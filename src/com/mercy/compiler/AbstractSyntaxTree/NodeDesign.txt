@@ -1,0 +1,34 @@
+AST
+
+Node
+    ExprNode
+        AssignNode
+        BinaryOpNode
+            LogicalAndNode
+            LogicalOrNode
+        FuncallNode
+        LiteralNode
+            IntegerLiteralNode
+            StringLiteralNode
+        LHSNode
+            ArefNode
+            VariableNode
+            MemberNode
+        CreatorNode
+        UnarryOpNode
+            PrefixOpNode
+            SuffixOpNode
+    StmtNode
+        BlockNode
+        BreakNode
+        ContinueNode
+        ExprStmtNode
+        ForNode
+        IfNode
+        ReturnNode
+        WhileNode
+        DefinitionNode
+            ClassDefNode
+            VariableDefNode
+            FunctionDefNode
+            SlotNode
