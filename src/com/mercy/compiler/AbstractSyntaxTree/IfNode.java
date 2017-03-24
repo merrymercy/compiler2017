@@ -10,8 +10,8 @@ public class IfNode extends  StmtNode  {
     public IfNode(Location loc, ExprNode c, StmtNode t, StmtNode e) {
         super(loc);
         this.cond = c;
-        this.thenBody = t;
-        this.elseBody = e;
+        this.thenBody = BlockNode.wrapBlock(t);
+        this.elseBody = BlockNode.wrapBlock(e);
     }
 
     public ExprNode cond() {

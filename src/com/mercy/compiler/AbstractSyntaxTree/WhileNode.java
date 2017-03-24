@@ -10,7 +10,7 @@ public class WhileNode extends StmtNode {
     public WhileNode(Location loc, ExprNode cond, StmtNode body) {
         super(loc);
         this.cond = cond;
-        this.body = body;
+        this.body = BlockNode.wrapBlock(body);
     }
 
     public StmtNode body() {

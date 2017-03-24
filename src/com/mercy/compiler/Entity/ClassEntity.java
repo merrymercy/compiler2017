@@ -1,8 +1,9 @@
 package com.mercy.compiler.Entity;
 
-import com.mercy.compiler.AbstractSyntaxTree.ParameterDefNode;
+import com.mercy.compiler.AbstractSyntaxTree.FunctionDefNode;
+import com.mercy.compiler.AbstractSyntaxTree.Location;
 import com.mercy.compiler.AbstractSyntaxTree.VariableDefNode;
-import com.mercy.compiler.Type.Type;
+import com.mercy.compiler.Type.ClassType;
 
 import java.util.List;
 
@@ -11,21 +12,31 @@ import java.util.List;
  */
 public class ClassEntity extends Entity {
     private List<VariableDefNode> memberVars;
-    private List<FunctionEntity> memberFuncs;
+    private List<FunctionDefNode> memberFuncs;
     private Scope scope;
+    private ClassType classType; // for add "this" pointer
 
-    public ClassEntity (Type type, String name, List<VariableDefNode> memberVars, List<FunctionEntity> memberFuncs) {
-        super(type, name);
+    public ClassEntity (Location loc, String name, List<VariableDefNode> memberVars, List<FunctionDefNode> memberFuncs) {
+        super(loc, new ClassType(name), name);
         this.memberVars = memberVars;
         this.memberFuncs = memberFuncs;
+        ((ClassType)this.type).setEntity(this);
     }
 
     public List<VariableDefNode> memberVars() {
         return memberVars;
     }
 
-    public List<FunctionEntity> memberFuncs() {
+    public List<FunctionDefNode> memberFuncs() {
         return memberFuncs;
+    }
+
+    public Scope scope() {
+        return scope;
+    }
+
+    public void setScope(Scope scope) {
+        this.scope = scope;
     }
 
     @Override

@@ -29,6 +29,5 @@ Node
         WhileNode
         DefinitionNode
             ClassDefNode
-            VariableDefNode
             FunctionDefNode
-            SlotNode
+            VariableDefNode

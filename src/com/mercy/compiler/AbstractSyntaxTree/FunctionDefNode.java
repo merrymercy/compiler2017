@@ -9,8 +9,8 @@ import com.mercy.compiler.Type.Type;
 public class FunctionDefNode extends DefinitionNode {
     private FunctionEntity entity;
 
-    public FunctionDefNode(Location loc, String name, FunctionEntity entity) {
-        super(loc, name);
+    public FunctionDefNode(FunctionEntity entity) {
+        super(entity.location(), entity.name());
         this.entity = entity;
     }
 

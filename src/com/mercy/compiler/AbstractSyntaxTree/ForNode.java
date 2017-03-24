@@ -12,7 +12,7 @@ public class ForNode extends  StmtNode {
         this.init = init;
         this.cond = cond;
         this.incr = incr;
-        this.body = body;
+        this.body = BlockNode.wrapBlock(body);
     }
 
     public ExprNode init() {

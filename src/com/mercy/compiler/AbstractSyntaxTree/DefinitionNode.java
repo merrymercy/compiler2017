@@ -14,4 +14,6 @@ abstract public class DefinitionNode extends StmtNode {
     public String name() {
         return name;
     }
+
+    abstract public <S,E> S accept(ASTVisitor<S,E> visitor);
 }

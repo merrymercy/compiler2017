@@ -11,8 +11,8 @@ import java.util.List;
 public class ClassDefNode extends DefinitionNode {
     private ClassEntity entity; // store all information in entity
 
-    public ClassDefNode(Location loc, String name, ClassEntity entity) {
-        super(loc, name);
+    public ClassDefNode(ClassEntity entity) {
+        super(entity.location(), entity.name());
         this.entity = entity;
     }
 

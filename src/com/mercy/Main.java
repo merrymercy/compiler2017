@@ -1,8 +1,10 @@
 package com.mercy;
 
+import com.mercy.compiler.AbstractSyntaxTree.AST;
 import com.mercy.compiler.AbstractSyntaxTree.BuildListener;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
+import com.mercy.compiler.Utility.SemanticError;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -14,9 +16,16 @@ import java.io.InputStream;
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        InputStream is = new FileInputStream("test.c");
+        InputStream is = new FileInputStream("testcase/test.c");
+        try {
+            compile(is);
+        } catch (SemanticError error) {
+            System.err.println(error.getMessage());
+        }
+    }
 
-        ANTLRInputStream input = new ANTLRInputStream(is);
+    public static void compile(InputStream sourceCode) throws Exception {
+        ANTLRInputStream input = new ANTLRInputStream(sourceCode);
         MalicLexer lexer = new MalicLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         MalicParser parser = new MalicParser(tokens);
@@ -28,6 +37,9 @@ public class Main {
         BuildListener listener = new BuildListener();
 
         walker.walk(listener, tree);
+
+        AST ast  = listener.getAST();
+        ast.resolveSymbol();
 
     }
 }

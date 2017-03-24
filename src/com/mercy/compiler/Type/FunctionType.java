@@ -1,19 +1,30 @@
 package com.mercy.compiler.Type;
 
+import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.Utility.InternalError;
-
-import java.util.List;
 
 /**
  * Created by mercy on 17-3-20.
  */
 public class FunctionType extends Type {
-    private Type returnType;
-    private List<Type> paramTypes;
+    private String name;
+    private FunctionEntity entity;
 
-    public FunctionType(Type ret, List<Type> paramTypes) {
-        returnType = ret;
-        paramTypes = paramTypes;
+    public FunctionType(String name) {
+        this.name = name;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public FunctionEntity entity() {
+        return entity;
+    }
+
+    public void setEntity(FunctionEntity entity) {
+        this.entity = entity;
+        isResolved = true;
     }
 
     @Override
@@ -26,14 +37,6 @@ public class FunctionType extends Type {
         throw new InternalError("FunctionType#size called");
     }
 
-    public Type returnType() {
-        return returnType;
-    }
-
-    public List<Type> paramTypes() {
-        return paramTypes;
-    }
-
     @Override
     public boolean isFunction() {
         return true;
@@ -44,18 +47,18 @@ public class FunctionType extends Type {
         return true;
     }
 
-    @Override
+    /*@Override
     public String toString() {
         String sep = "";
         StringBuilder buf = new StringBuilder();
-        buf.append(returnType.toString());
+        buf.append(entity.returnType().toString());
         buf.append("(");
-        for (Type t : paramTypes) {
+        for (ParameterDefNode param : entity.params()) {
             buf.append(sep);
-            buf.append(t.toString());
+            buf.append(param.toString());
             sep = ", ";
         }
         buf.append(")");
         return buf.toString();
-    }
+    }*/
 }

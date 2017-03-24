@@ -1,26 +1,22 @@
 package com.mercy.compiler.AbstractSyntaxTree;
 
+import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.Type.Type;
 
 /**
  * Created by mercy on 17-3-18.
  */
 public class VariableDefNode extends DefinitionNode {
-    private Type type;
-    private ExprNode init;
+    private VariableEntity entity;
 
-    public VariableDefNode(Location loc, Type type, String name, ExprNode init) {
-        super(loc, name);
-        this.type = type;
-        this.init = init;
+    public VariableDefNode(VariableEntity entity) {
+        super(entity.location(), entity.name());
+        this.entity = entity;
+
     }
 
-    public ExprNode init() {
-        return init;
-    }
-
-    public Type type() {
-        return type;
+    public VariableEntity entity() {
+        return entity;
     }
 
     @Override

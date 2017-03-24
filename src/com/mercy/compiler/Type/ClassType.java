@@ -8,15 +8,15 @@ import com.mercy.compiler.Entity.ClassEntity;
 public class ClassType extends Type {
     private String name;
     private ClassEntity entity;
-    private long cachedSize, cachedAlign;
 
     public ClassType(String name) {
         this.name = name;
     }
 
-    public ClassType(String name, ClassEntity classEntity) {
-        this.name = name;
-        this.entity = classEntity;
+    public ClassType(ClassEntity entity) {
+        this.name = entity.name();
+        this.entity = entity;
+        isResolved = true;
     }
 
     public String name() {
@@ -29,14 +29,7 @@ public class ClassType extends Type {
 
     public void setEntity(ClassEntity entity) {
         this.entity = entity;
-    }
-
-    public long cachedSize() {
-        return cachedSize;
-    }
-
-    public long cachedAlign() {
-        return cachedAlign;
+        isResolved = true;
     }
 
     @Override

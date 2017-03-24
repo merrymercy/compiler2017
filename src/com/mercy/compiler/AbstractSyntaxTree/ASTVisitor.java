@@ -17,7 +17,6 @@ public interface ASTVisitor<S, E> {
     public S visit(VariableDefNode node);
     public S visit(FunctionDefNode node);
     public S visit(ClassDefNode node);
-    public S visit(ParameterDefNode node);
 
     // Expressions
     public E visit(AssignNode node);

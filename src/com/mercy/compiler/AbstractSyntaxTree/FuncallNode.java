@@ -23,11 +23,11 @@ public class FuncallNode extends ExprNode {
 
     @Override
     public Type type() {
-        return functionType().returnType();
+        return functionType().entity().returnType();
     }
 
     public FunctionType functionType() {
-        return expr.type().getFunctionType();
+        return (FunctionType)expr.type();
     }
 
     public List<ExprNode> args() {

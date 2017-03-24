@@ -15,10 +15,6 @@ public class MemberNode extends LHSNode {
         this.member = member;
     }
 
-    public ClassType baseType() {
-        return expr.type().getClassType();
-    }
-
     public ExprNode expr() {
         return expr;
     }

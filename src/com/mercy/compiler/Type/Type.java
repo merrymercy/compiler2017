@@ -5,6 +5,7 @@ package com.mercy.compiler.Type;
  */
 public abstract class Type {
     static final public long sizeUnknown = -1;
+    protected boolean isResolved = false;
 
     public boolean isVoid() {
         return false;
@@ -35,6 +36,9 @@ public abstract class Type {
     public boolean isCallable() {
         return false;
     }
+
+    public boolean isResolved() { return isResolved; }
+    public void setResolved() { isResolved = true; }
 
     // Ability methods (binary)
     // abstract public boolean isCompatible(Type other);

@@ -3,6 +3,7 @@ package com.mercy.compiler.AbstractSyntaxTree;
 import com.mercy.compiler.Entity.Scope;
 import com.mercy.compiler.Entity.VariableEntity;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -15,6 +16,20 @@ public class BlockNode extends StmtNode {
     public BlockNode(Location loc, List<StmtNode> stmts) {
         super(loc);
         this.stmts = stmts;
+    }
+
+    public static BlockNode wrapBlock(StmtNode node) {
+        if (node == null)
+            return null;
+
+        if (node instanceof BlockNode) {
+            return (BlockNode) node;
+        } else {
+            return new BlockNode(node.location(),
+                    new LinkedList<StmtNode>() {{
+                        add(node);
+                    }});
+        }
     }
 
     public List<StmtNode> stmts() {

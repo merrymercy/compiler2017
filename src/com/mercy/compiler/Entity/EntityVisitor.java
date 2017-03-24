@@ -8,4 +8,5 @@ public interface EntityVisitor<T> {
     public T visit(FunctionEntity func);
     public T visit(ConstantEntity constant);
     public T visit(ClassEntity c);
+    public T visit(ParameterEntity param);
 }

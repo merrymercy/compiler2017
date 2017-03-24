@@ -9,12 +9,14 @@ import com.mercy.compiler.Utility.InternalError;
  * Created by mercy on 17-3-18.
  */
 abstract public class Entity {
+    protected Location location;
     protected String name;
     protected Type type;
 
-    public Entity(Type type, String name) {
-        this.name = name;
+    public Entity(Location loc, Type type, String name) {
+        this.location = loc;
         this.type = type;
+        this.name = name;
     }
 
     public String name() {
@@ -23,6 +25,10 @@ abstract public class Entity {
 
     public Type type() {
         return type;
+    }
+
+    public Location location() {
+        return location;
     }
 
     public ExprNode value() {

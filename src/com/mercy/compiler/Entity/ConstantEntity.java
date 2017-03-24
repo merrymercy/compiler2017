@@ -1,6 +1,7 @@
 package com.mercy.compiler.Entity;
 
 import com.mercy.compiler.AbstractSyntaxTree.ExprNode;
+import com.mercy.compiler.AbstractSyntaxTree.Location;
 import com.mercy.compiler.Type.Type;
 
 /**
@@ -9,8 +10,8 @@ import com.mercy.compiler.Type.Type;
 public class ConstantEntity extends Entity {
     private ExprNode value;
 
-    public ConstantEntity(Type type, String name, ExprNode value) {
-        super(type, name);
+    public ConstantEntity(Location loc, Type type, String name, ExprNode value) {
+        super(loc, type, name);
         this.value = value;
     }
 

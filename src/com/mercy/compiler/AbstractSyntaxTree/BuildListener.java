@@ -2,12 +2,18 @@ package com.mercy.compiler.AbstractSyntaxTree;
 
 import com.mercy.compiler.Entity.ClassEntity;
 import com.mercy.compiler.Entity.FunctionEntity;
+import com.mercy.compiler.Entity.ParameterEntity;
+import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.Parser.MalicBaseListener;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Type.*;
 import com.mercy.compiler.Utility.InternalError;
+import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 
+import java.lang.reflect.Parameter;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -17,76 +23,77 @@ import java.util.List;
 public class BuildListener extends MalicBaseListener {
     private ParseTreeProperty<Object> map = new ParseTreeProperty<>();
     private AST ast;
-    private boolean inClass;
 
     public AST getAST() {
         return ast;
     }
 
-    public BuildListener() {
-        super();
-        inClass = false;
-    }
-
     @Override
     public void exitCompilationUnit(MalicParser.CompilationUnitContext ctx) {
+        List<DefinitionNode> definitionNodes = new LinkedList<>();
         List<FunctionEntity> functionEntities = new LinkedList<>();
         List<ClassEntity> classEntities = new LinkedList<>();
 
-        for (MalicParser.FunctionDefinitionContext item : ctx.functionDefinition()) {
-            functionEntities.add(((FunctionDefNode)map.get(item)).entity());
+        for (ParserRuleContext parserRuleContext : ctx.getRuleContexts(ParserRuleContext.class)) {
+            DefinitionNode node = (DefinitionNode)map.get(parserRuleContext);
+            definitionNodes.add(node);
+            if (node instanceof FunctionDefNode) {
+                functionEntities.add(((FunctionDefNode)node).entity());
+            } else if (node instanceof  VariableDefNode) {
+                ;
+            } else if (node instanceof  ClassDefNode) {
+                classEntities.add(((ClassDefNode)node).entity());
+            } else {
+                throw new InternalError("Invalid definition node " + node.name());
+            }
         }
 
-        for (MalicParser.ClassDefinitionContext item : ctx.classDefinition()) {
-            classEntities.add(((ClassDefNode)map.get(item)).entity());
-        }
-
-        ast = new AST(functionEntities, classEntities);
+        ast = new AST(definitionNodes, classEntities, functionEntities);
     }
 
     @Override
     public void exitClassDefinition(MalicParser.ClassDefinitionContext ctx) {
         List<VariableDefNode> vars = new LinkedList<>();
-        List<FunctionEntity> funcs = new LinkedList<>();
+        List<FunctionDefNode> funcs = new LinkedList<>();
 
         for (MalicParser.VariableDefinitionContext item : ctx.variableDefinition()) {
             vars.add((VariableDefNode)map.get(item));
         }
 
         for (MalicParser.FunctionDefinitionContext item : ctx.functionDefinition()) {
-            funcs.add(((FunctionDefNode)map.get(item)).entity());
+            funcs.add((FunctionDefNode)map.get(item));
         }
 
         String name = ctx.name.getText();
-        Type type = new ClassType(name);
-        ClassEntity entity = new ClassEntity(type, name, vars, funcs);
+        ClassEntity entity = new ClassEntity(new Location(ctx.name), name, vars, funcs);
 
-        map.put(ctx, new ClassDefNode(new Location(ctx), name, entity));
+        map.put(ctx, new ClassDefNode(entity));
     }
 
     @Override
     public void exitFunctionDefinition(MalicParser.FunctionDefinitionContext ctx) {
-        List<ParameterDefNode> params = new LinkedList<>();
+        List<ParameterEntity> params = new LinkedList<>();
 
         for(MalicParser.ParameterContext item : ctx.parameter()) {
-            params.add((ParameterDefNode)map.get(item));
+            ParameterEntity node = (ParameterEntity)map.get(item);
+            params.add(node);
         }
 
-        FunctionEntity entity = new FunctionEntity((Type)map.get(ctx.ret), ctx.name.getText(),
+        FunctionEntity entity = new FunctionEntity(new Location(ctx.name), (Type)map.get(ctx.ret), ctx.name.getText(),
                 params, (BlockNode)map.get(ctx.block()));
-
-        map.put(ctx, new FunctionDefNode(new Location(ctx), ctx.name.getText(), entity));
+        map.put(ctx, new FunctionDefNode(entity));
     }
 
     @Override
     public void exitVariableDefinition(MalicParser.VariableDefinitionContext ctx) {
-        map.put(ctx, new VariableDefNode(new Location(ctx), (Type)map.get(ctx.typeType()),
-                ctx.Identifier().getText(), getExpr(ctx.expression())));
+        VariableEntity entity = new VariableEntity(new Location(ctx.Identifier()), (Type)map.get(ctx.typeType()),
+                ctx.Identifier().getText(), getExpr(ctx.expression()));
+        map.put(ctx, new VariableDefNode(entity));
     }
 
     @Override
     public void exitParameter(MalicParser.ParameterContext ctx) {
-        map.put(ctx, new ParameterDefNode(new Location(ctx), (Type)map.get(ctx.typeType()),
+        map.put(ctx, new ParameterEntity(new Location(ctx), (Type)map.get(ctx.typeType()),
                 ctx.Identifier().getText()));
     }
 
