@@ -28,11 +28,20 @@ public class Scope {
         }
     }
 
-    public boolean insert(Entity entity) {
+    public void insert(Entity entity) {
         if (entities.containsKey(entity.name()))
             throw new SemanticError(entity.location(), "duplicated symbol : " + entity.name());
         entities.put(entity.name(), entity);
-        return true;
+    }
+
+    public void insertConstant(Entity entity) {
+        Scope scope = this;
+        while (!scope.isToplevel) {
+            scope = scope.parent;
+        }
+        if (entities.containsKey(entity.name()))
+            throw new SemanticError(entity.location(), "duplicated string constant : " + entity.name());
+        entities.put(entity.name(), entity);
     }
 
     // search in entire symbol table
