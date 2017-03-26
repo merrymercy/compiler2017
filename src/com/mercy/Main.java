@@ -40,6 +40,7 @@ public class Main {
 
         AST ast  = listener.getAST();
         ast.resolveSymbol();
+        ast.checkType();
 
     }
 }

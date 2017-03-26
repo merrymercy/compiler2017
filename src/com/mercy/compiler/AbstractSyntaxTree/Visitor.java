@@ -128,20 +128,6 @@ abstract public class Visitor implements ASTVisitor<Void, Void> {
     // Expressions
     //
     @Override
-    public Void visit(LogicalOrNode node) {
-        visitExpr(node.left());
-        visitExpr(node.right());
-        return null;
-    }
-
-    @Override
-    public Void visit(LogicalAndNode node) {
-        visitExpr(node.left());
-        visitExpr(node.right());
-        return null;
-    }
-
-    @Override
     public Void visit(AssignNode n) {
         visitExpr(n.lhs());
         visitExpr(n.rhs());
@@ -152,6 +138,20 @@ abstract public class Visitor implements ASTVisitor<Void, Void> {
     public Void visit(BinaryOpNode n) {
         visitExpr(n.left());
         visitExpr(n.right());
+        return null;
+    }
+
+    @Override
+    public Void visit(LogicalOrNode node) {
+        visitExpr(node.left());
+        visitExpr(node.right());
+        return null;
+    }
+
+    @Override
+    public Void visit(LogicalAndNode node) {
+        visitExpr(node.left());
+        visitExpr(node.right());
         return null;
     }
 

@@ -14,11 +14,6 @@ public class AssignNode extends ExprNode {
         this.rhs = rhs;
     }
 
-    @Override
-    public Type type() {
-        return lhs.type();
-    }
-
     public ExprNode lhs() {
         return lhs;
     }
@@ -27,8 +22,9 @@ public class AssignNode extends ExprNode {
         return rhs;
     }
 
-    public void setRHS(ExprNode expr) {
-        this.rhs = expr;
+    @Override
+    public Type type() {
+        return lhs.type();
     }
 
     @Override

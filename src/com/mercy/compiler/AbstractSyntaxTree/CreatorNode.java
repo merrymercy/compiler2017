@@ -25,7 +25,6 @@ public class CreatorNode extends ExprNode {
         return type;
     }
 
-
     public List<ExprNode> exprs() {
         return exprs;
     }

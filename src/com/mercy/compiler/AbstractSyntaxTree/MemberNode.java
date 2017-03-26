@@ -1,5 +1,7 @@
 package com.mercy.compiler.AbstractSyntaxTree;
 
+import com.mercy.compiler.Entity.Entity;
+import com.mercy.compiler.Entity.Scope;
 import com.mercy.compiler.Type.ClassType;
 import com.mercy.compiler.Type.Type;
 
@@ -9,6 +11,7 @@ import com.mercy.compiler.Type.Type;
 public class MemberNode extends LHSNode {
     private ExprNode expr;
     private String member;
+    private Entity entity;
 
     public MemberNode(ExprNode expr, String member) {
         this.expr = expr;
@@ -21,6 +24,19 @@ public class MemberNode extends LHSNode {
 
     public String member() {
         return member;
+    }
+
+    public Entity entity() {
+        return entity;
+    }
+
+    public void setEntity(Entity entity) {
+        this.entity = entity;
+    }
+
+    @Override
+    public boolean isAssignable() {
+        return !entity.type().isFunction();
     }
 
     @Override

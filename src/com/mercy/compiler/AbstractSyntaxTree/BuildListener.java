@@ -133,7 +133,7 @@ public class BuildListener extends MalicBaseListener {
         List<StmtNode> stmts = new LinkedList<>();
         for (MalicParser.StatementContext item : ctx.statement()) {
             StmtNode stmt = getStmt(item);
-            if (item != null)
+            if (stmt != null)
                 stmts.add(stmt);
         }
         map.put(ctx, new BlockNode(new Location(ctx), stmts));
@@ -201,7 +201,7 @@ public class BuildListener extends MalicBaseListener {
     @Override
     public void exitMemberExpr(MalicParser.MemberExprContext ctx) {
         map.put(ctx, new MemberNode(getExpr(ctx.expression()),
-                ctx.expression().getText()));
+                ctx.Identifier().getText()));
     }
 
     @Override

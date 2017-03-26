@@ -21,6 +21,14 @@ public class FuncallNode extends ExprNode {
         return expr;
     }
 
+    public List<ExprNode> args() {
+        return args;
+    }
+
+    public void addThisPointer(ExprNode expr) {
+        args.add(0, expr);
+    }
+
     @Override
     public Type type() {
         return functionType().entity().returnType();
@@ -28,10 +36,6 @@ public class FuncallNode extends ExprNode {
 
     public FunctionType functionType() {
         return (FunctionType)expr.type();
-    }
-
-    public List<ExprNode> args() {
-        return args;
     }
 
     @Override

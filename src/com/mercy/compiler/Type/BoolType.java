@@ -12,6 +12,11 @@ public class BoolType extends Type {
     }
 
     @Override
+    public boolean isCompatible(Type other) {
+        return other.isBool();
+    }
+
+    @Override
     public boolean isScalar() {
         return true;
     }

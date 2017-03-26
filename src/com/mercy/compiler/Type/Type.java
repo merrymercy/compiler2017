@@ -5,7 +5,17 @@ package com.mercy.compiler.Type;
  */
 public abstract class Type {
     static final public long sizeUnknown = -1;
-    protected boolean isResolved = false;
+
+    static public BoolType boolType = new BoolType();
+    static public IntegerType integerType = new IntegerType();
+    static public VoidType voidType = new VoidType();
+    static public StringType stringType = new StringType();
+    static public NullType nullType = new NullType();
+
+    static public void initializeBuiltinType() {
+        StringType.initializeBuiltinFunction();
+        ArrayType.initializeBuiltinFunction();
+    }
 
     public boolean isVoid() {
         return false;
@@ -28,6 +38,9 @@ public abstract class Type {
     public boolean isFunction() {
         return false;
     }
+    public boolean isNull() {
+        return false;
+    }
 
     // Ability methods (unary)
     public boolean isScalar() {
@@ -36,12 +49,10 @@ public abstract class Type {
     public boolean isCallable() {
         return false;
     }
-
-    public boolean isResolved() { return isResolved; }
-    public void setResolved() { isResolved = true; }
+    public boolean isHalfComparable() { return false; }
 
     // Ability methods (binary)
-    // abstract public boolean isCompatible(Type other);
+    abstract public boolean isCompatible(Type other);
     // abstract public boolean isCastableTo(Type target);
 
     abstract public long size();

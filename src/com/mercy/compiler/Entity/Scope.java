@@ -35,6 +35,7 @@ public class Scope {
         return true;
     }
 
+    // search in entire symbol table
     public Entity lookup(String name) {
         Entity entity = entities.get(name);
         if (entity == null) {
@@ -42,6 +43,11 @@ public class Scope {
         } else {
             return entity;
         }
+    }
+
+    // only search in current level
+    public Entity find(String name) {
+        return entities.get(name);
     }
 
     public Scope parent() {

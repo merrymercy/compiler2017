@@ -58,7 +58,7 @@ public class BinaryOpNode extends ExprNode {
     }
 
     public void setType(Type type) {
-        if (this.type == null)
+        if (this.type != null)
             throw new InternalError("BinaryOp#setType called twice");
         this.type = type;
     }

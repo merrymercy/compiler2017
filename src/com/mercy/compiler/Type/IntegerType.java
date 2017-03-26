@@ -17,6 +17,16 @@ public class IntegerType extends Type {
     }
 
     @Override
+    public boolean isCompatible(Type other) {
+        return other.isInteger();
+    }
+
+    @Override
+    public boolean isHalfComparable() {
+        return true;
+    }
+
+    @Override
     public long size() {
         return DEFAULT_SIZE;
     }

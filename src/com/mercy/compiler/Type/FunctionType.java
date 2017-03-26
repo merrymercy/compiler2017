@@ -24,7 +24,6 @@ public class FunctionType extends Type {
 
     public void setEntity(FunctionEntity entity) {
         this.entity = entity;
-        isResolved = true;
     }
 
     @Override
@@ -45,6 +44,13 @@ public class FunctionType extends Type {
     @Override
     public boolean isCallable() {
         return true;
+    }
+
+    @Override
+    public boolean isCompatible(Type other) {
+        if (!other.isFunction())
+            return false;
+        return entity.equals(((FunctionType)other).entity);
     }
 
     /*@Override

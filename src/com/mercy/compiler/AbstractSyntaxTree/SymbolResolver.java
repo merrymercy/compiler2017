@@ -1,6 +1,10 @@
 package com.mercy.compiler.AbstractSyntaxTree;
 
 import com.mercy.compiler.Entity.*;
+import com.mercy.compiler.Type.ArrayType;
+import com.mercy.compiler.Type.ClassType;
+import com.mercy.compiler.Type.FunctionType;
+import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.SemanticError;
 
 import java.util.Stack;
@@ -40,19 +44,46 @@ public class SymbolResolver extends Visitor {
         currentClass = null;
     }
 
+    // set entity for type
+    private boolean resolveType(Type type) {
+        if (type instanceof ClassType) {
+            ClassType t = (ClassType) type;
+            Entity entity = currentScope.lookup(t.name());
+            if (entity == null || !(entity instanceof ClassEntity))
+                return false;
+            t.setEntity((ClassEntity)entity);
+        } else if (type instanceof FunctionType) {
+            FunctionType t = (FunctionType) type;
+            Entity entity = currentScope.lookup(t.name());
+            if (entity == null || !(entity instanceof FunctionEntity))
+                return false;
+            t.setEntity((FunctionEntity)entity);
+        } else if (type instanceof ArrayType) {
+            ArrayType t = (ArrayType) type;
+            return resolveType(t.baseType());
+        }
+        return true;
+    }
+
     @Override
     public Void visit(FunctionDefNode node) {
         FunctionEntity entity = node.entity();
         enterScope();
         entity.setScope(currentScope);
+        if (!resolveType(entity.returnType())) {
+            throw new SemanticError(node.location(), "Cannot resolve symbol : " + entity.returnType());
+        }
 
-        // if it is a member function, add "this" pointer
+        // if it is a member function, add "this" pointer parameter
         if (currentClass != null) {
             entity.addThisPointer(node.location(), currentClass);
         }
         // add parameters into scope
         for (ParameterEntity param : entity.params()) {
             currentScope.insert(param);
+            if (!resolveType(param.type())) {
+                throw new SemanticError(node.location(), "Cannot resolve symbol : " + param.type());
+            }
         }
         firstBlockInFunction = true;
         visit(entity.body());
@@ -75,12 +106,8 @@ public class SymbolResolver extends Visitor {
         }
 
         // visit members
-        for (VariableDefNode memberVar : entity.memberVars()) {
-            visit(memberVar);
-        }
-        for (FunctionDefNode memberFunc : entity.memberFuncs()) {
-            visit(memberFunc);
-        }
+        visitStmts(entity.memberVars());
+        visitStmts(entity.memberFuncs());
 
         exitClass();
         return null;
@@ -88,12 +115,25 @@ public class SymbolResolver extends Visitor {
 
     @Override
     public Void visit(VariableDefNode node) {
+        VariableEntity entity = node.entity();
+        if (!resolveType(entity.type())) {
+            throw new SemanticError(node.location(), "Cannot resolve symbol : " + entity.type());
+        }
         if (currentClass == null) {
-            VariableEntity entity = node.entity();
             if (entity.initializer() != null)
                 visitExpr(entity.initializer());
             currentScope.insert(entity);
         }
+        return null;
+    }
+
+    @Override
+    public Void visit(CreatorNode node) {
+        if (!resolveType(node.type())) {
+            throw new SemanticError(node.location(), "Cannot resolve symbol : " + node.type());
+        }
+        if (node.exprs() != null)
+            visitExprs(node.exprs());
         return null;
     }
 
@@ -122,24 +162,3 @@ public class SymbolResolver extends Visitor {
         return null;
     }
 }
-
-
-   /* private boolean resolveType(Type type) {
-        if (type instanceof ClassType) {
-            ClassType t = (ClassType) type;
-            Entity entity = currentScope.lookup(t.name());
-            if (entity == null || !(entity instanceof ClassEntity))
-                return false;
-            t.setEntity((ClassEntity)entity);
-        } else if (type instanceof FunctionType) {
-            FunctionType t = (FunctionType) type;
-            Entity entity = currentScope.lookup(t.name());
-            if (entity == null || !(entity instanceof FunctionEntity))
-                return false;
-            t.setEntity((FunctionEntity)entity);
-        } else if (type instanceof ArrayType) {
-            ArrayType t = (ArrayType) type;
-            return resolveType(t.baseType());
-        }
-        return true;
-    }*/

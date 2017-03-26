@@ -17,6 +17,12 @@ public class VoidType extends Type {
         return true;
     }
 
+    @Override
+    public boolean isCompatible(Type other) {
+        return other.isVoid();
+    }
+
+    @Override
     public String toString() {
         return "void";
     }
