@@ -1,8 +1,8 @@
 package com.mercy.compiler.Entity;
 
-import com.mercy.compiler.AbstractSyntaxTree.FunctionDefNode;
-import com.mercy.compiler.AbstractSyntaxTree.Location;
-import com.mercy.compiler.AbstractSyntaxTree.VariableDefNode;
+import com.mercy.compiler.AST.FunctionDefNode;
+import com.mercy.compiler.AST.Location;
+import com.mercy.compiler.AST.VariableDefNode;
 import com.mercy.compiler.Type.ClassType;
 
 import java.util.List;

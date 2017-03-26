@@ -1,6 +1,6 @@
 package com.mercy.compiler.Utility;
 
-import com.mercy.compiler.AbstractSyntaxTree.Location;
+import com.mercy.compiler.AST.Location;
 
 /**
  * Created by mercy on 17-3-23.

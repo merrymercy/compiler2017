@@ -1,7 +1,7 @@
 package com.mercy.compiler.Entity;
 
-import com.mercy.compiler.AbstractSyntaxTree.ExprNode;
-import com.mercy.compiler.AbstractSyntaxTree.Location;
+import com.mercy.compiler.AST.ExprNode;
+import com.mercy.compiler.AST.Location;
 import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.InternalError;
 

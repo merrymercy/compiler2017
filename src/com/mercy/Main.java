@@ -1,7 +1,7 @@
 package com.mercy;
 
-import com.mercy.compiler.AbstractSyntaxTree.AST;
-import com.mercy.compiler.AbstractSyntaxTree.BuildListener;
+import com.mercy.compiler.AST.AST;
+import com.mercy.compiler.FrontEnd.BuildListener;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Utility.SemanticError;

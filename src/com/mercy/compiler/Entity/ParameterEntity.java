@@ -1,6 +1,6 @@
 package com.mercy.compiler.Entity;
 
-import com.mercy.compiler.AbstractSyntaxTree.Location;
+import com.mercy.compiler.AST.Location;
 import com.mercy.compiler.Type.Type;
 
 /**
