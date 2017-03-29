@@ -1,7 +1,0 @@
-class A {
-    A() {
-        return this;
-    }
-}
-
-int main() { return 0; }

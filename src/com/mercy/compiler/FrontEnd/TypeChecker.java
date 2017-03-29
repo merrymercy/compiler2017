@@ -168,12 +168,21 @@ public class TypeChecker extends Visitor {
     @Override
     public Void visit(PrefixOpNode node) {
         visit((UnaryOpNode)node);
+        if (node.operator() == UnaryOpNode.UnaryOp.PRE_INC ||
+                node.operator() == UnaryOpNode.UnaryOp.PRE_DEC) {
+            /*System.out.println("haha\n");
+            System.out.println(node);*/
+            node.setAssignable(true);
+        }
         return null;
     }
 
     @Override
     public Void visit(SuffixOpNode node) {
         visit((UnaryOpNode)node);
+        if (!node.expr().isAssignable()) {
+            throw new SemanticError(node.location(), "lvalue is needed");
+        }
         return null;
     }
 

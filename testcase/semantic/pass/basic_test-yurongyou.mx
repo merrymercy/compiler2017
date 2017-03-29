@@ -29,7 +29,8 @@ void journalists(string location){
 }
 
 Mo xu(Mo m0, RedBoy boys){
-	for (int i = 0; i < boys.num; ++i){
+    int i;
+	for (i = 0; i < boys.num; ++i){
 		m0.sec++;
 	}
 	return m0;
@@ -74,7 +75,7 @@ int main(){
 	a <= b;
 	a >= b;
 
-    bool g, h;
+    bool g; bool h;
 	g && h;
 	g || h;
 	!g;
@@ -98,10 +99,10 @@ int main(){
 	xu(new Mo, null);
 
 	//test for iteration
-	for (int i = 0; i < 3; ++i){
+	int i;
+	for (i = 0; i < 3; ++i){
 		xu(haha, boys[i]);
 	}
-	int i = 0;
 	for (i = 0; i < 3; ++i) xu(haha, boys[i]);
 	for (;;);
 	i = 0;

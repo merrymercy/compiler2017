@@ -6,6 +6,7 @@ import com.mercy.compiler.Type.Type;
  * Created by mercy on 17-3-18.
  */
 abstract public class ExprNode extends Node {
+    private boolean isAssignable = false;
     public ExprNode() {
         super();
     }
@@ -25,10 +26,14 @@ abstract public class ExprNode extends Node {
         return false;
     }
     public boolean isAssignable() {
-        return false;
+        return isAssignable;
     }
     public boolean isLoadable() {
         return false;
+    }
+
+    public void setAssignable(boolean isAssignable) {
+        this.isAssignable = isAssignable;
     }
 
     abstract public <S,E> E accept(ASTVisitor<S,E> visitor);

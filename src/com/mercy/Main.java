@@ -6,6 +6,7 @@ import com.mercy.compiler.FrontEnd.ParserErrorListener;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Utility.SemanticError;
+import jdk.nashorn.internal.runtime.regexp.joni.exception.InternalException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -21,6 +22,13 @@ public class Main {
             compile(is);
         } catch (SemanticError error) {
             System.err.println(error.getMessage());
+            System.exit(1);
+        } catch (InternalError error) {
+            System.err.println(error.getMessage());
+            System.exit(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
         }
     }
 

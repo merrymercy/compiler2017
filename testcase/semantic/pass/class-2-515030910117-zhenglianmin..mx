@@ -4,6 +4,7 @@ B b;
 int main() {
     a = new A;
     b = new B;
+    A[] a = (new A[10][])[0];
     return 0;
 }
 

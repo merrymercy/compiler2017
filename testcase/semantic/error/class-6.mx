@@ -1,6 +1,0 @@
-class A {
-    void this() {
-        return;
-    }
-}
-int main() {}
