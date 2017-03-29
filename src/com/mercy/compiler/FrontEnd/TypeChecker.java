@@ -191,7 +191,7 @@ public class TypeChecker extends Visitor {
                 break;
             case EQ: case LT:
                 checkCompatibility(node.location(), ltype, rtype, true);
-                if (!ltype.isHalfComparable()) {
+                if (!ltype.isHalfComparable() && !rtype.isHalfComparable()) { // ugly, for "null"
                     throw new SemanticError(node.location(), "Cannot compare two " + ltype);
                 }
                 node.setType(boolType);
@@ -241,7 +241,8 @@ public class TypeChecker extends Visitor {
 
         // count for "this" pointer
         int base = 0;
-        if (node.expr() instanceof MemberNode) {
+        if (node.expr() instanceof MemberNode || (node.expr() instanceof VariableNode &&
+                                                 ((VariableNode)node.expr()).isMember())) {
             base = 1;
         }
 

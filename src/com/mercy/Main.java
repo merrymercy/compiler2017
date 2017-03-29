@@ -15,7 +15,6 @@ import java.io.InputStream;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-
         InputStream is = new FileInputStream("testcase/test.c");
         try {
             compile(is);

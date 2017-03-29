@@ -31,9 +31,5 @@ abstract public class ExprNode extends Node {
         return false;
     }
 
-    public boolean isCallable() {
-        return type().isCallable();
-    }
-
     abstract public <S,E> E accept(ASTVisitor<S,E> visitor);
 }

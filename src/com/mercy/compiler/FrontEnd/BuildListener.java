@@ -9,6 +9,7 @@ import com.mercy.compiler.Parser.MalicBaseListener;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Type.*;
 import com.mercy.compiler.Utility.InternalError;
+import com.mercy.compiler.Utility.SemanticError;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 
@@ -383,6 +384,11 @@ public class BuildListener extends MalicBaseListener {
 
         map.put(ctx, new CreatorNode(new Location(ctx),
                 type, exprNodes, dimension));
+    }
+
+    @Override
+    public void exitErrorCreator(MalicParser.ErrorCreatorContext ctx) {
+        throw new SemanticError(new Location(ctx), "Invalid creator expression");
     }
 
     @Override

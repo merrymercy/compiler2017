@@ -1,0 +1,4 @@
+class A {
+    int this;
+}
+int main() {}

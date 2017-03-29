@@ -67,7 +67,7 @@ public class TypeCheckerTest {
 
             walker.walk(listener, tree);
 
-            AST ast  = listener.getAST();
+            AST ast = listener.getAST();
             ast.resolveSymbol();
             ast.checkType();
             if (!shouldPass) {

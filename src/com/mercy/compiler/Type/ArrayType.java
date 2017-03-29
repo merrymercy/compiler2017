@@ -11,7 +11,7 @@ public class ArrayType extends Type {
     static final long DEFAULT_POINTER_SIZE = 4;
 
     static private Scope scope;
-    static private ArrayType magicArray = new ArrayType(nullType);
+    static private ArrayType magicArray = new ArrayType(nullType); // for matching "this" pointer in function call
 
     static public void initializeBuiltinFunction() {
         scope = new Scope(true);

@@ -16,6 +16,11 @@ public class NullType extends ClassType {
     }
 
     @Override
+    public boolean isHalfComparable() {
+        return true;
+    }
+
+    @Override
     public boolean isCompatible(Type other) {
         return other.isClass() || other.isNull();
     }

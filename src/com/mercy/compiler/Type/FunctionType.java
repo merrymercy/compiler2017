@@ -42,11 +42,6 @@ public class FunctionType extends Type {
     }
 
     @Override
-    public boolean isCallable() {
-        return true;
-    }
-
-    @Override
     public boolean isCompatible(Type other) {
         if (!other.isFunction())
             return false;

@@ -13,6 +13,7 @@ public class VariableNode extends LHSNode {
     private Location location;
     private String name;
     private Entity entity;
+    private boolean isMember = false;
 
     public VariableNode(Location loc, String name) {
         this.location = loc;
@@ -39,8 +40,12 @@ public class VariableNode extends LHSNode {
         this.entity = entity;
     }
 
-    public boolean isResolved() {
-        return entity != null;
+    public void setMember(boolean isMember) {
+        this.isMember = isMember;
+    }
+
+    public boolean isMember() {
+        return isMember;
     }
 
     @Override

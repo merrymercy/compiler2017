@@ -446,6 +446,18 @@ public interface MalicListener extends ParseTreeListener {
 	 */
 	void exitNullConst(MalicParser.NullConstContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code errorCreator}
+	 * labeled alternative in {@link MalicParser#creator}.
+	 * @param ctx the parse tree
+	 */
+	void enterErrorCreator(MalicParser.ErrorCreatorContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code errorCreator}
+	 * labeled alternative in {@link MalicParser#creator}.
+	 * @param ctx the parse tree
+	 */
+	void exitErrorCreator(MalicParser.ErrorCreatorContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code arrayCreator}
 	 * labeled alternative in {@link MalicParser#creator}.
 	 * @param ctx the parse tree

@@ -47,11 +47,6 @@ public class ClassType extends Type {
     }
 
     @Override
-    public boolean isHalfComparable() {
-        return true;
-    }
-
-    @Override
     public long size() {
         return DEFAULT_SIZE;
     }

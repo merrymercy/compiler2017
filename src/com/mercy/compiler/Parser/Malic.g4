@@ -54,9 +54,9 @@ expressionList
 expression
     : primary                                            # primaryExpr
     | expression '.' Identifier                          # memberExpr
+    | 'new' creator                                      # newExpr
     | expression '[' expression ']'                      # arefExpr
     | expression '(' expressionList? ')'                 # funcallExpr
-    | 'new' creator                                      # newExpr
     | expression op=('++' | '--')                        # suffixExpr
     | op=('+' | '-' | '++' | '--') expression            # prefixExpr
     | op=('~' | '!' ) expression                         # prefixExpr
@@ -88,7 +88,9 @@ literal
     ;
 
 creator
-    : (Identifier | primitiveType) ('[' expression ']')+ ('[' ']')* # arrayCreator
+    : (Identifier | primitiveType) ('[' expression ']')+ ('[' ']')+
+                                              ('[' expression ']')+ # errorCreator
+    | (Identifier | primitiveType) ('[' expression ']')+ ('[' ']')* # arrayCreator
     | Identifier                                                    # nonarrayCreator
     ;
 
