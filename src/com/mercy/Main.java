@@ -2,6 +2,7 @@ package com.mercy;
 
 import com.mercy.compiler.AST.AST;
 import com.mercy.compiler.FrontEnd.BuildListener;
+import com.mercy.compiler.FrontEnd.ParserErrorListener;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Utility.SemanticError;
@@ -28,8 +29,8 @@ public class Main {
         MalicLexer lexer = new MalicLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         MalicParser parser = new MalicParser(tokens);
-
-        parser.setBuildParseTree(true);
+        parser.removeErrorListeners();
+        parser.addErrorListener(new ParserErrorListener());
         ParseTree tree = parser.compilationUnit();
 
         ParseTreeWalker walker = new ParseTreeWalker();
@@ -40,6 +41,5 @@ public class Main {
         AST ast  = listener.getAST();
         ast.resolveSymbol();
         ast.checkType();
-
     }
 }

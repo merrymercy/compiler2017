@@ -1,2 +1,11 @@
-class A {};
+class A {}
+class B { B() {{{{{ return; }}}}} }
 int main() {}
+void func() {
+    if(false);else;
+    while(true);
+    for(;;);
+    return;
+    {{{;{{}{}}}};{}};
+    new A[10][][][];
+}

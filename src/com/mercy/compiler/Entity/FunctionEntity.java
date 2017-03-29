@@ -15,6 +15,7 @@ public class FunctionEntity extends Entity {
     private List<ParameterEntity> params;
     private BlockNode body;
     private Scope scope;
+    private boolean isConstructor = false;
 
     public FunctionEntity(Location loc, Type returnType, String name, List<ParameterEntity> params, BlockNode body) {
         super(loc, new FunctionType(name), name);
@@ -46,6 +47,14 @@ public class FunctionEntity extends Entity {
 
     public void setScope(Scope scope) {
         this.scope = scope;
+    }
+
+    public boolean isConstructor() {
+        return isConstructor;
+    }
+
+    public void setConstructor(boolean constructor) {
+        isConstructor = constructor;
     }
 
     @Override

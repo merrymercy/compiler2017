@@ -9,8 +9,14 @@ int main() {
 
 class B {
     A a;
+    B func() {
+        return b;
+    }
 }
 
 class A {
     B b;
+    A func() {
+        return a;
+    }
 }

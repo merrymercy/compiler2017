@@ -119,12 +119,19 @@ public class TypeChecker extends Visitor {
     public Void visit(ReturnNode node) {
         if (currentFunction == null)
             throw new SemanticError(node.location(), "cannot return outside function");
-        if (node.expr() != null) {
-            visitExpr(node.expr());
-            checkCompatibility(node.location(), node.expr().type(), currentFunction.returnType(), true);
+
+        if (currentFunction != null && currentFunction.isConstructor()) {
+            if (node.expr() != null) {
+                throw new SemanticError(node.location(), "cannot return in constructor");
+            }
         } else {
-            if (!currentFunction.returnType().isVoid()) {
-                throw new SemanticError(node.location(), "cannot return to void");
+            if (node.expr() != null) {
+                visitExpr(node.expr());
+                checkCompatibility(node.location(), node.expr().type(), currentFunction.returnType(), true);
+            } else {
+                if (!currentFunction.returnType().isVoid()) {
+                    throw new SemanticError(node.location(), "cannot return to void");
+                }
             }
         }
         return null;

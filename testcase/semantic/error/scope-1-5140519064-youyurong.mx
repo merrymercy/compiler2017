@@ -7,6 +7,7 @@ int g(){
 	while(true) int b = 1;
 	return b;
 }
+
 int main(){
 	return 0;
 }

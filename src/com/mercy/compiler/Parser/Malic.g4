@@ -9,7 +9,7 @@ classDefinition
     ;
 
 functionDefinition
-    : ret=typeType name=Identifier '(' (parameter (',' parameter)*)? ')'
+    : ret=typeType? name=Identifier '(' (parameter (',' parameter)*)? ')'
                block
     ;
 

@@ -58,8 +58,9 @@ public class TypeCheckerTest {
             MalicLexer lexer = new MalicLexer(input);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             MalicParser parser = new MalicParser(tokens);
+            parser.removeErrorListeners();
+            parser.addErrorListener(new ParserErrorListener());
 
-            parser.setBuildParseTree(true);
             ParseTree tree = parser.compilationUnit();
 
             ParseTreeWalker walker = new ParseTreeWalker();

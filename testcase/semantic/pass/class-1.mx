@@ -4,13 +4,12 @@ int main() {
     object.func1(2, 3);
 
     object.set(0, 1)
-          .set(1, 0)
+          .set(1, 0);
 
     object.copy(object
           .
-          getThis())
-          .
-          copy(object.getThis().getThis());
+           getThis())
+          .copy(object.getThis().getThis());
 
     return 0;
 }

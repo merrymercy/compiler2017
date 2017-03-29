@@ -78,8 +78,16 @@ public class BuildListener extends MalicBaseListener {
             params.add(node);
         }
 
-        FunctionEntity entity = new FunctionEntity(new Location(ctx.name), (Type)map.get(ctx.ret), ctx.name.getText(),
-                params, (BlockNode)map.get(ctx.block()));
+        FunctionEntity entity;
+        if (ctx.ret == null) { // creator
+            entity = new FunctionEntity(new Location(ctx.name), new ClassType(ctx.name.getText()),
+                    ClassType.CONSTRUCTOR_PREFIX + ctx.name.getText(),
+                    params, (BlockNode) map.get(ctx.block()));
+            entity.setConstructor(true);
+        } else {
+            entity = new FunctionEntity(new Location(ctx.name), (Type) map.get(ctx.ret), ctx.name.getText(),
+                    params, (BlockNode) map.get(ctx.block()));
+        }
         map.put(ctx, new FunctionDefNode(entity));
     }
 

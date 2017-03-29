@@ -6,6 +6,7 @@ import com.mercy.compiler.AST.VariableDefNode;
 import com.mercy.compiler.Type.ClassType;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Created by mercy on 17-3-23.
@@ -37,6 +38,10 @@ public class ClassEntity extends Entity {
 
     public void setScope(Scope scope) {
         this.scope = scope;
+    }
+
+    public void setConstructor() {
+
     }
 
     @Override
