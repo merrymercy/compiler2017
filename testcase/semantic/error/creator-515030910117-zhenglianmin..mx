@@ -2,3 +2,15 @@ int main() {
     int[] a = new int[1][][1];
     return 0;
 }
+
+/*!! metadata:
+=== comment ===
+creator test
+=== assert ===
+failure_compile
+=== phase ===
+semantic pretest
+=== is_public ===
+True
+
+!!*/

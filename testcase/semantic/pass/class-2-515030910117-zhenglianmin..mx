@@ -4,20 +4,41 @@ B b;
 int main() {
     a = new A;
     b = new B;
-    A[] a = (new A[10][])[0];
+    A[] a = (new A).many()[0];
+    B[][] b = (new B).many()[1][1].many();
     return 0;
-}
-
-class B {
-    A a;
-    B func() {
-        return b;
-    }
 }
 
 class A {
     B b;
-    A func() {
+    A one() {
         return a;
     }
+
+    A[][] many() {
+        return new A[10][10];
+    }
 }
+
+class B {
+    A a;
+    B one() {
+        return b;
+    }
+
+    B[][] many() {
+        return new B[10][10];
+    }
+}
+
+/*!! metadata:
+=== comment ===
+miscellaneous class test
+=== assert ===
+success_compile
+=== phase ===
+semantic pretest
+=== is_public ===
+True
+
+!!*/

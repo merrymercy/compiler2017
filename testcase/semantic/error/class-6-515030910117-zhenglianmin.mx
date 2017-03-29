@@ -4,3 +4,15 @@ class A {
     }
 }
 int main() {}
+
+/*!! metadata:
+=== comment ===
+test reserved word "this"
+=== assert ===
+failure_compile
+=== phase ===
+semantic pretest
+=== is_public ===
+True
+
+!!*/

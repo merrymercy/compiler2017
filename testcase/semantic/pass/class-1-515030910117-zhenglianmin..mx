@@ -16,11 +16,11 @@ int main() {
 
 class A {
     void func1(int x, int y) {
-        this.func2(this.x*x, this.y*y);
+        func2(this.x*x, this.y*y);
     }
 
     void func2(int xx, int yy) {
-        this.func1(x*this.x, y*this.y);
+        func1(x*this.x, y*this.y);
     }
 
     A set(int xx, int yy) {
@@ -38,3 +38,15 @@ class A {
 
     int x; int y;
 }
+
+/*!! metadata:
+=== comment ===
+test return in class
+=== assert ===
+success_compile
+=== phase ===
+semantic pretest
+=== is_public ===
+True
+
+!!*/

@@ -200,12 +200,12 @@ public class TypeChecker extends Visitor {
                 checkCompatibility(node.right().location(), rtype, integerType, true);
                 node.setType(ltype);
                 break;
-            case GT: case LE: case GE:case NE:
+            case GT: case LE: case GE:
                 checkCompatibility(node.left().location(), ltype, integerType, true);
                 checkCompatibility(node.right().location(), rtype, integerType, true);
                 node.setType(boolType);
                 break;
-            case EQ: case LT:
+            case EQ: case LT: case NE:
                 checkCompatibility(node.location(), ltype, rtype, true);
                 if (!ltype.isHalfComparable() && !rtype.isHalfComparable()) { // ugly, for "null"
                     throw new SemanticError(node.location(), "Cannot compare two " + ltype);

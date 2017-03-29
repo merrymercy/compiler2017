@@ -7,3 +7,15 @@ class A {
 }
 
 int main() { return 0; }
+
+/*!! metadata:
+=== comment ===
+test return in constructor
+=== assert ===
+failure_compile
+=== phase ===
+semantic pretest
+=== is_public ===
+True
+
+!!*/
