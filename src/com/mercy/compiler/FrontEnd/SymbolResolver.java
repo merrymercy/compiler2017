@@ -127,11 +127,12 @@ public class SymbolResolver extends Visitor {
 
     @Override
     public Void visit(StringLiteralNode node) {
-        Entity entity = currentScope.lookup(node.value());
+        Entity entity = currentScope.lookup(StringType.STRING_CONSTANT_PREFIX + node.value());
         if (entity == null) {
-            entity = new ConstantEntity(node.location(), new StringType(), node.value(), node);
+            entity = new StringConstantEntity(node.location(), new StringType(), node.value(), node);
             currentScope.insertConstant(entity);
         }
+        node.setEntity((StringConstantEntity) entity);
         return null;
     }
 

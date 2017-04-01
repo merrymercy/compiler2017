@@ -6,7 +6,7 @@ import com.mercy.compiler.Type.BoolType;
  * Created by mercy on 17-3-23.
  */
 public class BoolLiteralNode extends LiteralNode {
-    boolean value;
+    private boolean value;
 
     public BoolLiteralNode(Location loc, boolean value) {
         super(loc, new BoolType());

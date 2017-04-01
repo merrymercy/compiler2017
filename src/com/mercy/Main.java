@@ -1,12 +1,12 @@
 package com.mercy;
 
 import com.mercy.compiler.AST.AST;
-import com.mercy.compiler.FrontEnd.BuildListener;
+import com.mercy.compiler.FrontEnd.ASTBuilder;
+import com.mercy.compiler.IR.IRBuilder;
 import com.mercy.compiler.FrontEnd.ParserErrorListener;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Utility.SemanticError;
-import jdk.nashorn.internal.runtime.regexp.joni.exception.InternalException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -42,12 +42,17 @@ public class Main {
         ParseTree tree = parser.compilationUnit();
 
         ParseTreeWalker walker = new ParseTreeWalker();
-        BuildListener listener = new BuildListener();
+        ASTBuilder listener = new ASTBuilder();
 
-        walker.walk(listener, tree);
+        walker.walk(listener, tree);  // 0th pass, CST -> AST
 
         AST ast  = listener.getAST();
-        ast.resolveSymbol();
-        ast.checkType();
+        ast.resolveSymbol();          // 1st pass, extract info of class and function
+        ast.checkType();              // 2nd pass, check type
+
+        IRBuilder irBuilder = new IRBuilder(ast);
+        irBuilder.generateIR();       // 3rd pass, generate IR, do simple constant folding
+
+        // 4th pass, generate instructions
     }
 }

@@ -10,6 +10,11 @@ import com.mercy.compiler.Type.Type;
 public class VariableEntity extends Entity {
     private ExprNode initializer;
 
+    static long tmpCounter = 0;
+    static VariableEntity newIntTemp() {
+        return new VariableEntity(null, Type.integerType, "tmp" + tmpCounter, null);
+    }
+
     public VariableEntity(Location loc, Type type, String name, ExprNode init) {
         super(loc, type, name);
         initializer = init;

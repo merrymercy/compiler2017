@@ -2,21 +2,23 @@ package com.mercy.compiler.Entity;
 
 import com.mercy.compiler.AST.ExprNode;
 import com.mercy.compiler.AST.Location;
+import com.mercy.compiler.Type.StringType;
 import com.mercy.compiler.Type.Type;
 
 /**
  * Created by mercy on 17-3-20.
  */
-public class ConstantEntity extends Entity {
-    private ExprNode value;
+public class StringConstantEntity extends Entity {
+    private ExprNode expr;
+    private String value;
 
-    public ConstantEntity(Location loc, Type type, String name, ExprNode value) {
-        super(loc, type, name);
-        this.value = value;
+    public StringConstantEntity(Location loc, Type type, String name, ExprNode expr) {
+        super(loc, type, StringType.STRING_CONSTANT_PREFIX + name);
+        this.expr = expr;
+        this.value = name;
     }
 
-    @Override
-    public ExprNode value() {
+    public String strValue() {
         return value;
     }
 
