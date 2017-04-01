@@ -1,6 +1,6 @@
 package com.mercy.compiler.AST;
 
-import com.mercy.compiler.Entity.ConstantEntity;
+import com.mercy.compiler.Entity.StringConstantEntity;
 import com.mercy.compiler.Type.StringType;
 
 /**
@@ -8,7 +8,7 @@ import com.mercy.compiler.Type.StringType;
  */
 public class StringLiteralNode extends  LiteralNode {
     private String value;
-    private ConstantEntity entry;
+    private StringConstantEntity entity;
 
     public StringLiteralNode(Location loc, String value) {
         super(loc, new StringType());
@@ -19,12 +19,12 @@ public class StringLiteralNode extends  LiteralNode {
         return value;
     }
 
-    public ConstantEntity entry() {
-        return entry;
+    public StringConstantEntity entity() {
+        return entity;
     }
 
-    public void setEntry(ConstantEntity entry) {
-        this.entry = entry;
+    public void setEntity(StringConstantEntity entity) {
+        this.entity = entity;
     }
 
     @Override

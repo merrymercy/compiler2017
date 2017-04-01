@@ -8,7 +8,7 @@ import com.mercy.compiler.Utility.InternalError;
  */
 public class BinaryOpNode extends ExprNode {
     public enum BinaryOp {
-        MUL, DIV, MOD, ADD, MINUS,
+        ADD, SUB, MUL, DIV, MOD,
         LSHIFT, RSHIFT, LT, GT, LE, GE, EQ, NE,
         BIT_AND, BIT_XOR, BIT_OR,
         LOGIC_AND, LOGIC_OR

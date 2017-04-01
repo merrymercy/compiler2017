@@ -6,7 +6,7 @@ package com.mercy.compiler.Entity;
 public interface EntityVisitor<T> {
     public T visit(VariableEntity var);
     public T visit(FunctionEntity func);
-    public T visit(ConstantEntity constant);
+    public T visit(StringConstantEntity constant);
     public T visit(ClassEntity c);
     public T visit(ParameterEntity param);
 }

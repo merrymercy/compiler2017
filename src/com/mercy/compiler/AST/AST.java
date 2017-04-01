@@ -19,18 +19,20 @@ public class AST {
     private List<DefinitionNode> definitionNodes;
     private List<ClassEntity> classEntitsies;
     private List<FunctionEntity> functionEntities;
+    private List<VariableEntity> variableEntities;
 
-    public AST(List<DefinitionNode> definitionNodes,  List<ClassEntity> definedClass, List<FunctionEntity> definedFunction) {
+    public AST(List<DefinitionNode> definitionNodes, List<ClassEntity> definedClass,
+               List<FunctionEntity> definedFunction, List<VariableEntity> definedVariable) {
         super();
         this.definitionNodes = definitionNodes;
         this.classEntitsies = definedClass;
         this.functionEntities = definedFunction;
+        this.variableEntities = definedVariable;
         this.scope = new Scope(true);
     }
 
-    public void loadLiabrary() {
+    public void loadLibrary() {
         // lib function
-
         scope.insert(new LibFunction(voidType, "print", new Type[]{stringType}).getEntity());
         scope.insert(new LibFunction(voidType, "println", new Type[]{stringType}).getEntity());
         scope.insert(new LibFunction(stringType, "getString", null).getEntity());
@@ -44,7 +46,7 @@ public class AST {
 
     public void resolveSymbol() {
         // DEBUG ONLY
-        loadLiabrary();
+        loadLibrary();
 
         // put function entity and class entity into scope
         for (ClassEntity entity : classEntitsies) {
@@ -70,5 +72,26 @@ public class AST {
         if (!mainFunc.returnType().isInteger()) {
             throw new SemanticError(new Location(0, 0), "main must return a integer");
         }
+    }
+
+
+    public Scope scope() {
+        return scope;
+    }
+
+    public List<DefinitionNode> definitionNodes() {
+        return definitionNodes;
+    }
+
+    public List<ClassEntity> classEntitsies() {
+        return classEntitsies;
+    }
+
+    public List<FunctionEntity> functionEntities() {
+        return functionEntities;
+    }
+
+    public List<VariableEntity> variableEntities() {
+        return variableEntities;
     }
 }

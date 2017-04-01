@@ -17,6 +17,11 @@ public class BoolType extends Type {
     }
 
     @Override
+    public boolean isHalfComparable() {
+        return true;
+    }
+
+    @Override
     public boolean isScalar() {
         return true;
     }

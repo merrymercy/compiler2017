@@ -144,7 +144,8 @@ public class TypeChecker extends Visitor {
         if (!node.lhs().isAssignable()) {
             throw new SemanticError(node.location(), "LHS of '=' is not assignable");
         }
-        checkCompatibility(node.location(), node.lhs().type(), node.rhs().type(), false);
+        // note !! swap left and right for null
+        checkCompatibility(node.location(), node.rhs().type(), node.lhs().type(), false);
         return null;
     }
 
@@ -193,7 +194,7 @@ public class TypeChecker extends Visitor {
 
         Type ltype = node.left().type(), rtype = node.right().type();
         switch(node.operator()) {
-            case MUL : case DIV :case MOD : case MINUS:
+            case MUL : case DIV :case MOD : case SUB:
             case LSHIFT: case RSHIFT:
             case BIT_AND: case BIT_XOR:case BIT_OR:
                 checkCompatibility(node.left().location(), ltype, integerType, true);

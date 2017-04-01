@@ -2,6 +2,7 @@ package com.mercy.compiler.Entity;
 
 import com.mercy.compiler.AST.BlockNode;
 import com.mercy.compiler.AST.Location;
+import com.mercy.compiler.IR.IR;
 import com.mercy.compiler.Type.FunctionType;
 import com.mercy.compiler.Type.Type;
 
@@ -16,6 +17,8 @@ public class FunctionEntity extends Entity {
     private BlockNode body;
     private Scope scope;
     private boolean isConstructor = false;
+
+    private List<IR> irs;
 
     public FunctionEntity(Location loc, Type returnType, String name, List<ParameterEntity> params, BlockNode body) {
         super(loc, new FunctionType(name), name);
@@ -55,6 +58,14 @@ public class FunctionEntity extends Entity {
 
     public void setConstructor(boolean constructor) {
         isConstructor = constructor;
+    }
+
+    public List<IR> IR() {
+        return irs;
+    }
+
+    public void setIR(List<IR> irs) {
+        this.irs = irs;
     }
 
     @Override

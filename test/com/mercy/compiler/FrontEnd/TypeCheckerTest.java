@@ -64,7 +64,7 @@ public class TypeCheckerTest {
             ParseTree tree = parser.compilationUnit();
 
             ParseTreeWalker walker = new ParseTreeWalker();
-            BuildListener listener = new BuildListener();
+            ASTBuilder listener = new ASTBuilder();
 
             walker.walk(listener, tree);
 

@@ -22,6 +22,6 @@ public class NullType extends ClassType {
 
     @Override
     public boolean isCompatible(Type other) {
-        return other.isClass() || other.isNull();
+        return other.isArray() || other.isClass() || other.isNull();
     }
 }

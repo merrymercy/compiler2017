@@ -10,7 +10,6 @@ import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Type.*;
 import com.mercy.compiler.Utility.InternalError;
 import com.mercy.compiler.Utility.SemanticError;
-import com.sun.org.apache.xpath.internal.operations.Variable;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 
@@ -20,7 +19,7 @@ import java.util.List;
 /**
  * Created by mercy on 17-3-17.
  */
-public class BuildListener extends MalicBaseListener {
+public class ASTBuilder extends MalicBaseListener {
     private ParseTreeProperty<Object> map = new ParseTreeProperty<>();
     private AST ast;
 
