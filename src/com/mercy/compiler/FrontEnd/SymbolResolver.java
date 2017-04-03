@@ -117,7 +117,7 @@ public class SymbolResolver extends Visitor {
         if (!resolveType(entity.type())) {
             throw new SemanticError(node.location(), "Cannot resolve symbol : " + entity.type());
         }
-        if (currentClass == null) {
+        if (currentClass == null || currentClass.scope() != currentScope) {
             if (entity.initializer() != null)
                 visitExpr(entity.initializer());
             currentScope.insert(entity);
