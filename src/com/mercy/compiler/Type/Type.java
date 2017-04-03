@@ -46,7 +46,12 @@ public abstract class Type {
     public boolean isScalar() {
         return false;
     }
-    public boolean isHalfComparable() { return false; } // can comparable w.r.t. '==' and '<'
+    public boolean isFullComparable() {
+        return false;
+    }
+    public boolean isHalfComparable() {
+        return false;
+    } // can comparable w.r.t. '==' and '!='
 
     // Ability methods (binary)
     abstract public boolean isCompatible(Type other);

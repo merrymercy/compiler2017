@@ -1,0 +1,18 @@
+class A
+{
+    A func()
+    {
+        A a=this;
+        a=null;
+        return this;
+    }
+    int a;
+}
+int main()
+{
+    A A;
+    A.func();
+    A.func();
+    return 0;
+}
+

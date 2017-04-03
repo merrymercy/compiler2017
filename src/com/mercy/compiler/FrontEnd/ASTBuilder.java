@@ -55,16 +55,21 @@ public class ASTBuilder extends MalicBaseListener {
     public void exitClassDefinition(MalicParser.ClassDefinitionContext ctx) {
         List<VariableDefNode> vars = new LinkedList<>();
         List<FunctionDefNode> funcs = new LinkedList<>();
+        String name = ctx.name.getText();
 
         for (MalicParser.VariableDefinitionContext item : ctx.variableDefinition()) {
             vars.add((VariableDefNode)map.get(item));
         }
 
         for (MalicParser.FunctionDefinitionContext item : ctx.functionDefinition()) {
-            funcs.add((FunctionDefNode)map.get(item));
+            FunctionDefNode node = (FunctionDefNode)map.get(item);
+            funcs.add(node);
+            FunctionEntity entity = node.entity();
+            if (entity.isConstructor() && !entity.name().equals(ClassType.CONSTRUCTOR_PREFIX + name))
+                throw new SemanticError(new Location(ctx.name), "wrong name of constructor : " + entity.name()
+                + "and" + name);
         }
 
-        String name = ctx.name.getText();
         ClassEntity entity = new ClassEntity(new Location(ctx.name), name, vars, funcs);
 
         map.put(ctx, new ClassDefNode(entity));
@@ -288,8 +293,8 @@ public class ASTBuilder extends MalicBaseListener {
             case "-"  : op = BinaryOpNode.BinaryOp.SUB;  break;
             case "<<" : op = BinaryOpNode.BinaryOp.LSHIFT; break;
             case ">>" : op = BinaryOpNode.BinaryOp.RSHIFT; break;
-            case ">"  : op = BinaryOpNode.BinaryOp.LT; break;
-            case "<"  : op = BinaryOpNode.BinaryOp.GT; break;
+            case ">"  : op = BinaryOpNode.BinaryOp.GT; break;
+            case "<"  : op = BinaryOpNode.BinaryOp.LT; break;
             case ">=" : op = BinaryOpNode.BinaryOp.GE; break;
             case "<=" : op = BinaryOpNode.BinaryOp.LE; break;
             case "==" : op = BinaryOpNode.BinaryOp.EQ; break;

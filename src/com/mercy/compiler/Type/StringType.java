@@ -44,6 +44,11 @@ public class StringType extends Type {
     }
 
     @Override
+    public boolean isFullComparable() {
+        return true;
+    }
+
+    @Override
     public boolean isHalfComparable() {
         return true;
     }

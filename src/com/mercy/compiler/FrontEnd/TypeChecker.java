@@ -38,6 +38,8 @@ public class TypeChecker extends Visitor {
     @Override
     public Void visit(FunctionDefNode node) {
         currentFunction = node.entity();
+        if (!currentFunction.isConstructor() && currentFunction.returnType() == null)
+            throw new SemanticError(node.location(), "expect a return type");
         visitStmt(node.entity().body());
         currentFunction = null;
         return null;
@@ -201,12 +203,14 @@ public class TypeChecker extends Visitor {
                 checkCompatibility(node.right().location(), rtype, integerType, true);
                 node.setType(ltype);
                 break;
-            case GT: case LE: case GE:
-                checkCompatibility(node.left().location(), ltype, integerType, true);
-                checkCompatibility(node.right().location(), rtype, integerType, true);
+            case GT: case LE: case GE: case LT:
+                checkCompatibility(node.left().location(), ltype, rtype, false);
+                if (!ltype.isFullComparable() && !rtype.isFullComparable()) { // ugly, for "null"
+                    throw new SemanticError(node.location(), "Cannot compare two " + ltype);
+                }
                 node.setType(boolType);
                 break;
-            case EQ: case LT: case NE:
+            case EQ: case NE:
                 checkCompatibility(node.location(), ltype, rtype, true);
                 if (!ltype.isHalfComparable() && !rtype.isHalfComparable()) { // ugly, for "null"
                     throw new SemanticError(node.location(), "Cannot compare two " + ltype);
