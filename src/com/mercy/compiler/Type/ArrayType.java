@@ -40,7 +40,8 @@ public class ArrayType extends Type {
 
     @Override
     public boolean isCompatible(Type other) {
-        if (!other.isArray()) return false;
+        if (other.isNull()) return true;
+        if (!other.isArray() ) return false;
         return baseType.isCompatible(((ArrayType)other).baseType);
     }
 
