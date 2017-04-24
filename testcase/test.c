@@ -1,12 +1,9 @@
-class A {
-  B() {}
-}
-
-class B {
-  A() {}
-}
 
 int main() {
-  A b = new A;
-  B a = new B;
+    int a;
+    int b;
+    int c;
+
+    c = a + b;
+    print("nihao");
 }

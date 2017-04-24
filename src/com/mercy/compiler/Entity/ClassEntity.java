@@ -15,12 +15,16 @@ public class ClassEntity extends Entity {
     private List<VariableDefNode> memberVars;
     private List<FunctionDefNode> memberFuncs;
     private Scope scope;
+    private FunctionEntity constructor;
     private ClassType classType; // for add "this" pointer
+    private int size;
 
     public ClassEntity (Location loc, String name, List<VariableDefNode> memberVars, List<FunctionDefNode> memberFuncs) {
         super(loc, new ClassType(name), name);
         this.memberVars = memberVars;
         this.memberFuncs = memberFuncs;
+        this.scope = null;
+        this.constructor = null;
         ((ClassType)this.type).setEntity(this);
     }
 
@@ -40,8 +44,21 @@ public class ClassEntity extends Entity {
         this.scope = scope;
     }
 
-    public void setConstructor() {
+    public FunctionEntity constructor() {
+        return constructor;
+    }
 
+    public void setConstructor(FunctionEntity constructor) {
+        this.constructor = constructor;
+    }
+
+    public void initOffset(int alignment) {
+        this.size = scope.initOffset(alignment);
+    }
+
+    @Override
+    public int size() {
+        return size;
     }
 
     @Override

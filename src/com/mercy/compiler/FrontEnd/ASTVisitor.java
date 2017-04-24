@@ -1,4 +1,6 @@
-package com.mercy.compiler.AST;
+package com.mercy.compiler.FrontEnd;
+
+import com.mercy.compiler.AST.*;
 
 /**
  * Created by mercy on 17-3-21.

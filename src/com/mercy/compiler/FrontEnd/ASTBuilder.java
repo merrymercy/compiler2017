@@ -61,16 +61,22 @@ public class ASTBuilder extends MalicBaseListener {
             vars.add((VariableDefNode)map.get(item));
         }
 
+        FunctionEntity constructor = null;
         for (MalicParser.FunctionDefinitionContext item : ctx.functionDefinition()) {
             FunctionDefNode node = (FunctionDefNode)map.get(item);
             funcs.add(node);
             FunctionEntity entity = node.entity();
-            if (entity.isConstructor() && !entity.name().equals(ClassType.CONSTRUCTOR_PREFIX + name))
-                throw new SemanticError(new Location(ctx.name), "wrong name of constructor : " + entity.name()
-                + "and" + name);
+            if (entity.isConstructor()) {
+                if (!entity.name().equals(ClassType.CONSTRUCTOR_PREFIX + name)) {
+                    throw new SemanticError(new Location(ctx.name), "wrong name of constructor : " + entity.name()
+                            + "and" + name);
+                }
+
+            }
         }
 
         ClassEntity entity = new ClassEntity(new Location(ctx.name), name, vars, funcs);
+        entity.setConstructor(constructor);
 
         map.put(ctx, new ClassDefNode(entity));
     }

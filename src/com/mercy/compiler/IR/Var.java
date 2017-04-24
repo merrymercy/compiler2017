@@ -6,9 +6,17 @@ import com.mercy.compiler.Entity.Entity;
  * Created by mercy on 17-3-30.
  */
 public class Var extends Expr {
-    Entity var;
+    Entity entity;
 
-    public Var(Entity var) {
-        this.var = var;
+    public Var(Entity entity) {
+        this.entity = entity;
+    }
+
+    public Entity entity() {
+        return entity;
+    }
+
+    public void setEntity(Entity entity) {
+        this.entity = entity;
     }
 }

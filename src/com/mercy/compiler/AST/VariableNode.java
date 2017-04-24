@@ -2,6 +2,7 @@ package com.mercy.compiler.AST;
 
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.VariableEntity;
+import com.mercy.compiler.FrontEnd.ASTVisitor;
 import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.InternalError;
 
@@ -20,7 +21,7 @@ public class VariableNode extends LHSNode {
         this.name = name;
     }
 
-    public VariableNode(VariableEntity var) {
+    public VariableNode(Entity var) {
         this.entity = var;
         this.name = var.name();
     }

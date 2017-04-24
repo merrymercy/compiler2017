@@ -4,7 +4,7 @@ package com.mercy.compiler.Type;
  * Created by mercy on 17-3-18.
  */
 public class BoolType extends Type {
-    static final long DEFAULT_SIZE = 1;
+    static final int DEFAULT_SIZE = 4;
 
     @Override
     public boolean isBool() {
@@ -27,7 +27,7 @@ public class BoolType extends Type {
     }
 
     @Override
-    public long size() {
+    public int size() {
         return DEFAULT_SIZE;
     }
 

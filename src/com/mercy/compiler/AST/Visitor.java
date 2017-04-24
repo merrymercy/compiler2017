@@ -1,5 +1,7 @@
 package com.mercy.compiler.AST;
 
+import com.mercy.compiler.FrontEnd.ASTVisitor;
+
 import java.util.List;
 
 /**

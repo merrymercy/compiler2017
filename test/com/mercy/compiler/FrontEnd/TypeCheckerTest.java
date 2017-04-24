@@ -3,6 +3,7 @@ package com.mercy.compiler.FrontEnd;
 import com.mercy.compiler.AST.AST;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
+import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.SemanticError;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -16,6 +17,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import static com.mercy.Main.getLibrary;
 import static junit.framework.TestCase.fail;
 
 /**
@@ -69,6 +71,10 @@ public class TypeCheckerTest {
             walker.walk(listener, tree);
 
             AST ast = listener.getAST();
+
+            ast.loadLibrary(getLibrary());// load library function
+            Type.initializeBuiltinType();
+
             ast.resolveSymbol();
             ast.checkType();
             if (!shouldPass) {

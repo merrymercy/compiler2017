@@ -1,6 +1,7 @@
 package com.mercy.compiler.AST;
 
 import com.mercy.compiler.Entity.StringConstantEntity;
+import com.mercy.compiler.FrontEnd.ASTVisitor;
 import com.mercy.compiler.Type.StringType;
 
 /**

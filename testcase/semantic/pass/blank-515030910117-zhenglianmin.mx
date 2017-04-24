@@ -1,13 +1,7 @@
 class A {}
 class B { B() {{{{{ return; }}}}} }  // single return is allowed in constructor
-class C {
-    bool func(A a, B b) {
-        return a == null && b != null;
-    }
-}
-
-int main() { return 0; }
-
+class C { int func() { return 93; } }
+int main() {}
 void func() {
     if(false);else;
     while(true);
@@ -15,18 +9,5 @@ void func() {
     return;
     {;{{;{{}{}}}};{{};{}}};
     new A[10][][][];
-    (new C).func(null, null);
+    (new C).func() + (new C).func();   // new is a kind of expression
 }
-
-/*!! metadata:
-=== comment ===
-miscellaneous blank test
-blank-515030910117-zhenglianmin.mx
-=== assert ===
-success_compile
-=== phase ===
-semantic pretest
-=== is_public ===
-True
-
-!!*/

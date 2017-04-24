@@ -59,10 +59,7 @@ public class Scope {
         return entities.get(name);
     }
 
-    public Scope parent() {
-        return isToplevel ? null : parent;
-    };
-
+    // getter and setter
     public Map<String, Entity> entities() {
         return entities;
     }
@@ -75,8 +72,25 @@ public class Scope {
         children.add(s);
     }
 
+    public Scope parent() {
+        return isToplevel ? null : parent;
+    };
+
     public boolean isToplevel() {
         return isToplevel;
     }
 
+    // offset
+    public int initOffset(int align) {
+        int offset = 0;
+        for (Entity entity : entities.values()) {
+            if (!(entity instanceof FunctionEntity)) {
+                entity.setOffset(offset);
+                offset += entity.size();
+
+                offset += (align - offset % align) % align; // can be optimized here, use shift
+            }
+        }
+        return offset;
+    }
 }

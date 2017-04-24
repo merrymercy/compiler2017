@@ -1,5 +1,8 @@
 package com.mercy.compiler.AST;
 
+import com.mercy.compiler.FrontEnd.ASTVisitor;
+import com.mercy.compiler.Type.Type;
+
 /**
  * Created by mercy on 17-3-21.
  */
@@ -9,6 +12,12 @@ public class ArefNode extends LHSNode {
     public ArefNode(ExprNode expr, ExprNode index) {
         this.expr = expr;
         this.index = index;
+    }
+
+    public ArefNode(ExprNode expr, ExprNode index, Type type) {
+        this.expr = expr;
+        this.index = index;
+        this.type = type;
     }
 
     public ExprNode expr() { return expr; }
@@ -23,7 +32,7 @@ public class ArefNode extends LHSNode {
     }
 
     public long elementSize() {
-        return type().allocSize();
+        return type().size();
     }
 
     public Location location() {

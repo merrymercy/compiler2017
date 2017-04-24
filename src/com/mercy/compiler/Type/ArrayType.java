@@ -8,7 +8,7 @@ import com.mercy.compiler.Utility.LibFunction;
  */
 public class ArrayType extends Type {
     private Type baseType;
-    static final long DEFAULT_POINTER_SIZE = 4;
+    static final int DEFAULT_POINTER_SIZE = 4;
 
     static private Scope scope;
     static private ArrayType magicArray = new ArrayType(nullType); // for matching "this" pointer in function call
@@ -38,6 +38,10 @@ public class ArrayType extends Type {
         return baseType;
     }
 
+    public Type deepType() {
+        return baseType instanceof ArrayType ? ((ArrayType) baseType).deepType() : baseType;
+    }
+
     @Override
     public boolean isCompatible(Type other) {
         if (other.isNull()) return true;
@@ -56,7 +60,7 @@ public class ArrayType extends Type {
     }
 
     @Override
-    public long size() {
+    public int size() {
         return DEFAULT_POINTER_SIZE;
     }
 

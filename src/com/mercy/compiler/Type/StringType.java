@@ -8,16 +8,20 @@ import com.mercy.compiler.Utility.LibFunction;
  * Created by mercy on 17-3-23.
  */
 public class StringType extends Type {
-    static final long DEFAULT_SIZE = 4;
+    static final int DEFAULT_SIZE = 4;
     static public String STRING_CONSTANT_PREFIX = "__str_constant_";
-    static public FunctionEntity operatorADD, operatorLT, operatorEQ;
+    static public FunctionEntity operatorADD, operatorEQ, operatorNE, operatorLT, operatorGT, operatorGE, operatorLE;
     static private Scope scope;
 
     static public void initializeBuiltinFunction() {
         // operators
         operatorADD = new LibFunction(stringType, "__str_operator_ADD", new Type[]{stringType, stringType}).getEntity();
-        operatorLT  = new LibFunction(stringType, "__str_operator_LT", new Type[]{stringType, stringType}).getEntity();
         operatorEQ  = new LibFunction(stringType, "__str_operator_EQ", new Type[]{stringType, stringType}).getEntity();
+        operatorNE  = new LibFunction(stringType, "__str_operator_NE", new Type[]{stringType, stringType}).getEntity();
+        operatorLT  = new LibFunction(stringType, "__str_operator_LT", new Type[]{stringType, stringType}).getEntity();
+        operatorGT  = new LibFunction(stringType, "__str_operator_GT", new Type[]{stringType, stringType}).getEntity();
+        operatorLE  = new LibFunction(stringType, "__str_operator_LE", new Type[]{stringType, stringType}).getEntity();
+        operatorGE  = new LibFunction(stringType, "__str_operator_GE", new Type[]{stringType, stringType}).getEntity();
 
         scope = new Scope(true);
         scope.insert(new LibFunction(integerType, "length", new Type[]{stringType}).getEntity());
@@ -54,7 +58,7 @@ public class StringType extends Type {
     }
 
     @Override
-    public long size() {
+    public int size() {
         return DEFAULT_SIZE;
     }
 

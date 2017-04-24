@@ -12,6 +12,7 @@ abstract public class Entity {
     protected Location location;
     protected String name;
     protected Type type;
+    protected int offset;
 
     public Entity(Location loc, Type type, String name) {
         this.location = loc;
@@ -19,6 +20,7 @@ abstract public class Entity {
         this.name = name;
     }
 
+    // getter and setter
     public String name() {
         return name;
     }
@@ -35,11 +37,16 @@ abstract public class Entity {
         throw new InternalError("Entity#value called");
     }
 
-    public long allocSize() {
-        return type.allocSize();
+    // offset
+    public void setOffset(int offset) {
+        this.offset = offset;
     }
-    public long aligment() {
-        return type.alignment();
+    public int offset() {
+        return this.offset;
+    }
+
+    public int size() {
+        return type.size();
     }
 
     abstract public <T> T accept(EntityVisitor<T> visitor);

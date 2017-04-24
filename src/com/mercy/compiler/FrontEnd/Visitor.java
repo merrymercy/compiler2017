@@ -81,7 +81,8 @@ abstract public class Visitor implements ASTVisitor<Void, Void> {
             visitExpr(n.cond());
         if (n.init() != null)
             visitExpr(n.incr());
-        visitStmt(n.body());
+        if (n.body() != null)
+            visitStmt(n.body());
         return null;
     }
 
