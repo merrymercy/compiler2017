@@ -14,6 +14,7 @@ public class SymbolResolver extends Visitor {
     private Stack<Scope> stack = new Stack<>();
     private Scope currentScope;
     private ClassEntity currentClass = null;
+    private ParameterEntity currentThis = null;
     private boolean firstBlockInFunction = false;
 
     public SymbolResolver(Scope toplevelScope) {
@@ -74,7 +75,7 @@ public class SymbolResolver extends Visitor {
 
         // if it is a member function, add "this" pointer parameter
         if (currentClass != null) {
-            entity.addThisPointer(node.location(), currentClass);
+            currentThis = entity.addThisPointer(node.location(), currentClass);
         }
         // add parameters into scope
         for (ParameterEntity param : entity.params()) {
@@ -169,7 +170,7 @@ public class SymbolResolver extends Visitor {
         node.setEntity(entity);
 
         if (currentClass != null && currentClass.scope().find(node.name()) != null) {
-            node.setMember(true);
+            node.setThisPointer(currentThis);
         }
 
         return null;

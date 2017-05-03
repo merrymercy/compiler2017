@@ -19,7 +19,4 @@ public class Binary extends Expr {
         this.right = right;
         this.operator = operator;
     }
-
-
-
 }

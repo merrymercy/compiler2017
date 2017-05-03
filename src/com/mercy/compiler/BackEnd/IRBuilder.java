@@ -1,8 +1,9 @@
-package com.mercy.compiler.IR;
+package com.mercy.compiler.BackEnd;
 
 import com.mercy.compiler.AST.*;
 import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.FrontEnd.ASTVisitor;
+import com.mercy.compiler.IR.*;
 import com.mercy.compiler.Type.*;
 import com.mercy.compiler.Utility.InternalError;
 
@@ -13,7 +14,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 
-
 /**
  * Created by mercy on 17-3-30.
  */
@@ -21,19 +21,19 @@ import java.util.Stack;
 public class IRBuilder implements ASTVisitor<Void, Expr> {
     public final int ALIGNMENT = 4;
     private List<IR> stmts = new LinkedList<>();
+
     private AST ast;
     private int exprDepth = 0;
+    private Scope currentScope;
 
-    private IntegerLiteralNode constPointerSizeNode = new IntegerLiteralNode(null, 4);
-    private IntegerLiteralNode constLengthSizeNode  = new IntegerLiteralNode(null, 4);
-    private IntegerLiteralNode constMinusOneNode    = new IntegerLiteralNode(null, -1);
-    private IntegerLiteralNode constZeroNode = new IntegerLiteralNode(null, 0);
-    private IntegerLiteralNode constOneNode = new IntegerLiteralNode(null, 1);
-    private IntConst constPointerSize = new IntConst(4);
-    private IntConst constLengthSize = new IntConst(4);
-    private IntConst constOne = new IntConst(1);
-    private IntConst constZero = new IntConst(0);
-    private FunctionEntity malloc;
+    private List<IR> globalInitializer;
+
+    // some constant
+    private final IntConst constPointerSize = new IntConst(4);
+    private final IntConst constLengthSize = new IntConst(4);
+    private final IntConst constOne = new IntConst(1);
+    private final IntConst constZero = new IntConst(0);
+    private final FunctionEntity malloc;
 
     public IRBuilder(AST abstractSemanticTree) {
         this.ast = abstractSemanticTree;
@@ -41,8 +41,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     public void generateIR() {
-        List<IR> globalInitializer;
-
         // calc offset in class
         for (ClassEntity entity : ast.classEntitsies()) {
             entity.initOffset(ALIGNMENT);
@@ -50,7 +48,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         // gather global variable initialization
         for (DefinitionNode node : ast.definitionNodes()) {
-            if (node instanceof VariableDefNode) {
+            if (node instanceof VariableDefNode) { // TODO: constructor !!!!
                 visit((VariableDefNode)node);
             }
         }
@@ -60,6 +58,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         for (FunctionEntity entity : ast.functionEntities()) {
             compileFunction(entity);
             if (entity.name().equals("main")) {
+                ; // insert global initializer ?
             }
         }
 
@@ -75,6 +74,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     public void compileFunction(FunctionEntity entity) {
         // body
+        currentScope = entity.scope();
         visit(entity.body());
         entity.setIR(fetchStmts());
     }
@@ -102,7 +102,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
         return null;
     }
-
 
     public Expr visitExpr(ExprNode node) {
         exprDepth++;
@@ -401,7 +400,13 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Expr visit(VariableNode node) {
-        return new Var(node.entity());
+        if (node.isMember()) {  // add "this" pointer
+            Expr base = new Var(node.getThisPointer());
+            int offset = node.entity().offset();
+            return new Mem(new Binary(base, ADD, new IntConst(offset)));
+        } else {
+            return new Var(node.entity());
+        }
     }
 
     @Override
@@ -602,12 +607,31 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     static int tmpCounter = 0;
     private Var newIntTemp() {
-        return new Var(new VariableEntity(null, new IntegerType(),
-                 "tmp" + tmpCounter, null));
+        VariableEntity tmp = new VariableEntity(null, new IntegerType(),
+                "tmp" + tmpCounter, null);
+        currentScope.insert(tmp);
+        tmpCounter += 1;
+        return new Var(tmp);
     }
 
     private VariableEntity newTemp(Type type) {
         return new VariableEntity(null, type, "tmp" + tmpCounter, null);
+    }
+
+
+    /*
+     * getter
+     */
+    public List<IR> globalInitializer() {
+        return globalInitializer;
+    }
+
+    public Scope globalScope() {
+        return ast.scope();
+    }
+
+    public List<FunctionEntity> functionEntities() {
+        return ast.functionEntities();
     }
 }
 

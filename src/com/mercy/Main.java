@@ -1,10 +1,11 @@
 package com.mercy;
 
 import com.mercy.compiler.AST.AST;
+import com.mercy.compiler.BackEnd.InstructionEmitter;
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.FrontEnd.ASTBuilder;
-import com.mercy.compiler.IR.IRBuilder;
+import com.mercy.compiler.BackEnd.IRBuilder;
 import com.mercy.compiler.FrontEnd.ParserErrorListener;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
@@ -74,12 +75,14 @@ public class Main {
         ast.loadLibrary(getLibrary());// load library function
         Type.initializeBuiltinType();
 
-        ast.resolveSymbol();          // 1st pass, extract info of class and function
-        ast.checkType();              // 2nd pass, check type
+        ast.resolveSymbol();                         // 1st pass, extract info of class and function
+        ast.checkType();                             // 2nd pass, check type
 
         IRBuilder irBuilder = new IRBuilder(ast);
-        irBuilder.generateIR();       // 3rd pass, generate IR, do simple constant folding
+        irBuilder.generateIR();                      // 3rd pass, generate IR, do simple constant folding
 
-        // 4th pass, generate instructions
+                                                     // 4th pass, emit instructions
+        InstructionEmitter emitter = new InstructionEmitter(irBuilder);
+        emitter.emit();
     }
 }

@@ -4,6 +4,8 @@ int main() {
     int b;
     int c;
 
-    c = a + b;
+    int []array = new int [90];
+
+    a = b + c;
     print("nihao");
 }

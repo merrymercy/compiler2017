@@ -2,6 +2,7 @@ package com.mercy.compiler.Entity;
 
 import com.mercy.compiler.AST.BlockNode;
 import com.mercy.compiler.AST.Location;
+import com.mercy.compiler.INS.Instruction;
 import com.mercy.compiler.IR.IR;
 import com.mercy.compiler.Type.FunctionType;
 import com.mercy.compiler.Type.Type;
@@ -19,6 +20,7 @@ public class FunctionEntity extends Entity {
     private boolean isConstructor = false;
 
     private List<IR> irs;
+    private List<Instruction> ins;
 
     public FunctionEntity(Location loc, Type returnType, String name, List<ParameterEntity> params, BlockNode body) {
         super(loc, new FunctionType(name), name);
@@ -28,10 +30,13 @@ public class FunctionEntity extends Entity {
         ((FunctionType)this.type).setEntity(this);
     }
 
-    public void addThisPointer(Location loc, ClassEntity entity) {
-        params.add(0, new ParameterEntity(entity.location(), entity.type(), "this"));
+    public ParameterEntity addThisPointer(Location loc, ClassEntity entity) {
+        ParameterEntity thisPointer = new ParameterEntity(entity.location(), entity.type(), "this");
+        params.add(0, thisPointer);
+        return thisPointer;
     }
 
+    // getter and setter
     public List<ParameterEntity> params() {
         return params;
     }
@@ -66,6 +71,14 @@ public class FunctionEntity extends Entity {
 
     public void setIR(List<IR> irs) {
         this.irs = irs;
+    }
+
+    public List<Instruction> INS() {
+        return ins;
+    }
+
+    public void setINS(List<Instruction> ins) {
+        this.ins = ins;
     }
 
     @Override
