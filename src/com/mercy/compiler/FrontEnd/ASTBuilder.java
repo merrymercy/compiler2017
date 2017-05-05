@@ -370,7 +370,9 @@ public class ASTBuilder extends MalicBaseListener {
 
     @Override
     public void exitStringConst(MalicParser.StringConstContext ctx) {
-        map.put(ctx, new StringLiteralNode(new Location(ctx), ctx.StringLiteral().getText()));
+        String value = ctx.StringLiteral().getText();
+        value = value.substring(1, value.length()-1);
+        map.put(ctx, new StringLiteralNode(new Location(ctx), value));
     }
 
     @Override

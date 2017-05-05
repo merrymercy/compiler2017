@@ -1,10 +1,7 @@
 package com.mercy.compiler.IR;
 
-import com.mercy.compiler.INS.Instruction;
-import com.mercy.compiler.INS.Operand;
-import com.mercy.compiler.INS.Register;
-
-import java.util.List;
+import com.mercy.compiler.BackEnd.InstructionEmitter;
+import com.mercy.compiler.INS.Operand.Operand;
 
 /**
  * Created by mercy on 17-3-30.
@@ -19,11 +16,20 @@ public class CJump extends IR {
         this.falseLabel = falseLabel;
     }
 
+    public Expr cond() {
+        return cond;
+    }
+
+    public Label trueLabel() {
+        return trueLabel;
+    }
+
+    public Label falseLabel() {
+        return falseLabel;
+    }
+
     @Override
-    public Operand emit(List<Instruction> ins) {
-        Operand tmp = this.cond.emit(ins);
-        ins.add(new com.mercy.compiler.INS.CJump(tmp, new com.mercy.compiler.INS.Label(this.trueLabel.name()),
-                                                      new com.mercy.compiler.INS.Label(this.falseLabel.name())));
-        return null;
+    public Operand accept(InstructionEmitter emitter) {
+        return emitter.visit(this);
     }
 }

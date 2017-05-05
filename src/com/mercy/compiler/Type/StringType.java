@@ -8,7 +8,7 @@ import com.mercy.compiler.Utility.LibFunction;
  * Created by mercy on 17-3-23.
  */
 public class StringType extends Type {
-    static final int DEFAULT_SIZE = 4;
+    static final int DEFAULT_SIZE = 8;
     static public String STRING_CONSTANT_PREFIX = "__str_constant_";
     static public FunctionEntity operatorADD, operatorEQ, operatorNE, operatorLT, operatorGT, operatorGE, operatorLE;
     static private Scope scope;

@@ -1,11 +1,16 @@
 
 int main() {
-    int a;
-    int b;
-    int c;
+    int a; int b;
+    int c; int d;
 
-    int []array = new int [90];
+    a = getInt();
+    b = getInt();
+    c = getInt();
 
-    a = b + c;
-    print("nihao");
+    c = a + b % c;
+
+    string s = toString(c);
+    println(s);
+
+    return d;
 }

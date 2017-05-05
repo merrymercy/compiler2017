@@ -1,5 +1,8 @@
 package com.mercy.compiler.IR;
 
+import com.mercy.compiler.BackEnd.InstructionEmitter;
+import com.mercy.compiler.INS.Operand.Operand;
+
 /**
  * Created by mercy on 17-3-30.
  */
@@ -18,5 +21,22 @@ public class Binary extends Expr {
         this.left = left;
         this.right = right;
         this.operator = operator;
+    }
+
+    public Expr left() {
+        return left;
+    }
+
+    public Expr right() {
+        return right;
+    }
+
+    public BinaryOp operator() {
+        return operator;
+    }
+
+    @Override
+    public Operand accept(InstructionEmitter emitter) {
+        return emitter.visit(this);
     }
 }

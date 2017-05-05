@@ -4,12 +4,12 @@ import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Operand;
 
 /**
- * Created by mercy on 17-4-25.
+ * Created by mercy on 17-5-4.
  */
-public class Neg extends Instruction {
+public class Not extends Instruction {
     private Operand operand;
 
-    public Neg(Operand operand) {
+    public Not(Operand operand) {
         this.operand = operand;
     }
 
@@ -24,6 +24,6 @@ public class Neg extends Instruction {
 
     @Override
     public String toString() {
-        return "neg " + operand;
+        return "not " + operand;
     }
 }

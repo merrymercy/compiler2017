@@ -6,7 +6,7 @@ import com.mercy.compiler.Entity.ClassEntity;
  * Created by mercy on 17-3-18.
  */
 public class ClassType extends Type {
-    static final int DEFAULT_SIZE = 4;
+    static final int DEFAULT_SIZE = 8;
     static public final String CONSTRUCTOR_PREFIX = "_constructor_";
 
     protected String name;

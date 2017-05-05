@@ -7,7 +7,7 @@ package com.mercy.compiler.Type;
 
 
 public class IntegerType extends Type {
-    static final int DEFAULT_SIZE = 4;
+    static final int DEFAULT_SIZE = 8;
 
     @Override
     public boolean isInteger() {

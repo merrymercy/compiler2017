@@ -21,6 +21,7 @@ public class LibFunction {
             }
         }
         entity = new FunctionEntity(null, returnType, name, paramEntities, null);
+
     }
 
     public FunctionEntity getEntity() {

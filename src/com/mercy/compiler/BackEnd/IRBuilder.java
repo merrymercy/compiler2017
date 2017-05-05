@@ -24,6 +24,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     private AST ast;
     private int exprDepth = 0;
+
+    private Stack<Scope> scopeStack = new Stack<>();
     private Scope currentScope;
 
     private List<IR> globalInitializer;
@@ -74,9 +76,10 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     public void compileFunction(FunctionEntity entity) {
         // body
-        currentScope = entity.scope();
+        scopeStack.push(null);
         visit(entity.body());
         entity.setIR(fetchStmts());
+        assert (scopeStack.size() == 1);
     }
 
     @Override
@@ -97,9 +100,13 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     public Void visit(BlockNode node) {
+        currentScope = node.scope();
+        scopeStack.push(currentScope);
         for (StmtNode stmt : node.stmts()) {
             stmt.accept(this);
         }
+        scopeStack.pop();
+        currentScope = scopeStack.peek();
         return null;
     }
 
@@ -313,6 +320,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 case BIT_AND: op = BIT_AND; break;
                 case BIT_XOR: op = BIT_XOR; break;
                 case BIT_OR:  op = BIT_OR;  break;
+                case LOGIC_AND: op = LOGIC_AND; break;
+                case LOGIC_OR:  op = LOGIC_OR;  break;
                 case GT: op = GT; break;
                 case LT: op = LT; break;
                 case GE: op = GE; break;
@@ -380,6 +389,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Expr visit(StringLiteralNode node) {
+        if (ast.scope().lookup(node.entity().name()) == null) {
+            ast.scope().insert(node.entity());
+        }
         return new StrConst(node.entity());
     }
 
@@ -672,7 +684,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 //    ExprStmtNode alloc = new ExprStmtNode(null,
 //            new AssignNode(base, new FuncallNode(new VariableNode(malloc),
 //                    new LinkedList<ExprNode>() {{
-//                        add(new BinaryOpNode(tmpS, BinaryOpNode.BinaryOp.MUL, constPointerSizeNode));
+//                        add(new BinaryOpNode(tmpS, BinaryOpNode.BinaryOp.Mul, constPointerSizeNode));
 //                    }})));
 //    ExprStmtNode storeLen = new ExprStmtNode(null,
 //            new AssignNode(new ArefNode(base, constMinusOneNode, baseType), tmpS));

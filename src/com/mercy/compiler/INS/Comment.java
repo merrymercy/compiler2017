@@ -5,17 +5,19 @@ import com.mercy.compiler.BackEnd.Translator;
 import java.util.List;
 
 /**
- * Created by mercy on 17-4-25.
+ * Created by mercy on 17-5-4.
  */
-public class Jmp extends Instruction {
-    Label dest;
-    public Jmp(Label dest) {
-        this.dest = dest;
+public class Comment extends Instruction {
+    String comment;
+
+    public Comment(String comment) {
+        this.comment = comment;
     }
 
-    public Label dest() {
-        return dest;
-    }
+    /*@Override
+    public void toNASM(List<String> asm) {
+
+    }*/
 
     @Override
     public void accept(Translator translator) {
@@ -24,6 +26,6 @@ public class Jmp extends Instruction {
 
     @Override
     public String toString() {
-        return "jmp " + dest;
+        return comment;
     }
 }

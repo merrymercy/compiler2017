@@ -2,6 +2,7 @@ package com.mercy;
 
 import com.mercy.compiler.AST.AST;
 import com.mercy.compiler.BackEnd.InstructionEmitter;
+import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.FrontEnd.ASTBuilder;
@@ -17,8 +18,7 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -81,8 +81,31 @@ public class Main {
         IRBuilder irBuilder = new IRBuilder(ast);
         irBuilder.generateIR();                      // 3rd pass, generate IR, do simple constant folding
 
-                                                     // 4th pass, emit instructions
+        // 4th pass, emit instructions
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
+        // DEBUG ~~~
+        emitter.printSelf(System.out);
+
+        // 5th pass, translate to x86 nasm
+        Translator translator = new Translator(emitter);
+        List<String> asm = translator.translate();
+        translator.printSelf(System.out);
+
+        outputAsm("out.asm", asm);
+    }
+
+
+    static private void outputAsm(String filename, List<String> asm) {
+        File f = new File(filename);
+        try {
+            BufferedWriter fout = new BufferedWriter(new FileWriter(f));
+            for (String s : asm) {
+                fout.write(s + "\n");
+            }
+            fout.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
