@@ -52,8 +52,8 @@ public class TypeCheckerTest {
 
     @Test
     public void testPass() throws IOException {
-        System.out.println(filename);
-
+        System.out.println("# " + filename);
+        System.out.flush();
         try {
             InputStream sourceCode = new FileInputStream(filename);
             ANTLRInputStream input = new ANTLRInputStream(sourceCode);

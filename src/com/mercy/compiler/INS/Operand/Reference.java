@@ -3,9 +3,11 @@ package com.mercy.compiler.INS.Operand;
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.StringConstantEntity;
 import com.mercy.compiler.Utility.InternalError;
+import com.mercy.compiler.BackEnd.Translator;
 
 import java.util.List;
 
+import static com.mercy.compiler.BackEnd.Translator.GLOBAL_PREFIX;
 import static com.mercy.compiler.INS.Operand.Reference.Type.*;
 
 /**
@@ -79,7 +81,7 @@ public class Reference extends Operand {
     public String toNASM() {
         switch (type) {
             case STRING: return name;
-            case GLOBAL: return "[" + name + "]";
+            case GLOBAL: return "[" + GLOBAL_PREFIX + name + "]";
             case OFFSET: return "qword " + "[" + reg.name() + "-" + offset + "]";
             case REG:    return reg.name();
             case UNKNOWN:

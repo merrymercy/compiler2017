@@ -1,0 +1,8 @@
+int[] a = new int[4];
+int main()
+{
+    int[] b = new int[4];
+    b[2]=2;
+    a=b;
+    println(toString(a[2]));
+}

@@ -3,24 +3,34 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 __int_format:
-    db "%d", 0
+    db "%ld", 0
 
 ;========== IO ==========
 print:
+    sub rsp, 8
+
     xor rax, rax
     call printf
+
+    add rsp, 8
     ret
 
 println:
+    sub rsp, 8
+
     call puts
+
+    add rsp, 8
     ret
 
 printInt_:
     sub rsp, 8
+
     mov rsi, rdi
     mov rdi, __int_format
     xor rax, rax
     call printf
+
     add rsp, 8
     ret
 
@@ -29,8 +39,9 @@ getInt:
 
     mov rsi, rsp
     mov rdi, __int_format
-    xor rax, rax
+    xor eax, eax
     call scanf
+    call getchar
     mov rax, [rsp]
 
     add rsp, 8
@@ -82,15 +93,16 @@ getString:
     mov rsi, rsp
     call strcpy
 
-    ;mov byte [rax + rbx + 1], 0
-
     add rsp, 128
     pop rbx
     ret
 
-
 __lib_array_size:
+    sub rsp, 8
+
     mov eax, dword [rdi -4]
+
+    add rsp, 8
     ret
 
 __lib_str_operator_ADD:
@@ -127,12 +139,17 @@ __lib_str_operator_ADD:
     ret
 
 __lib_str_length:
+    sub rsp, 8
+
     mov eax, dword [rdi -4]
+
+    add rsp, 8
     ret
 
 __lib_str_substring:
     push rbx
     push r12
+    sub rsp, 8
     
     lea r12, [rdi + rsi]
     neg rsi
@@ -148,6 +165,7 @@ __lib_str_substring:
     mov rdx, rbx
     call strncpy
 
+    add rsp, 8
     pop r12
     pop rbx
     ret
@@ -165,6 +183,43 @@ __lib_str_parseInt:
     ret
 
 __lib_str_ord:
+    sub rsp, 8
+    xor rax, rax
     mov al, byte [rdi + rsi]
+
+    add rsp, 8
+    ret
+
+__lib_str_operator_LT:
+    sub rsp, 8
+
+    call strcmp
+    cmp rax, 0
+    setl al
+    movzx rax, al
+
+    add rsp, 8
+    ret
+
+__lib_str_operator_EQ:
+    sub rsp, 8
+
+    call strcmp
+    cmp rax, 0
+    sete al
+    movzx rax, al
+
+    add rsp, 8
+    ret
+
+__lib_str_operator_GT:
+    sub rsp, 8
+
+    call strcmp
+    cmp rax, 0
+    setg al
+    movzx rax, al
+
+    add rsp, 8
     ret
 

@@ -17,6 +17,7 @@ public class StringConstantEntity extends Entity {
         this.expr = expr;
         StringBuffer sb = new StringBuffer();
         name = name.replaceAll("\\\\" + "\"" , "\"");
+        name = name.replaceAll("\\\\" + "n" , "\n");
         this.value = name;
     }
 

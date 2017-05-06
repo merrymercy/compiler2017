@@ -178,8 +178,6 @@ public class SymbolResolver extends Visitor {
             throw new SemanticError(node.location(), "cannot resolve symbol : " + node.name());
         node.setEntity(entity);
 
-        System.out.println(node.entity().name());
-
         if (currentClass != null && currentClass.scope().find(node.name()) != null) {
             node.setThisPointer(currentThis);
         }

@@ -172,7 +172,10 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         testLabelStack.pop();
 
         addLabel(testLabel, "loop_test");
-        stmts.add(new CJump(visitExpr(cond), beginLabel, endLabel));
+        if (cond != null)
+            stmts.add(new CJump(visitExpr(cond), beginLabel, endLabel));
+        else
+            stmts.add(new Jump(beginLabel));
         addLabel(endLabel, "loop_end");
     }
 
@@ -561,6 +564,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 if (true || node.expr() instanceof VariableNode) { // cont(i++); -> v = i; i = i + 1; cont(v)
                     if (exprDepth != 0) {
                         Var tmp = newIntTemp();
+                        addAssign(tmp, expr);
                         addAssign(expr, new Binary(expr, op, constOne));
                         return tmp;
                     } else {

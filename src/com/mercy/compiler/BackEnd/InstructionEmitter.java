@@ -136,6 +136,8 @@ public class InstructionEmitter {
     public Operand visit(com.mercy.compiler.IR.Call ir) {
         List<Operand> operands = new LinkedList<>();
 
+        int backupTop = top;
+
         for (Expr arg : ir.args()) {
             exprDepth++;
             operands.add(visitExpr(arg));
@@ -149,6 +151,8 @@ public class InstructionEmitter {
             call.setRet(ret);
         }
         ins.add(call);
+
+        top = backupTop;
 
         return ret;
     }

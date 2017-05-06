@@ -13,7 +13,6 @@ int N;
 
 string calc(string A)
 {
-    println("goto " + A);
 	int len = A.length();
 	if (1 == len) return A;
 	int mid = len/2;
@@ -39,17 +38,6 @@ int main()
 		println("length error!");
 		return 0;
 	}
-
-	/*if ("123" < "456")
-	    println("yes1");
-
-	if ("1" < "0")
-	    println("yes2");*/
-
-	println(A);
-	println(B);
-	println(toString(N));
-
 	C = calc(A.substring(0,N-1));
 	println(C);
 	return 0;
