@@ -1,5 +1,6 @@
 package com.mercy.compiler.AST;
 
+import com.mercy.compiler.FrontEnd.ASTVisitor;
 import com.mercy.compiler.Type.FunctionType;
 import com.mercy.compiler.Type.Type;
 

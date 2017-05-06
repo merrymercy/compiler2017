@@ -57,7 +57,7 @@ public abstract class Type {
     abstract public boolean isCompatible(Type other);
     // abstract public boolean isCastableTo(Type target);
 
-    abstract public long size();
+    abstract public int size();
 
     public long allocSize() {
         return size();

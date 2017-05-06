@@ -1,7 +1,10 @@
 package com.mercy.compiler.AST;
 
+import com.mercy.compiler.Entity.ClassEntity;
 import com.mercy.compiler.Entity.Entity;
+import com.mercy.compiler.Entity.ParameterEntity;
 import com.mercy.compiler.Entity.VariableEntity;
+import com.mercy.compiler.FrontEnd.ASTVisitor;
 import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.InternalError;
 
@@ -13,14 +16,14 @@ public class VariableNode extends LHSNode {
     private Location location;
     private String name;
     private Entity entity;
-    private boolean isMember = false;
+    private ParameterEntity thisPointer = null;
 
     public VariableNode(Location loc, String name) {
         this.location = loc;
         this.name = name;
     }
 
-    public VariableNode(VariableEntity var) {
+    public VariableNode(Entity var) {
         this.entity = var;
         this.name = var.name();
     }
@@ -31,6 +34,7 @@ public class VariableNode extends LHSNode {
 
     public Entity entity() {
         if (entity == null) {
+            System.err.println(this);
             throw new InternalError("Vairable.entity == null");
         }
         return entity;
@@ -40,12 +44,16 @@ public class VariableNode extends LHSNode {
         this.entity = entity;
     }
 
-    public void setMember(boolean isMember) {
-        this.isMember = isMember;
+    public void setThisPointer(ParameterEntity entity) {
+        this.thisPointer = entity;
+    }
+
+    public ParameterEntity getThisPointer() {
+        return thisPointer;
     }
 
     public boolean isMember() {
-        return isMember;
+        return thisPointer != null;
     }
 
     @Override

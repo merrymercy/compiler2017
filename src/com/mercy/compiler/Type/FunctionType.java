@@ -32,7 +32,7 @@ public class FunctionType extends Type {
     }
 
     @Override
-    public long size() {
+    public int size() {
         throw new InternalError("FunctionType#size called");
     }
 

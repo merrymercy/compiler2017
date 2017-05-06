@@ -1,4 +1,14 @@
 .idea
 out
 *.iml
+
 note
+
+./*.out
+*.asm
+*.o
+
+
+main.c
+debug.c
+in.txt

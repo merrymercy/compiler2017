@@ -8,7 +8,7 @@ public class VoidType extends Type {
     }
 
     @Override
-    public long size() {
+    public int size() {
         return 0;
     }
 

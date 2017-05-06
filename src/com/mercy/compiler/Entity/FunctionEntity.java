@@ -2,10 +2,14 @@ package com.mercy.compiler.Entity;
 
 import com.mercy.compiler.AST.BlockNode;
 import com.mercy.compiler.AST.Location;
+import com.mercy.compiler.INS.Instruction;
+import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.IR.IR;
 import com.mercy.compiler.Type.FunctionType;
 import com.mercy.compiler.Type.Type;
+import com.sun.org.apache.xpath.internal.operations.Variable;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -19,6 +23,10 @@ public class FunctionEntity extends Entity {
     private boolean isConstructor = false;
 
     private List<IR> irs;
+    private List<Instruction> ins;
+    private List<Reference> tmpStack;
+
+    private String asmName;
 
     public FunctionEntity(Location loc, Type returnType, String name, List<ParameterEntity> params, BlockNode body) {
         super(loc, new FunctionType(name), name);
@@ -26,12 +34,34 @@ public class FunctionEntity extends Entity {
         this.body = body;
         this.returnType = returnType;
         ((FunctionType)this.type).setEntity(this);
+        this.asmName = null;
     }
 
-    public void addThisPointer(Location loc, ClassEntity entity) {
-        params.add(0, new ParameterEntity(entity.location(), entity.type(), "this"));
+    public ParameterEntity addThisPointer(Location loc, ClassEntity entity) {
+        ParameterEntity thisPointer = new ParameterEntity(entity.location(), entity.type(), "this");
+        params.add(0, thisPointer);
+        return thisPointer;
     }
 
+    public void setAsmName(String name) {
+        this.asmName = name;
+    }
+
+    public String asmName() {
+        return asmName == null ? name : asmName;
+    }
+
+    @Override
+    public String name() {
+        return name;
+    }
+
+    // for locating local variabes
+    public List<VariableEntity> allLocalVariables() {
+        return scope.allLocalVariables();
+    }
+
+    // getter and setter
     public List<ParameterEntity> params() {
         return params;
     }
@@ -66,6 +96,26 @@ public class FunctionEntity extends Entity {
 
     public void setIR(List<IR> irs) {
         this.irs = irs;
+    }
+
+    public List<Instruction> INS() {
+        return ins;
+    }
+
+    public void setINS(List<Instruction> ins) {
+        this.ins = ins;
+    }
+
+    public List<Instruction> ins() {
+        return ins;
+    }
+
+    public List<Reference> tmpStack() {
+        return tmpStack;
+    }
+
+    public void setTmpStack(List<Reference> tmpStack) {
+        this.tmpStack = tmpStack;
     }
 
     @Override

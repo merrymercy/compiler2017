@@ -15,6 +15,9 @@ public class StringConstantEntity extends Entity {
     public StringConstantEntity(Location loc, Type type, String name, ExprNode expr) {
         super(loc, type, StringType.STRING_CONSTANT_PREFIX + name);
         this.expr = expr;
+        StringBuffer sb = new StringBuffer();
+        name = name.replaceAll("\\\\" + "\"" , "\"");
+        name = name.replaceAll("\\\\" + "n" , "\n");
         this.value = name;
     }
 

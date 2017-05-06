@@ -1,6 +1,7 @@
 package com.mercy.compiler.AST;
 
 import com.mercy.compiler.Entity.Scope;
+import com.mercy.compiler.FrontEnd.ASTVisitor;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -19,7 +20,7 @@ public class BlockNode extends StmtNode {
 
     public static BlockNode wrapBlock(StmtNode node) {
         if (node == null)
-            return new BlockNode(new Location(0,0), new LinkedList<>());
+            return null; //new BlockNode(new Location(0,0), new LinkedList<>());
 
         if (node instanceof BlockNode) {
             return (BlockNode) node;

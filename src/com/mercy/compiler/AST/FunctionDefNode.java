@@ -1,6 +1,7 @@
 package com.mercy.compiler.AST;
 
 import com.mercy.compiler.Entity.FunctionEntity;
+import com.mercy.compiler.FrontEnd.ASTVisitor;
 
 /**
  * Created by mercy on 17-3-23.

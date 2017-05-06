@@ -7,7 +7,7 @@ package com.mercy.compiler.Type;
 
 
 public class IntegerType extends Type {
-    static final long DEFAULT_SIZE = 4;
+    static final int DEFAULT_SIZE = 8;
 
     @Override
     public boolean isInteger() {
@@ -35,7 +35,7 @@ public class IntegerType extends Type {
     }
 
     @Override
-    public long size() {
+    public int size() {
         return DEFAULT_SIZE;
     }
 

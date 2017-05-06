@@ -61,16 +61,22 @@ public class ASTBuilder extends MalicBaseListener {
             vars.add((VariableDefNode)map.get(item));
         }
 
+        FunctionEntity constructor = null;
         for (MalicParser.FunctionDefinitionContext item : ctx.functionDefinition()) {
             FunctionDefNode node = (FunctionDefNode)map.get(item);
             funcs.add(node);
             FunctionEntity entity = node.entity();
-            if (entity.isConstructor() && !entity.name().equals(ClassType.CONSTRUCTOR_PREFIX + name))
-                throw new SemanticError(new Location(ctx.name), "wrong name of constructor : " + entity.name()
-                + "and" + name);
+            if (entity.isConstructor()) {
+                if (!entity.name().equals(ClassType.CONSTRUCTOR_PREFIX + name)) {
+                    throw new SemanticError(new Location(ctx.name), "wrong name of constructor : " + entity.name()
+                            + "and" + name);
+                }
+
+            }
         }
 
         ClassEntity entity = new ClassEntity(new Location(ctx.name), name, vars, funcs);
+        entity.setConstructor(constructor);
 
         map.put(ctx, new ClassDefNode(entity));
     }
@@ -254,8 +260,8 @@ public class ASTBuilder extends MalicBaseListener {
     public void exitSuffixExpr(MalicParser.SuffixExprContext ctx) {
         UnaryOpNode.UnaryOp op;
         switch (ctx.op.getText()) {
-            case "++" : op = UnaryOpNode.UnaryOp.SUF_DEC; break;
-            case "--" : op = UnaryOpNode.UnaryOp.SUF_INC; break;
+            case "++" : op = UnaryOpNode.UnaryOp.SUF_INC; break;
+            case "--" : op = UnaryOpNode.UnaryOp.SUF_DEC; break;
             default:
                 throw new InternalError("Invalid token " + ctx.op.getText());
         }
@@ -270,8 +276,8 @@ public class ASTBuilder extends MalicBaseListener {
         switch (ctx.op.getText()) {
             case "+"  : op = UnaryOpNode.UnaryOp.ADD;   break;
             case "-"  : op = UnaryOpNode.UnaryOp.MINUS; break;
-            case "++" : op = UnaryOpNode.UnaryOp.PRE_DEC; break;
-            case "--" : op = UnaryOpNode.UnaryOp.PRE_INC; break;
+            case "++" : op = UnaryOpNode.UnaryOp.PRE_INC; break;
+            case "--" : op = UnaryOpNode.UnaryOp.PRE_DEC; break;
             case "~"  : op = UnaryOpNode.UnaryOp.BIT_NOT; break;
             case "!"  : op = UnaryOpNode.UnaryOp.LOGIC_NOT; break;
             default:
@@ -364,7 +370,9 @@ public class ASTBuilder extends MalicBaseListener {
 
     @Override
     public void exitStringConst(MalicParser.StringConstContext ctx) {
-        map.put(ctx, new StringLiteralNode(new Location(ctx), ctx.StringLiteral().getText()));
+        String value = ctx.StringLiteral().getText();
+        value = value.substring(1, value.length()-1);
+        map.put(ctx, new StringLiteralNode(new Location(ctx), value));
     }
 
     @Override
