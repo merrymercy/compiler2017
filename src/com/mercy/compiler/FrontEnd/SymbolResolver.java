@@ -13,11 +13,13 @@ import java.util.Stack;
 public class SymbolResolver extends Visitor {
     private Stack<Scope> stack = new Stack<>();
     private Scope currentScope;
+    private Scope topLevelScope;
     private ClassEntity currentClass = null;
     private ParameterEntity currentThis = null;
     private boolean firstBlockInFunction = false;
 
     public SymbolResolver(Scope toplevelScope) {
+        this.topLevelScope = toplevelScope;
         currentScope = toplevelScope;
         stack.push(currentScope);
     }
@@ -128,12 +130,13 @@ public class SymbolResolver extends Visitor {
 
     @Override
     public Void visit(StringLiteralNode node) {
-        Entity entity = currentScope.lookup(StringType.STRING_CONSTANT_PREFIX + node.value());
+        Entity entity = topLevelScope.find(StringType.STRING_CONSTANT_PREFIX + node.value());
         if (entity == null) {
             entity = new StringConstantEntity(node.location(), new StringType(), node.value(), node);
-            currentScope.insertConstant(entity);
+            topLevelScope.insert(entity);
         }
         node.setEntity((StringConstantEntity) entity);
+
         return null;
     }
 
@@ -162,12 +165,20 @@ public class SymbolResolver extends Visitor {
         return null;
     }
 
+    /*@Override
+    public Void visit(FuncallNode node ) {
+
+        return null;
+    }*/
+
     @Override
     public Void visit(VariableNode node) {
         Entity entity = currentScope.lookup(node.name());
         if (entity == null)
             throw new SemanticError(node.location(), "cannot resolve symbol : " + node.name());
         node.setEntity(entity);
+
+        System.out.println(node.entity().name());
 
         if (currentClass != null && currentClass.scope().find(node.name()) != null) {
             node.setThisPointer(currentThis);

@@ -18,6 +18,7 @@ public class Call extends Instruction {
     public Call(FunctionEntity entity, List<Operand> operands) {
         this.entity = entity;
         this.operands = operands;
+        this.ret = null;
     }
 
     public FunctionEntity entity() {
@@ -47,6 +48,6 @@ public class Call extends Instruction {
         for (Operand operand : operands) {
             args += ", " + operand;
         }
-        return ret + " = call " + entity.name() + args;
+        return ret + " = call " + entity.asmName() + args;
     }
 }

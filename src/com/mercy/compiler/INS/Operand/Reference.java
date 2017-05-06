@@ -1,6 +1,7 @@
 package com.mercy.compiler.INS.Operand;
 
 import com.mercy.compiler.Entity.Entity;
+import com.mercy.compiler.Entity.StringConstantEntity;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import static com.mercy.compiler.INS.Operand.Reference.Type.*;
  */
 public class Reference extends Operand {
     public enum Type {
-        GLOBAL, OFFSET, REG, UNKNOWN
+        STRING, GLOBAL, OFFSET, REG, UNKNOWN
     }
 
     Type type;
@@ -24,6 +25,11 @@ public class Reference extends Operand {
 
     public Reference(int offset, Register reg) {
         setOffset(offset, reg);
+    }
+
+    public Reference(String name, boolean isString) {
+        this.name = name;
+        this.type = STRING;
     }
 
     public Reference(String name) {
@@ -59,6 +65,11 @@ public class Reference extends Operand {
         this.type = REG;
     }
 
+    public Register reg() {
+        assert type == REG;
+        return reg;
+    }
+
     @Override
     public boolean isRegister() {
         return type == REG;
@@ -67,7 +78,8 @@ public class Reference extends Operand {
     @Override
     public String toNASM() {
         switch (type) {
-            case GLOBAL: return name;
+            case STRING: return name;
+            case GLOBAL: return "[" + name + "]";
             case OFFSET: return "qword " + "[" + reg.name() + "-" + offset + "]";
             case REG:    return reg.name();
             case UNKNOWN:

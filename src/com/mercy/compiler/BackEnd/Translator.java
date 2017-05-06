@@ -2,13 +2,14 @@ package com.mercy.compiler.BackEnd;
 
 import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.INS.*;
-import com.mercy.compiler.INS.Operand.Immediate;
-import com.mercy.compiler.INS.Operand.Operand;
-import com.mercy.compiler.INS.Operand.Reference;
-import com.mercy.compiler.INS.Operand.Register;
+import com.mercy.compiler.INS.Operand.*;
 import com.mercy.compiler.IR.IR;
+import com.mercy.compiler.Utility.InternalError;
+import com.mercy.compiler.Utility.Pair;
+import com.sun.org.apache.regexp.internal.RE;
 
 import java.io.*;
+import java.sql.Ref;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,6 +32,7 @@ public class Translator {
     private List<Register> registers = new ArrayList<>();
     private List<Register> paraRegister = new ArrayList<>();
     private boolean [] regUsed = new boolean[16];
+    private boolean [] isCalleeSave = new boolean[16];
     private List<String> asm = new LinkedList<>();
 
     public Translator(InstructionEmitter emitter) {
@@ -57,6 +59,11 @@ public class Translator {
         paraRegister.add(rdx); paraRegister.add(rcx);
         paraRegister.add(registers.get(8));
         paraRegister.add(registers.get(9));
+
+        // set callee save
+        for (int i = 12; i < 16; i++)
+            isCalleeSave[i] = true;
+        isCalleeSave[3] = isCalleeSave[5] = true;
     }
 
     public List<String> translate() {
@@ -66,11 +73,14 @@ public class Translator {
         // add extern
         add("global main");
         add("extern printf");
-        add("extern puts");
         add("extern scanf");
+        add("extern puts");
+        add("extern gets");
         add("extern sprintf");
+        add("extern sscanf");
         add("extern strlen");
         add("extern strcpy");
+        add("extern strncpy");
         add("extern malloc");
         add("");
 
@@ -80,10 +90,12 @@ public class Translator {
             //System.out.println(entity.name());
             if (entity instanceof VariableEntity) {
                 entity.setReference(new Reference(entity.name()));
+                addLabel(entity.name());
+                add("dq 0");
             } else if (entity instanceof  StringConstantEntity) {
-                String name = "__STR_CONST_" + stringCounter;
+                String name = "__STR_CONST_" + stringCounter++;
                 String value = ((StringConstantEntity) entity).strValue();
-                entity.setReference(new Reference(name));
+                entity.setReference(new Reference(name, true));
 
                 add("dd " + value.length());
                 addLabel(name);
@@ -105,19 +117,23 @@ public class Translator {
         // translate functions
         add("section .text");
         for (FunctionEntity entity : functionEntities) {
+            // init
+            for (int i = 0; i < regUsed.length; i++)
+                regUsed[i] = false;
             currentFunction = entity;
             int frameSize = locateFrame(entity);
             translateFunction(entity, frameSize);
+            add("");
         }
 
         pasteLibfunction();
         return asm;
     }
 
+    // saved reg
     // virtual stack
     // local variable
     // parameter
-    // saved reg
     // ----------------- <- bp
     // old bp
     // return address
@@ -125,15 +141,14 @@ public class Translator {
     public int locateFrame(FunctionEntity entity) {
         int savedRegBase, paraBase, lvarBase, stackBase, total;
 
-        // locate callee-save register
-        savedRegBase = 4;
-        paraBase = savedRegBase;
+        paraBase = 0;
 
         // locate parameter
         lvarBase = paraBase;
         for (ParameterEntity parameterEntity : entity.params()) {
             lvarBase += parameterEntity.type().size();
-            parameterEntity.setReference(new Reference(lvarBase, rbp));
+            parameterEntity.setOffset(lvarBase);
+            parameterEntity.setReference(new Reference(lvarBase, rbp()));
         }
 
         // locate local variable
@@ -141,41 +156,80 @@ public class Translator {
         stackBase += entity.scope().locateLocalVariable(lvarBase, ALIGNMENT);
         for (VariableEntity variableEntity : entity.scope().allLocalVariables()) {
             variableEntity.setReference(new Reference(variableEntity.offset(),
-                    rbp));
+                    rbp()));
         }
 
-        Register [] toAllocate = {R(12), R(13), R(14), R(15)};
+        int[] toAllocate = {12, 13, 14, 15, 3};//, 10, 11};
 
         // locate tmpStack
-        total = stackBase;
+        savedRegBase = stackBase;
         List<Reference> tmpStack = entity.tmpStack();
         for (int i = 0; i < tmpStack.size(); i++) {
             if (i < toAllocate.length) {
-                tmpStack.get(i).setRegister(toAllocate[i]);
+                tmpStack.get(i).setRegister(registers.get(toAllocate[i]));
+                regUsed[toAllocate[i]] = true;
             } else {
-                total += VIRTUAL_STACK_REG_SIZE;
-                tmpStack.get(i).setOffset(total, rbp);
+                savedRegBase += VIRTUAL_STACK_REG_SIZE;
+                tmpStack.get(i).setOffset(savedRegBase, rbp());
             }
         }
 
+        // locate callee-save register
+        total = savedRegBase;
         return total;
     }
 
     public void translateFunction(FunctionEntity entity, int frameSize) {
         addLabel(entity.name());
-        add("push", rbp());
-        add("mov", rbp(), rsp());
-        add("sub", rsp(), new Immediate((frameSize)));
-        add("");
 
+        int startPos = asm.size();
 
+        /***** body *****/
         for (Instruction instruction : entity.INS()) {
             instruction.accept(this);
         }
 
+        /***** prologue *****/
+        List<String> backup = asm, prologue;
+        asm = new LinkedList<>();
+        // push and pop callee-save registers
+        int calleeSaveRegSize = 0;
+        for (int i = 0; i < regUsed.length; i++) {
+            if (regUsed[i] && isCalleeSave[i]) {
+                add("push", registers.get(i));
+                calleeSaveRegSize += VIRTUAL_STACK_REG_SIZE;
+            }
+        }
+        // set rbp and rsp
+        if (regUsed[5])
+            add("mov", rbp(), rsp());
+        frameSize += (16 - (frameSize + 8 + calleeSaveRegSize) % 16) % 16;
+        add("sub", rsp(), new Immediate((frameSize)));
+        // store parameters
+        List<ParameterEntity> params = entity.params();
+        for (int i = 0; i < params.size(); i++) {
+            if (i < paraRegister.size()) {
+                add("mov", params.get(i).reference(), paraRegister.get(i));
+            } else {
+                add("pop", rax());
+                add("mov", params.get(i).reference(), rax());
+            }
+        }
+        add("");
+
+        // insert prologue
+        prologue = asm;
+        asm = backup;
+        asm.addAll(startPos, prologue);
+
+        /***** epilogue *****/
         addLabel(entity.name() + END_SUFFIX);
         add("add", rsp(), new Immediate((frameSize)));
-        add("pop", rbp());
+        for (int i = regUsed.length - 1; i >= 0; i--) {
+            if (regUsed[i] && isCalleeSave[i]) {
+                add("pop", registers.get(i));
+            }
+        }
         add("ret");
     }
 
@@ -190,6 +244,12 @@ public class Translator {
     }
     private void addLabel(String name) {
         asm.add(name + ":");
+    }
+    private void addJump(String name) {
+        asm.add("\tjmp" + " " + name);
+    }
+    private void addComment(String comment) {
+        asm.add("\t;" + comment);
     }
 
     /*
@@ -235,9 +295,8 @@ public class Translator {
         left = ins.left();
         right= ins.right();
         add("mov", rax(), left);
-        add("mov", rcx(), right);
-        add("cdq");
-        add("idiv", rcx());
+        add("cqo");
+        add("idiv", right);
         add("mov", left, rax());
     }
 
@@ -246,9 +305,8 @@ public class Translator {
         left = ins.left();
         right= ins.right();
         add("mov", rax(), left);
-        add("mov", rcx(), right);
-        add("cdq");
-        add("idiv", rcx());
+        add("cqo");
+        add("idiv", right);
         add("mov", left, rdx());
     }
 
@@ -295,8 +353,43 @@ public class Translator {
         add("mov", left, rax());
     }
 
+    private Pair<Operand, Boolean> dealOneSize(Register tmp, Operand operand) {
+        if (operand instanceof Address) {
+            Address addr = (Address)operand;
+            Reference ref;
+
+            switch (addr.type()) {
+                case OPERAND:
+                    ref = (Reference) addr.operand();
+                    if (ref.isRegister()) {
+                        return new Pair<>(operand, true);
+                    } else {
+                        add("mov", tmp, ref);
+                        return new Pair<>(new Address(tmp), true);
+                    }
+                case ENTITY:
+                    return new Pair<>(operand, true);
+                default:
+                    throw new InternalError("invalid addr type " + addr.type());
+            }
+        } else if (operand instanceof Reference) {
+            Reference ref = (Reference) operand;
+            return new Pair<>(operand, !ref.isRegister());
+        } else {
+            return new Pair<>(operand, false);
+        }
+    }
+
     public void visit(Move ins) {
-        add("mov", ins.dest(), ins.src());
+        Pair<Operand, Boolean>  dest = dealOneSize(rax(), ins.dest());
+        Pair<Operand, Boolean>  src  = dealOneSize(rdx(), ins.src());
+        if (dest.second && src.second) {
+            add("mov", rcx(), src.first);
+            add("mov", dest.first, rcx());
+        } else {
+            add("mov", dest.first, src.first);
+        }
+        // ATTENTION: HERE , double memory
     }
 
     public void visit(Call ins) {
@@ -313,13 +406,17 @@ public class Translator {
                 }
             }
         }
-        add("call " + ins.entity().name());
-        add("mov", ins.ret(), rax());
+        if (ins.entity().asmName().equals("printf"))
+            add("xor", rax(), rax());
+        add("call " + ins.entity().asmName());
+        if (ins.ret() != null)
+            add("mov", ins.ret(), rax());
     }
 
     public void visit(Return ins) {
-        add("mov", rax(), ins.ret());
-        add("jmp " + currentFunction.name() + END_SUFFIX);
+        if (ins.ret() != null)
+            add("mov", rax(), ins.ret());
+        addJump(currentFunction.name() + END_SUFFIX);
     }
 
     public void visit(CJump ins) {
@@ -329,12 +426,12 @@ public class Translator {
             add("mov", rax(), ins.cond());
             add("test", rax(), rax());
         }
-        add("jnz " + ins.trueLabel().name());
-        add("jmp " + ins.falseLabel().name());
+        add("jz " + ins.falseLabel().name());
+        addJump(ins.trueLabel().name());
     }
 
     public void visit(Jmp ins) {
-        add("jmp " + ins.dest().name());
+        addJump(ins.dest().name());
     }
 
     public void visit(Label ins) {
@@ -392,10 +489,10 @@ public class Translator {
         for (FunctionEntity functionEntity : functionEntities) {
             printFunction(out, functionEntity);
         }
-        out.println("========== NASM ==========");
+        /*out.println("========== NASM ==========");
         for (String s : asm) {
             out.println(s);
-        }
+        }*/
     }
 
     private void pasteLibfunction() {

@@ -26,18 +26,34 @@ public class FunctionEntity extends Entity {
     private List<Instruction> ins;
     private List<Reference> tmpStack;
 
+    private String asmName;
+
     public FunctionEntity(Location loc, Type returnType, String name, List<ParameterEntity> params, BlockNode body) {
         super(loc, new FunctionType(name), name);
         this.params = params;
         this.body = body;
         this.returnType = returnType;
         ((FunctionType)this.type).setEntity(this);
+        this.asmName = null;
     }
 
     public ParameterEntity addThisPointer(Location loc, ClassEntity entity) {
         ParameterEntity thisPointer = new ParameterEntity(entity.location(), entity.type(), "this");
         params.add(0, thisPointer);
         return thisPointer;
+    }
+
+    public void setAsmName(String name) {
+        this.asmName = name;
+    }
+
+    public String asmName() {
+        return asmName == null ? name : asmName;
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     // for locating local variabes

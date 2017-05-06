@@ -281,6 +281,15 @@ public class TypeChecker extends Visitor {
                     expr.type(), params.get(i).type(), true);
         }
 
+        // add "this" pointer
+        if (base != 0) {
+            if (node.expr() instanceof MemberNode) {   // A.func(...) -> func(A, ...)
+                node.addThisPointer(((MemberNode)node.expr()).expr());
+            } else {                                   // memberFunc(...) -> memberFunc(this, ...)
+                node.addThisPointer(new VariableNode(params.get(0)));
+            }
+        }
+
         return null;
     }
 

@@ -9,6 +9,7 @@ import com.mercy.compiler.Utility.InternalError;
 
 import static com.mercy.compiler.IR.Binary.BinaryOp.*;
 import static com.mercy.compiler.IR.Unary.UnaryOp.*;
+import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -39,10 +40,12 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     public IRBuilder(AST abstractSemanticTree) {
         this.ast = abstractSemanticTree;
-        malloc = (FunctionEntity) ast.scope().find("__malloc");
+        malloc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "malloc");
     }
 
     public void generateIR() {
+        currentScope = ast.scope();
+
         // calc offset in class
         for (ClassEntity entity : ast.classEntitsies()) {
             entity.initOffset(ALIGNMENT);
@@ -60,7 +63,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         for (FunctionEntity entity : ast.functionEntities()) {
             compileFunction(entity);
             if (entity.name().equals("main")) {
-                ; // insert global initializer ?
+                entity.IR().addAll(0, globalInitializer);
             }
         }
 
@@ -160,7 +163,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         testLabelStack.push(testLabel);
         endLabelStack.push(endLabel);
-        visitStmt(body);
+        if (body != null)
+            visitStmt(body);
         if (incr != null) {
             visitExpr(incr);
         }
@@ -216,10 +220,12 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (exprDepth == 0) { // is statement, which is always true in Mx* 2017
             addAssign(lhs, rhs);
         } else {
-            throw new InternalError(node.location(), "undefined behavior in nested assign expression (a = b = c)");
+            addAssign(lhs, rhs);
+            // ATTENTION
+            //throw new InternalError(node.location(), "undefined behavior in nested assign expression (a = b = c)");
         }
 
-        return null;
+        return lhs;
     }
 
     @Override
@@ -516,25 +522,26 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         switch (node.operator()) {
             case ADD:
                 if (node.expr() instanceof IntegerLiteralNode)
-                    return new IntConst((int)((IntegerLiteralNode)node.expr()).value());
+                    return new IntConst((int) ((IntegerLiteralNode) node.expr()).value());
                 else
                     return visitExpr(node.expr());
             case MINUS:
                 if (node.expr() instanceof IntegerLiteralNode)
-                    return new IntConst(-(int)((IntegerLiteralNode)node.expr()).value());
+                    return new IntConst(-(int) ((IntegerLiteralNode) node.expr()).value());
                 else
                     return new Unary(MINUS, visitExpr(node.expr()));
             case BIT_NOT:
                 if (node.expr() instanceof IntegerLiteralNode)
-                    return new IntConst(~(int)((IntegerLiteralNode)node.expr()).value());
+                    return new IntConst(~(int) ((IntegerLiteralNode) node.expr()).value());
                 else
                     return new Unary(BIT_NOT, visitExpr(node.expr()));
             case LOGIC_NOT:
                 if (node.expr() instanceof BoolLiteralNode)
-                    return new IntConst(((BoolLiteralNode)node.expr()).value() ? 1 : 0);
+                    return new IntConst(((BoolLiteralNode) node.expr()).value() ? 1 : 0);
                 else
                     return new Unary(LOGIC_NOT, visitExpr(node.expr()));
-            case PRE_INC: case PRE_DEC: {
+            case PRE_INC:
+            case PRE_DEC: {
                 Binary.BinaryOp op = node.operator() == UnaryOpNode.UnaryOp.PRE_INC ? ADD : SUB;
                 if (true || node.expr() instanceof VariableNode) { // cont(++i); -> i = i + 1; cont(i);
                     Expr expr = visitExpr(node.expr());
@@ -547,8 +554,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 //    return exprDepth == 0 ? null : new Mem(p);
                 //}
             }
-            case SUF_INC: case SUF_DEC: {
-                Binary.BinaryOp op = node.operator() == UnaryOpNode.UnaryOp.SUF_INC ? ADD : SUB;
+            case SUF_INC:
+            case SUF_DEC: {
+                Binary.BinaryOp op = (node.operator() == UnaryOpNode.UnaryOp.SUF_INC ? ADD : SUB);
                 Expr expr = visitExpr(node.expr());
                 if (true || node.expr() instanceof VariableNode) { // cont(i++); -> v = i; i = i + 1; cont(v)
                     if (exprDepth != 0) {
@@ -557,6 +565,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                         return tmp;
                     } else {
                         addAssign(expr, new Binary(expr, op, constOne));
+                        return null;
                     }
                 }
                 //} else {                                   // cont(i++) -> p = &i; t = *p; *p = t + 1; cont(t);

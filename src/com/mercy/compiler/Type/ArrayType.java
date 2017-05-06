@@ -3,6 +3,8 @@ package com.mercy.compiler.Type;
 import com.mercy.compiler.Entity.Scope;
 import com.mercy.compiler.Utility.LibFunction;
 
+import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
+
 /**
  * Created by mercy on 17-3-18.
  */
@@ -15,7 +17,7 @@ public class ArrayType extends Type {
 
     static public void initializeBuiltinFunction() {
         scope = new Scope(true);
-        scope.insert(new LibFunction(integerType, "size", new Type[]{magicArray}).getEntity());
+        scope.insert(new LibFunction(integerType, "size", LIB_PREFIX + "array_size", new Type[]{magicArray}).getEntity());
     }
 
     static public Scope scope() {

@@ -260,8 +260,8 @@ public class ASTBuilder extends MalicBaseListener {
     public void exitSuffixExpr(MalicParser.SuffixExprContext ctx) {
         UnaryOpNode.UnaryOp op;
         switch (ctx.op.getText()) {
-            case "++" : op = UnaryOpNode.UnaryOp.SUF_DEC; break;
-            case "--" : op = UnaryOpNode.UnaryOp.SUF_INC; break;
+            case "++" : op = UnaryOpNode.UnaryOp.SUF_INC; break;
+            case "--" : op = UnaryOpNode.UnaryOp.SUF_DEC; break;
             default:
                 throw new InternalError("Invalid token " + ctx.op.getText());
         }
@@ -276,8 +276,8 @@ public class ASTBuilder extends MalicBaseListener {
         switch (ctx.op.getText()) {
             case "+"  : op = UnaryOpNode.UnaryOp.ADD;   break;
             case "-"  : op = UnaryOpNode.UnaryOp.MINUS; break;
-            case "++" : op = UnaryOpNode.UnaryOp.PRE_DEC; break;
-            case "--" : op = UnaryOpNode.UnaryOp.PRE_INC; break;
+            case "++" : op = UnaryOpNode.UnaryOp.PRE_INC; break;
+            case "--" : op = UnaryOpNode.UnaryOp.PRE_DEC; break;
             case "~"  : op = UnaryOpNode.UnaryOp.BIT_NOT; break;
             case "!"  : op = UnaryOpNode.UnaryOp.LOGIC_NOT; break;
             default:

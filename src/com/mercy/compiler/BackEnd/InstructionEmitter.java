@@ -39,6 +39,7 @@ public class InstructionEmitter {
         for (FunctionEntity functionEntity : functionEntities) {
             currentFunction = functionEntity;
             tmpStack = new ArrayList<>();
+            top = 0;
             functionEntity.setINS(emitFunction(functionEntity));
             functionEntity.setTmpStack(tmpStack);
         }
@@ -71,8 +72,14 @@ public class InstructionEmitter {
 
     public Operand visit(com.mercy.compiler.IR.Assign ir) {
         Operand lhs = visitExpr(ir.left());
+        exprDepth++;
         Operand rhs = visitExpr(ir.right());
-        ins.add(new Move(lhs, rhs));
+        exprDepth--;
+        if (ir.left() instanceof Addr)
+            ins.add(new Move(lhs, rhs));
+        else {
+            ins.add(new Move(new Address(lhs), rhs));
+        }
         return null;
     }
 
@@ -130,11 +137,17 @@ public class InstructionEmitter {
         List<Operand> operands = new LinkedList<>();
 
         for (Expr arg : ir.args()) {
+            exprDepth++;
             operands.add(visitExpr(arg));
+            exprDepth--;
         }
-        Reference ret = getTmp();
+
+        Reference ret = null;
         Call call = new Call(ir.entity(), operands);
-        call.setRet(ret);
+        if (exprDepth != 0) {
+            ret = getTmp();
+            call.setRet(ret);
+        }
         ins.add(call);
 
         return ret;
@@ -157,14 +170,13 @@ public class InstructionEmitter {
         return null;
     }
 
-    public Operand visit(com.mercy.compiler.IR.Mem ir) {
-        Operand ret = visitExpr(ir.expr());
-        return new Address(ret);
-    }
-
     public Operand visit(com.mercy.compiler.IR.Return ir) {
-        Operand ret = visitExpr(ir.expr());
-        ins.add(new Return(ret));
+        if (ir.expr() == null) {
+            ins.add(new Return(null));
+        } else {
+            Operand ret = visitExpr(ir.expr());
+            ins.add(new Return(ret));
+        }
         return null;
     }
 
@@ -173,10 +185,24 @@ public class InstructionEmitter {
         switch (ir.operator()) {
             case MINUS:
                 ins.add(new Neg(ret)); break;
-            case BIT_NOT: case LOGIC_NOT:
+            case BIT_NOT:
                 ins.add(new Not(ret)); break;
+            case LOGIC_NOT:
+                ins.add(new Cmp(ret, new Immediate(0), Cmp.Operator.EQ));
+                break;
             default:
                 throw new InternalError("invalid operator " + ir.operator());
+        }
+        return ret;
+    }
+
+    public Operand visit(com.mercy.compiler.IR.Mem ir) {
+        Operand addr = visitExpr(ir.expr());
+        Reference ret = getTmp();
+        if (ir.expr() instanceof Addr)
+            ins.add(new Move(ret, addr));
+        else {
+            ins.add(new Move(ret, new Address(addr)));
         }
         return ret;
     }

@@ -14,6 +14,7 @@ public class Address extends Operand {
     }
 
     Entity entity;
+    Register base;
     Operand operand;
     Type type;
 
@@ -27,6 +28,18 @@ public class Address extends Operand {
         this.type = Type.OPERAND;
     }
 
+    public Type type() {
+        return type;
+    }
+
+    public Operand operand() {
+        return operand;
+    }
+
+    public Entity entity() {
+        return entity;
+    }
+
     @Override
     public String toNASM() {
         String addr;
@@ -34,7 +47,7 @@ public class Address extends Operand {
             case ENTITY:
                 return entity.reference().toNASM();
             case OPERAND:
-                throw new InternalError("invalid addressing of " + operand);
+                return "[" + operand.toNASM() + "]";
             default:
                 throw new InternalError("invalid type " + type);
         }
@@ -47,12 +60,7 @@ public class Address extends Operand {
             case ENTITY:
                 name = entity.name(); break;
             case OPERAND:
-                if (operand instanceof Reference) {
-                    name = ((Reference)operand).name();
-                } else {
-                    throw new InternalError("invalid addressing of " + operand);
-                }
-                break;
+                name = operand.toString(); break;
             default:
                 throw new InternalError("invalid type " + type);
         }

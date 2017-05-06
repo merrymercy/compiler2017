@@ -11,6 +11,7 @@ import java.util.List;
  * Created by mercy on 17-3-25.
  */
 public class LibFunction {
+    public static final String LIB_PREFIX = "__lib_";
     FunctionEntity entity;
 
     public LibFunction(Type returnType, String name, Type [] paramTypes) {
@@ -21,7 +22,11 @@ public class LibFunction {
             }
         }
         entity = new FunctionEntity(null, returnType, name, paramEntities, null);
+    }
 
+    public LibFunction(Type returnType, String name, String asmName, Type [] paramTypes) {
+        this(returnType, name, paramTypes);
+        entity.setAsmName(asmName);
     }
 
     public FunctionEntity getEntity() {

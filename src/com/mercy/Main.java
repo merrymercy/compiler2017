@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static com.mercy.compiler.Type.Type.*;
+import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -45,12 +46,12 @@ public class Main {
         List<Entity> ret = new LinkedList<>();
 
         // lib function
-        ret.add(new LibFunction(voidType, "print", new Type[]{stringType}).getEntity());
-        ret.add(new LibFunction(voidType, "println", new Type[]{stringType}).getEntity());
+        ret.add(new LibFunction(voidType, "print", "printf", new Type[]{stringType}).getEntity());
+        ret.add(new LibFunction(voidType, "println", "puts", new Type[]{stringType}).getEntity());
         ret.add(new LibFunction(stringType, "getString", null).getEntity());
         ret.add(new LibFunction(integerType, "getInt", null).getEntity());
         ret.add(new LibFunction(stringType, "toString", new Type[]{integerType}).getEntity());
-        ret.add(new LibFunction(integerType, "__malloc", new Type[]{integerType}).getEntity());
+        ret.add(new LibFunction(integerType, LIB_PREFIX + "malloc", "malloc", new Type[]{integerType}).getEntity());
         // null
         ret.add(new VariableEntity(null, nullType, "null", null));
 

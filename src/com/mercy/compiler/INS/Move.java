@@ -1,6 +1,7 @@
 package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
+import com.mercy.compiler.INS.Operand.Address;
 import com.mercy.compiler.INS.Operand.Operand;
 
 /**
