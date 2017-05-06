@@ -133,15 +133,18 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (node.elseBody() == null) {  // can be optimized here, see Lequn Chen's slide
             stmts.add(new CJump(visitExpr(node.cond()), thenLable, endLable));
             addLabel(thenLable, "if_then");
-            visitStmt(node.thenBody());
+            if (node.thenBody() != null)
+                visitStmt(node.thenBody());
             addLabel(endLable, "if_end");
         } else {
             stmts.add(new CJump(visitExpr(node.cond()), thenLable, elseLable));
             addLabel(thenLable, "if_then");
-            visitStmt(node.thenBody());
+            if (node.thenBody() != null)
+                visitStmt(node.thenBody());
             stmts.add(new Jump(endLable));
             addLabel(elseLable, "if_else");
-            visitStmt(node.elseBody());
+            if (node.elseBody() != null)
+                visitStmt(node.elseBody());
             addLabel(endLable, "if_end");
         }
         return null;

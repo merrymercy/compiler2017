@@ -11,3 +11,18 @@ void func() {
     new A[10][][][];
     (new C).func() + (new C).func();   // new is a kind of expression
 }
+
+
+/*!! metadata:
+=== comment ===
+miscellaneous blank test
+blank-515030910117-zhenglianmin.mx
+=== assert ===
+success_compile
+=== phase ===
+semantic extended
+=== is_public ===
+True
+
+!!*/
+
