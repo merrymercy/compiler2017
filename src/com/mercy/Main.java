@@ -19,14 +19,61 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.LinkedList;
 import java.util.List;
 
 import static com.mercy.compiler.Type.Type.*;
 import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
+import static java.nio.file.StandardWatchEventKinds.*;
 
 public class Main {
+    public static final String SOURCE_PATH = "testcase";
+
     public static void main(String[] args) throws Exception {
+        /*Path srcPath = Paths.get(SOURCE_PATH);
+        WatchService watcher = srcPath.getFileSystem().newWatchService();
+        srcPath.register(watcher, ENTRY_CREATE,
+                ENTRY_MODIFY, ENTRY_DELETE);
+
+        try {
+            WatchKey key = srcPath.register(watcher,
+                    ENTRY_CREATE,
+                    ENTRY_DELETE,
+                    ENTRY_MODIFY);
+        } catch (IOException x) {
+            x.printStackTrace();
+        }
+
+        while (true) {
+            // wait for key to be signaled
+            WatchKey key;
+            try {
+                key = watcher.take();
+            } catch (InterruptedException x) {
+                x.printStackTrace();
+                return;
+            }
+
+            for (WatchEvent<?> event: key.pollEvents()) {
+                WatchEvent.Kind<?> kind = event.kind();
+
+                if (kind == OVERFLOW) {
+                    continue;
+                }
+
+                System.out.println(kind);
+            }
+
+            // Reset the key -- this step is critical if you want to
+            // receive further watch events.  If the key is no longer valid,
+            // the directory is inaccessible so exit the loop.
+            boolean valid = key.reset();
+            if (!valid) {
+                break;
+            }
+        }*/
+
         InputStream is = new FileInputStream("testcase/test.c");
         try {
             compile(is);
@@ -86,12 +133,12 @@ public class Main {
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
         // DEBUG ~~~
-        emitter.printSelf(System.out);
+        //emitter.printSelf(System.out);
 
         // 5th pass, translate to x86 nasm
         Translator translator = new Translator(emitter);
         List<String> asm = translator.translate();
-        translator.printSelf(System.out);
+        //translator.printSelf(System.out);
 
         outputAsm("out.asm", asm);
     }
