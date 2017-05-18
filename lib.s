@@ -5,6 +5,9 @@
 __int_format:
     db "%ld", 0
 
+__intln_format:
+    db "%ld", 10, 0
+
 ;========== IO ==========
 print:
     sub rsp, 8
@@ -23,11 +26,22 @@ println:
     add rsp, 8
     ret
 
-printInt_:
+__lib_printInt:
     sub rsp, 8
 
     mov rsi, rdi
     mov rdi, __int_format
+    xor rax, rax
+    call printf
+
+    add rsp, 8
+    ret
+
+__lib_printlnInt:
+    sub rsp, 8
+
+    mov rsi, rdi
+    mov rdi, __intln_format
     xor rax, rax
     call printf
 

@@ -31,62 +31,24 @@ public class Main {
     public static final String SOURCE_PATH = "testcase";
 
     public static void main(String[] args) throws Exception {
-        /*Path srcPath = Paths.get(SOURCE_PATH);
-        WatchService watcher = srcPath.getFileSystem().newWatchService();
-        srcPath.register(watcher, ENTRY_CREATE,
-                ENTRY_MODIFY, ENTRY_DELETE);
+        compileFile("testcase/test.c");
+    }
 
-        try {
-            WatchKey key = srcPath.register(watcher,
-                    ENTRY_CREATE,
-                    ENTRY_DELETE,
-                    ENTRY_MODIFY);
-        } catch (IOException x) {
-            x.printStackTrace();
-        }
-
-        while (true) {
-            // wait for key to be signaled
-            WatchKey key;
-            try {
-                key = watcher.take();
-            } catch (InterruptedException x) {
-                x.printStackTrace();
-                return;
-            }
-
-            for (WatchEvent<?> event: key.pollEvents()) {
-                WatchEvent.Kind<?> kind = event.kind();
-
-                if (kind == OVERFLOW) {
-                    continue;
-                }
-
-                System.out.println(kind);
-            }
-
-            // Reset the key -- this step is critical if you want to
-            // receive further watch events.  If the key is no longer valid,
-            // the directory is inaccessible so exit the loop.
-            boolean valid = key.reset();
-            if (!valid) {
-                break;
-            }
-        }*/
-
-        InputStream is = new FileInputStream("testcase/test.c");
+    public static int compileFile(String filename) throws Exception {
+        InputStream is = new FileInputStream(filename);
         try {
             compile(is);
         } catch (SemanticError error) {
             System.err.println(error.getMessage());
-            System.exit(1);
+            return 1;
         } catch (InternalError error) {
             System.err.println(error.getMessage());
-            System.exit(1);
+            return 1;
         } catch (Exception e) {
             e.printStackTrace();
-            System.exit(1);
+            return 1;
         }
+        return 0;
     }
 
     public static List<Entity> getLibrary() {
@@ -98,6 +60,8 @@ public class Main {
         ret.add(new LibFunction(stringType, "getString", null).getEntity());
         ret.add(new LibFunction(integerType, "getInt", null).getEntity());
         ret.add(new LibFunction(stringType, "toString", new Type[]{integerType}).getEntity());
+        ret.add(new LibFunction(integerType, LIB_PREFIX + "printInt", LIB_PREFIX + "printInt", new Type[]{integerType}).getEntity());
+        ret.add(new LibFunction(integerType, LIB_PREFIX + "printlnInt", LIB_PREFIX + "printlnInt", new Type[]{integerType}).getEntity());
         ret.add(new LibFunction(integerType, LIB_PREFIX + "malloc", "malloc", new Type[]{integerType}).getEntity());
         // null
         ret.add(new VariableEntity(null, nullType, "null", null));
@@ -133,7 +97,7 @@ public class Main {
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
         // DEBUG ~~~
-        //emitter.printSelf(System.out);
+        emitter.printSelf(System.out);
 
         // 5th pass, translate to x86 nasm
         Translator translator = new Translator(emitter);

@@ -1,13 +1,17 @@
-class A {}
-class B { B() {{{{{ return; }}}}} }  // single return is allowed in constructor
-class C { int func() { return 93; } }
-int main() {}
-void func() {
-    if(false);else;
-    while(true);
-    for(;;);
-    return;
-    {;{{;{{}{}}}};{{};{}}};
-    new A[10][][][];
-    (new C).func() + (new C).func();   // new is a kind of expression
+int main() {
+    bool a = true;
+    bool b = false;
+
+    if (a && b) {
+        println("a && b == T");
+    } else {
+        println("a && b == F");
+    }
+
+    if (a || b) {
+        println("a || b == T");
+    } else {
+        println("a || b == F");
+    }
+
 }

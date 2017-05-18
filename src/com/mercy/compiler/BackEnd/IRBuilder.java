@@ -36,11 +36,15 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     private final IntConst constLengthSize = new IntConst(4);
     private final IntConst constOne = new IntConst(1);
     private final IntConst constZero = new IntConst(0);
-    private final FunctionEntity malloc;
+    private final FunctionEntity mallocFunc, printIntFunc, printlnIntFunc, printFunc, printlnFunc;
 
     public IRBuilder(AST abstractSemanticTree) {
         this.ast = abstractSemanticTree;
-        malloc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "malloc");
+        mallocFunc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "malloc");
+        printIntFunc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "printInt");
+        printlnIntFunc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "printlnInt");
+        printFunc = (FunctionEntity) ast.scope().find("print");
+        printlnFunc = (FunctionEntity) ast.scope().find("println");
     }
 
     public void generateIR() {
@@ -376,9 +380,29 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         return exprDepth == 0 ? null : tmp;
     }
 
+    private void expandPrint(ExprNode arg, boolean newline, boolean last) {
+        if (arg instanceof FuncallNode && ((FuncallNode)arg).functionType().entity().name().equals("toString")) {
+            Expr x = visitExpr(((FuncallNode)arg).args().get(0));
+            stmts.add(new Call(newline && last ? printlnIntFunc : printIntFunc, new LinkedList<Expr>() {{add(x);}}));
+        } else if (arg instanceof BinaryOpNode && ((BinaryOpNode)arg).operator() == BinaryOpNode.BinaryOp.ADD) {
+            expandPrint(((BinaryOpNode)arg).left(), newline, false);
+            expandPrint(((BinaryOpNode)arg).right(), newline, last);
+        } else {
+            Expr x = visitExpr(arg);
+            stmts.add(new Call(newline && last ? printlnFunc : printFunc, new LinkedList<Expr>() {{add(x);}}));
+        }
+    }
+
     @Override
     public Expr visit(FuncallNode node) {
         FunctionEntity entity = node.functionType().entity();
+        if (entity.name().equals("print")) {
+            expandPrint(node.args().get(0), false, true);
+            return null;
+        } else if (entity.name().equals("println")) {
+            expandPrint(node.args().get(0), true, true);
+            return null;
+        }
 
         List<Expr> args = new LinkedList<>();
         for (ExprNode exprNode : node.args())
@@ -445,17 +469,17 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         Var tmpI = newIntTemp();
         // new int a[5][4][];
         /* s = expr[now];
-         * p = malloc(s * pointerSize + lengthSize);
+         * p = mallocFunc(s * pointerSize + lengthSize);
          * *p = s;
          * p = p + 4;
          * for (int i = 0; i < s; i++) {  /-----
          *     s2 = expr[now + 1]
-         *     p[i] = malloc(s2 * pointerSize + lengthSize);
+         *     p[i] = mallocFunc(s2 * pointerSize + lengthSize);
          *     *(p[i]) = s2;
          *     p[i] = p[i] + 4;
          *     for (int i2 = 0; i2 < s2; i++) { /-----
          *         s3 = expr[now + 2];
-         *         p[i][i2] = malloc(s3 * elementSize + lengthSize);
+         *         p[i][i2] = mallocFunc(s3 * elementSize + lengthSize);
          *         p[i][i2][-1] = s3;
          *         // None or Constructor for class
          *         for (int i3 = 0; i3 < s3; i3++)  /-----
@@ -466,7 +490,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         IntConst sizeof = new IntConst(type.size());
 
         addAssign(tmpS, visitExpr(exprs.get(now)));
-        addAssign(base, new Call(malloc, new LinkedList<Expr>(){{add(new Binary(
+        addAssign(base, new Call(mallocFunc, new LinkedList<Expr>(){{add(new Binary(
                 new Binary(tmpS, MUL, sizeof), ADD, constLengthSize));}}));
         addAssign(new Mem(base), tmpS);
         addAssign(base, new Binary(base, ADD, constLengthSize));
@@ -516,7 +540,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         } else {
             ClassEntity entity = ((ClassType) node.type()).entity();
             Var tmp = newIntTemp();
-            addAssign(tmp, new Call(malloc, new LinkedList<Expr>(){{ add(new IntConst(entity.size())); }}));
+            addAssign(tmp, new Call(mallocFunc, new LinkedList<Expr>(){{ add(new IntConst(entity.size())); }}));
             if (entity.constructor() != null)
                 stmts.add(new Call(entity.constructor(), new LinkedList<Expr>(){{ add(tmp); }}));
             return exprDepth == 0 ? null : tmp;
@@ -677,15 +701,15 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 //        VariableNode tmpI = new VariableNode(newIntTemp().entity());
 //        // new int a[5][4][];
 //        /* s = expr[now];
-//         * p = malloc(s * pointerSize + lengthSize);
+//         * p = mallocFunc(s * pointerSize + lengthSize);
 //         *  = s;
 //         * for (int i = 0; i < s; i++) {  /-----
 //         *     s2 = expr[now + 1]
-//         *     p[i] = malloc(s2 * pointerSize + lengthSize);
+//         *     p[i] = mallocFunc(s2 * pointerSize + lengthSize);
 //         *     p[-1] = s2
 //         *     for (int i2 = 0; i2 < s2; i++) { /-----
 //         *         s3 = expr[now + 2];
-//         *         p[i][i2] = malloc(s3 * elementSize + lengthSize);
+//         *         p[i][i2] = mallocFunc(s3 * elementSize + lengthSize);
 //         *         p[i][i2][-1] = s3;
 //         *         // None or Constructor for class
 //         *         for (int i3 = 0; i3 < s3; i3++)  /-----
@@ -698,7 +722,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 //    ExprStmtNode calcSize = new ExprStmtNode(null,
 //            new AssignNode(tmpS, exprs.get(now)));
 //    ExprStmtNode alloc = new ExprStmtNode(null,
-//            new AssignNode(base, new FuncallNode(new VariableNode(malloc),
+//            new AssignNode(base, new FuncallNode(new VariableNode(mallocFunc),
 //                    new LinkedList<ExprNode>() {{
 //                        add(new BinaryOpNode(tmpS, BinaryOpNode.BinaryOp.Mul, constPointerSizeNode));
 //                    }})));
