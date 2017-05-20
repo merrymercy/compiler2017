@@ -271,17 +271,23 @@ public class Translator {
         left = ins.left();
         right= ins.right();
         name = ins.name();
+
         if (left.isRegister()) {
             if (right.isRegister()) {  // add regl, regr
                 add(name, left, right);
-            } else {                   // add regl, memr
-                add(name, left, right);
+            } else {
+                if (right instanceof Address) {    // add regl, [memr]
+                    add("mov", rax(), ((Address) right).base());
+                    add(name, left, new Address(rax()));
+                } else {                           // add regl, memr
+                    add(name, left, right);
+                }
             }
         } else {
             if (right.isRegister()) {   // add meml, regr
                 add("mov", rax(), left);
                 add(name, rax(), right);
-                add("mov", left, rax());
+                add("movm", left, rax());
             } else {                    // add meml, memr
                 add("mov", rax(), left);
                 add(name, rax(), right);
@@ -442,8 +448,8 @@ public class Translator {
 
     public void visit(Lea ins) {
         mem2reg(ins.addr(), rax(), rdx());
+        ins.addr().setShowSize(false);
         if (ins.dest().isRegister()) {
-            ins.addr().setShowSize(false);
             add("lea", ins.dest(), ins.addr());
         } else {
             add("lea", rcx(), ins.addr());
