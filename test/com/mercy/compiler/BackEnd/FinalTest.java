@@ -1,17 +1,5 @@
 package com.mercy.compiler.BackEnd;
 
-import com.mercy.compiler.AST.AST;
-import com.mercy.compiler.FrontEnd.ASTBuilder;
-import com.mercy.compiler.FrontEnd.ParserErrorListener;
-import com.mercy.compiler.Parser.MalicLexer;
-import com.mercy.compiler.Parser.MalicParser;
-import com.mercy.compiler.Type.Type;
-import com.mercy.compiler.Utility.SemanticError;
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
-import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -20,9 +8,8 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.mercy.Main.getLibrary;
-import static junit.framework.TestCase.fail;
-import static org.junit.Assert.*;
+import static com.mercy.Main.compile;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by mercy on 17-5-6.
@@ -65,41 +52,10 @@ public class FinalTest {
         System.out.flush();
         if (ansFile == null) throw new RuntimeException("no ans file");
 
+        InputStream is = new FileInputStream(srcFile);
+        PrintStream os = new PrintStream(new FileOutputStream("out.asm"));
 
-        InputStream sourceCode = new FileInputStream(srcFile);
-        ANTLRInputStream input = new ANTLRInputStream(sourceCode);
-        MalicLexer lexer = new MalicLexer(input);
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        MalicParser parser = new MalicParser(tokens);
-        parser.removeErrorListeners();
-        parser.addErrorListener(new ParserErrorListener());
-        ParseTree tree = parser.compilationUnit();
-
-        ParseTreeWalker walker = new ParseTreeWalker();
-        ASTBuilder listener = new ASTBuilder();
-
-        walker.walk(listener, tree);  // 0th pass, CST -> AST
-
-        AST ast  = listener.getAST();
-        ast.loadLibrary(getLibrary());// load library function
-        Type.initializeBuiltinType();
-
-        ast.resolveSymbol();                         // 1st pass, extract info of class and function
-        ast.checkType();                             // 2nd pass, check type
-
-        IRBuilder irBuilder = new IRBuilder(ast);
-        irBuilder.generateIR();                      // 3rd pass, generate IR, do simple constant folding
-
-        // 4th pass, emit instructions
-        InstructionEmitter emitter = new InstructionEmitter(irBuilder);
-        emitter.emit();
-
-        // 5th pass, translate to x86 nasm
-        Translator translator = new Translator(emitter);
-        List<String> asm = translator.translate();
-
-        outputAsm("out.asm", asm);
-
+        compile(is, os);
 
         // run test
         Process spim = new ProcessBuilder("./asm.bash","out")

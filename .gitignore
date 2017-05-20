@@ -1,14 +1,16 @@
 .idea
 out
+bin
 *.iml
 
-note
+note.txt
 
 ./*.out
 *.asm
 *.o
 
 
+a.out
 main.c
 debug.c
 in.txt

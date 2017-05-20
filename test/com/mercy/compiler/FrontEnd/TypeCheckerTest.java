@@ -1,14 +1,7 @@
 package com.mercy.compiler.FrontEnd;
 
-import com.mercy.compiler.AST.AST;
-import com.mercy.compiler.Parser.MalicLexer;
-import com.mercy.compiler.Parser.MalicParser;
-import com.mercy.compiler.Type.Type;
+import com.mercy.Option;
 import com.mercy.compiler.Utility.SemanticError;
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -17,8 +10,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static com.mercy.Main.compileFile;
-import static com.mercy.Main.getLibrary;
+import static com.mercy.Main.compile;
+import static java.lang.System.exit;
 import static junit.framework.TestCase.fail;
 
 /**
@@ -56,12 +49,20 @@ public class TypeCheckerTest {
         System.out.println("# " + filename);
         System.out.flush();
 
-        int status = compileFile(filename);
+        InputStream is = new FileInputStream(filename);
+        PrintStream os = new PrintStream(new FileOutputStream(Option.outFile));
 
-        if (!shouldPass && status == 0)
-            fail("should not pass");
-        if (shouldPass && status != 0)
-            fail("should pass");
+        try {
+            compile(is, os);
+            if (!shouldPass)
+                fail("should not pass");
+        }  catch (SemanticError error) {
+            if (shouldPass)
+                fail("should pass");
+        } catch (InternalError error) {
+            System.err.println(error.getMessage());
+            exit(1);
+        }
     }
 
 }

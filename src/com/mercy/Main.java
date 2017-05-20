@@ -1,57 +1,72 @@
 package com.mercy;
 
 import com.mercy.compiler.AST.AST;
+import com.mercy.compiler.BackEnd.IRBuilder;
 import com.mercy.compiler.BackEnd.InstructionEmitter;
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.FrontEnd.ASTBuilder;
-import com.mercy.compiler.BackEnd.IRBuilder;
 import com.mercy.compiler.FrontEnd.ParserErrorListener;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.LibFunction;
 import com.mercy.compiler.Utility.SemanticError;
-import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import java.io.*;
-import java.nio.file.*;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.LinkedList;
 import java.util.List;
 
 import static com.mercy.compiler.Type.Type.*;
 import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
 import static java.lang.System.exit;
-import static java.nio.file.StandardWatchEventKinds.*;
 
 public class Main {
-    public static final String SOURCE_PATH = "testcase";
 
     public static void main(String[] args) throws Exception {
-        int status = compileFile("testcase/test.c");
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "--print-ins":
+                    Option.printInsturction = true;
+                    break;
+                case "-in":
+                    if (i + 1 >= args.length)
+                        System.err.println("invalid argument for input file, use default setting instead");
+                    else
+                        Option.inFile = args[++i];
+                    break;
+                case "-out":
+                    if (i + 1 >= args.length)
+                        System.err.println("invalid argument for output file, use default setting instead");
+                    else
+                        Option.outFile = args[++i];
+                    break;
+            }
+        }
 
-        exit(status);
-    }
+        InputStream is = new FileInputStream(Option.inFile);
+        PrintStream os = new PrintStream(new FileOutputStream(Option.outFile));
 
-    public static int compileFile(String filename) throws Exception {
-        InputStream is = new FileInputStream(filename);
         try {
-            compile(is);
+            compile(is, os);
         } catch (SemanticError error) {
             System.err.println(error.getMessage());
-            return 1;
+            exit(1);
         } catch (InternalError error) {
             System.err.println(error.getMessage());
-            return 1;
+            exit(1);
         } catch (Exception e) {
             e.printStackTrace();
-            return 1;
+            exit(1);
         }
-        return 0;
     }
 
     public static List<Entity> getLibrary() {
@@ -72,7 +87,7 @@ public class Main {
         return ret;
     }
 
-    public static void compile(InputStream sourceCode) throws Exception {
+    public static void compile(InputStream sourceCode, PrintStream asmCode) throws Exception {
         ANTLRInputStream input = new ANTLRInputStream(sourceCode);
         MalicLexer lexer = new MalicLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -100,27 +115,16 @@ public class Main {
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
         // DEBUG ~~~
-        emitter.printSelf(System.out);
+        if (Option.printInsturction)
+            emitter.printSelf(System.out);
 
         // 5th pass, translate to x86 nasm
         Translator translator = new Translator(emitter);
         List<String> asm = translator.translate();
         //translator.printSelf(System.out);
 
-        outputAsm("out.asm", asm);
-    }
-
-
-    static private void outputAsm(String filename, List<String> asm) {
-        File f = new File(filename);
-        try {
-            BufferedWriter fout = new BufferedWriter(new FileWriter(f));
-            for (String s : asm) {
-                fout.write(s + "\n");
-            }
-            fout.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+        for (String s : asm) {
+            asmCode.println(s);
         }
     }
 }
