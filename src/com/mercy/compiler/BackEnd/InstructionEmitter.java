@@ -82,7 +82,7 @@ public class InstructionEmitter {
 
         exprDepth++;
 
-        if (ir instanceof Binary) {
+        /*if (ir instanceof Binary) {
             Binary bin = (Binary)ir;
             if (bin.operator() == ADD) {
                 if (bin.right() instanceof Binary && ((Binary) bin.right()).operator() == MUL
@@ -100,14 +100,14 @@ public class InstructionEmitter {
                     } else {
                         tmpTop = backupTop; // only leave ret, remove other useless tmp register
                         ret = getTmp();
-                        ins.add(new Move(ret, base));     // TODO : optimize here
+                        ins.add(new Move(ret, base));
                         ins.add(new Lea(ret, new Address(ret, index, ((IntConst) ((Binary) bin.right()).right()).value())));
                     }
 
                     matched = true;
                 }
             }
-        }
+        }*/
 
         if (!matched) {
             ret = ir.accept(this);
@@ -163,69 +163,31 @@ public class InstructionEmitter {
         }
     }
 
-
-    boolean leftValueWanted = false;
-    private boolean notuseTemp = false;
     public Operand visit(com.mercy.compiler.IR.Assign ir) {
-        Triple<Expr, Expr, Integer> addr;
         Operand dest = null;
 
         if (ir.left() instanceof Var) {
             dest = new Address(new Address(((Var) ir.left()).entity()));
         } else if (ir.left() instanceof Addr) {
             dest = new Address(((Addr) ir.left()).entity());
-        } else if (ir.left() instanceof Mem) {
-            addr = matchAddress(((Mem) ir.left()).expr());
-            if (addr == null) {
-                throw new InternalError("Unhanded case in IR Assign Mem: " + ir.left());
-            }
-/*
-            Operand base = visitExpr(addr.first);
-            Operand index = visitExpr(addr.second);
-
-            dest = new Address(base, index, addr.third);*/
+        }/* else if (ir.left() instanceof Mem) {
         } else if (ir.left() instanceof Binary) {
-
         } else {
             throw new InternalError("Unhandled case in IR Assign left: " + ir.left());
-        }
+        }*/
 
-        if (dest != null) {
-            if (ir.right() instanceof Mem && (addr = matchAddress(((Mem) ir.right()).expr())) != null) {
-                Operand base = visitExpr(addr.first);
-                Operand index = visitExpr(addr.second);
-
-                ins.add(new Move(dest, new Address(base, index, addr.third)));
-            } else {
-                exprDepth++;
-                Operand rhs = visitExpr(ir.right());
-                exprDepth--;
-                ins.add(new Move(dest, rhs));
-            }
-        } else {
-            leftValueWanted = true;
+        if (dest == null) {
             Operand lhs = visitExpr(ir.left());
-            leftValueWanted = false;
-            if (ir.right() instanceof Mem && (addr = matchAddress(((Mem) ir.right()).expr())) != null) {
-                Operand base = visitExpr(addr.first);
-                Operand index = visitExpr(addr.second);
-
-                if (ir.left() instanceof Addr) {
-                    ins.add(new Move(lhs, new Address(base, index, addr.third)));
-                } else {
-                    ins.add(new Move(new Address(lhs), new Address(base, index, addr.third)));
-                }
-            } else {
-                exprDepth++;
-                Operand rhs = visitExpr(ir.right());
-                exprDepth--;
-                if (ir.left() instanceof Addr) {
-                    ins.add(new Move(lhs, rhs));
-                } else {
-                    ins.add(new Move(new Address(lhs), rhs));
-                }
-            }
+            if (ir.left() instanceof Addr)
+                dest = lhs;
+            else
+                dest = new Address(lhs);
         }
+
+        exprDepth++;
+        Operand rhs = visitExpr(ir.right());
+        exprDepth--;
+        ins.add(new Move(dest, rhs));
 
         return null;
     }
@@ -278,14 +240,6 @@ public class InstructionEmitter {
                 throw new InternalError("Invalid operator " + operator);
         }
         return left;
-    }
-
-    List<Reference> tmpStack;
-    int tmpTop = 0;
-    public Reference getTmp() {
-        if (tmpTop >= tmpStack.size())
-            tmpStack.add(new Reference());
-        return tmpStack.get(tmpTop++);
     }
 
     private boolean isCommutative(com.mercy.compiler.IR.Binary.BinaryOp op) {
@@ -408,8 +362,6 @@ public class InstructionEmitter {
                 throw new InternalError("Unhandled case in IR Mem " + ir.expr());
             } else {       // should add address "[]" in this case
                 if (addr instanceof Reference) {
-                /*ret = (Reference)addr;
-                ins.add(new Move(ret, new Address(addr)));*/
                     return new Address(addr);
                 } else {
                     throw new InternalError("unhanded address type in IR Mem" + addr);
@@ -432,6 +384,18 @@ public class InstructionEmitter {
         Reference ret = getTmp();
         ins.add(new Move(ret, new Address(ir.entity())));
         return ret;
+    }
+
+
+    /*
+     * temp virtual register
+     */
+    List<Reference> tmpStack;
+    int tmpTop = 0;
+    public Reference getTmp() {
+        if (tmpTop >= tmpStack.size())
+            tmpStack.add(new Reference());
+        return tmpStack.get(tmpTop++);
     }
 
     // getter
@@ -461,21 +425,3 @@ public class InstructionEmitter {
         }
     }
 }
-
-/*
-
-    private List<Reference> virtualStack;
-    private int tmpTop = -1;
-    private void virtualPush(Operand base) {
-        tmpTop++;
-        if (tmpTop >= virtualStack.size()) {
-            virtualStack.add(new Reference());
-        }
-        ins.add(new Move(virtualStack.get(tmpTop), base));
-    }
-
-    private Operand virtualPop() {
-        return virtualStack.get(tmpTop--);
-    }
-
- */

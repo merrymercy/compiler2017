@@ -68,9 +68,9 @@ public class ASTBuilder extends MalicBaseListener {
             FunctionEntity entity = node.entity();
             if (entity.isConstructor()) {
                 constructor = entity;
-                if (!entity.name().equals(ClassType.CONSTRUCTOR_NAME)) {
+                if (!entity.name().equals(ClassType.CONSTRUCTOR_NAME + name)) {
                     throw new SemanticError(new Location(ctx.name), "wrong name of constructor : " + entity.name()
-                            + "and" + name);
+                            + " and " + ClassType.CONSTRUCTOR_NAME + name);
                 }
 
             }
@@ -94,7 +94,7 @@ public class ASTBuilder extends MalicBaseListener {
         FunctionEntity entity;
         if (ctx.ret == null) { // creator
             entity = new FunctionEntity(new Location(ctx.name), new ClassType(ctx.name.getText()),
-                    ClassType.CONSTRUCTOR_NAME,
+                    ClassType.CONSTRUCTOR_NAME + ctx.name.getText(),
                     params, (BlockNode) map.get(ctx.block()));
             entity.setConstructor(true);
         } else {

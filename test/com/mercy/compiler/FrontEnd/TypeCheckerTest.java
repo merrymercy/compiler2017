@@ -17,6 +17,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import static com.mercy.Main.compileFile;
 import static com.mercy.Main.getLibrary;
 import static junit.framework.TestCase.fail;
 
@@ -51,33 +52,13 @@ public class TypeCheckerTest {
     }
 
     @Test
-    public void testPass() throws IOException {
+    public void testPass() throws Exception {
         System.out.println("# " + filename);
         System.out.flush();
         try {
-            InputStream sourceCode = new FileInputStream(filename);
-            ANTLRInputStream input = new ANTLRInputStream(sourceCode);
-            MalicLexer lexer = new MalicLexer(input);
-            CommonTokenStream tokens = new CommonTokenStream(lexer);
-            MalicParser parser = new MalicParser(tokens);
-            parser.removeErrorListeners();
-            parser.addErrorListener(new ParserErrorListener());
+            int status = compileFile(filename);
 
-            ParseTree tree = parser.compilationUnit();
-
-            ParseTreeWalker walker = new ParseTreeWalker();
-            ASTBuilder listener = new ASTBuilder();
-
-            walker.walk(listener, tree);
-
-            AST ast = listener.getAST();
-
-            ast.loadLibrary(getLibrary());// load library function
-            Type.initializeBuiltinType();
-
-            ast.resolveSymbol();
-            ast.checkType();
-            if (!shouldPass) {
+            if (!shouldPass && status == 0) {
                 fail("should not pass");
             }
         } catch (SemanticError error) {
@@ -86,6 +67,8 @@ public class TypeCheckerTest {
             } else {
                 System.out.println(error);
             }
+        } catch (Exception error) {
+            throw error;
         }
     }
 
