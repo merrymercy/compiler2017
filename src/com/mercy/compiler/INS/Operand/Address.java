@@ -8,12 +8,12 @@ import com.mercy.compiler.Utility.InternalError;
  */
 public class Address extends Operand {
     public enum Type {
-        ENTITY, BASE_ONLY, BASE_INDEX, BASE_INDEX_MUL
+        ENTITY, BASE_OFFSET
     }
 
     Entity entity;
-    Operand base, index;  // however, these two member can only be register/reference, cannot be address!
-    int mul, add;
+    Operand base = null, index = null;  // however, these two member can only be register/reference, cannot be address!
+    int mul = 1, add = 0;
     Type type;
 
     boolean showSize = true;
@@ -27,22 +27,7 @@ public class Address extends Operand {
 
     public Address(Operand base) {
         this.base = base;
-        this.type = Type.BASE_ONLY;
-    }
-
-    public Address(Operand base, Operand index) {
-        this.base = base;
-        this.index = index;
-        this.mul = mul;
-        this.type = Type.BASE_INDEX;
-    }
-
-
-    public Address(Operand base, Operand index, int mul) {
-        this.base = base;
-        this.index = index;
-        this.mul = mul;
-        this.type = Type.BASE_INDEX_MUL;
+        this.type = Type.BASE_OFFSET;
     }
 
     public Address(Operand base, Operand index, int mul, int add) {
@@ -50,11 +35,8 @@ public class Address extends Operand {
         this.index = index;
         this.mul = mul;
         this.add = add;
+        this.type = Type.BASE_OFFSET;
     }
-
-
-
-
 
     /*
      * getter and setter
@@ -106,14 +88,28 @@ public class Address extends Operand {
 
     @Override
     public String toNASM() {
-        String sizePrefix = showSize ? "qword" : "";
+        String ret = showSize ? "qword" + " [" : "[";
+        String gap = "";
         switch (type) {
             case ENTITY:
                 return entity.reference().toNASM();
-            case BASE_ONLY:
-                return sizePrefix + " [" + baseNasm().toNASM() + "]";
-            case BASE_INDEX_MUL:
-                return sizePrefix + " [" + baseNasm().toNASM() + " + " + indexNasm().toNASM() + " * " + mul + "]";
+            case BASE_OFFSET:
+                if (base != null) {
+                    ret += gap + baseNasm().toNASM();
+                    gap = " + ";
+                }
+                if (index != null) {
+                    ret += gap + indexNasm().toNASM();
+                    gap = " + ";
+                    if (mul != 1) {
+                        ret += " * " + mul;
+                    }
+                }
+                if (add != 0) {
+                    ret += gap + add;
+                }
+
+                return ret + "]";
             default:
                 throw new InternalError("invalid type " + type);
         }
@@ -121,14 +117,27 @@ public class Address extends Operand {
 
     @Override
     public String toString() {
-        String str;
+        String str = "";
         switch (type) {
             case ENTITY:
                 str = entity.name(); break;
-            case BASE_ONLY:
-                str = base.toString(); break;
-            case BASE_INDEX_MUL:
-                str = base.toString() + " + " + index.toString() + " * " + mul; break;
+            case BASE_OFFSET:
+                String gap = "";
+                if (base != null) {
+                    str += gap + base;
+                    gap = " + ";
+                }
+                if (index != null) {
+                    str += gap + index;
+                    gap = " + ";
+                    if (mul != 1) {
+                        str += " * " + mul;
+                    }
+                }
+                if (add != 0) {
+                    str += gap + add;
+                }
+                break;
             default:
                 throw new InternalError("invalid type " + type);
         }

@@ -114,7 +114,6 @@ public class Main {
         // 4th pass, emit instructions
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
-        // DEBUG ~~~
         if (Option.printInsturction)
             emitter.printSelf(System.out);
 

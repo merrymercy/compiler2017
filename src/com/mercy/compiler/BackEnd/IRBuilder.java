@@ -7,14 +7,13 @@ import com.mercy.compiler.IR.*;
 import com.mercy.compiler.Type.*;
 import com.mercy.compiler.Utility.InternalError;
 
-import static com.mercy.compiler.IR.Binary.BinaryOp.*;
-import static com.mercy.compiler.IR.Unary.UnaryOp.*;
-import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
-import static java.lang.System.exit;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
+
+import static com.mercy.compiler.IR.Binary.BinaryOp.*;
+import static com.mercy.compiler.IR.Unary.UnaryOp.*;
+import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
 
 /**
  * Created by mercy on 17-3-30.
@@ -469,7 +468,10 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (node.isMember()) {  // add "this" pointer
             Expr base = new Var(node.getThisPointer());
             int offset = node.entity().offset();
-            return new Mem(new Binary(base, ADD, new IntConst(offset)));
+            if (offset == 0)
+                return new Mem(base);
+            else
+                return new Mem(new Binary(base, ADD, new IntConst(offset)));
         } else {
             return new Var(node.entity());
         }
@@ -479,7 +481,10 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(MemberNode node) {
         Expr base = visitExpr(node.expr());
         int offset = node.entity().offset();
-        return new Mem(new Binary(base, ADD, new IntConst(offset)));
+        if (offset == 0)
+            return new Mem(base);
+        else
+            return new Mem(new Binary(base, ADD, new IntConst(offset)));
     }
 
     private void expandCreator(List<ExprNode> exprs, Expr base, int now, Type type, FunctionEntity constructor) {

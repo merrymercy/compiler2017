@@ -1,12 +1,17 @@
 package com.mercy.compiler.BackEnd;
 
 import com.mercy.compiler.AST.FunctionDefNode;
-import com.mercy.compiler.Entity.*;
+import com.mercy.compiler.Entity.ClassEntity;
+import com.mercy.compiler.Entity.FunctionEntity;
+import com.mercy.compiler.Entity.Scope;
 import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.CJump;
 import com.mercy.compiler.INS.Call;
 import com.mercy.compiler.INS.Label;
-import com.mercy.compiler.INS.Operand.*;
+import com.mercy.compiler.INS.Operand.Address;
+import com.mercy.compiler.INS.Operand.Immediate;
+import com.mercy.compiler.INS.Operand.Operand;
+import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.INS.Return;
 import com.mercy.compiler.IR.*;
 import com.mercy.compiler.Utility.InternalError;
@@ -17,8 +22,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.mercy.compiler.INS.Operand.Address.Type.BASE_ONLY;
-import static com.mercy.compiler.IR.Binary.BinaryOp.*;
+import static com.mercy.compiler.IR.Binary.BinaryOp.ADD;
+import static com.mercy.compiler.IR.Binary.BinaryOp.MUL;
 
 /**
  * Created by mercy on 17-4-25.
@@ -30,8 +35,6 @@ public class InstructionEmitter {
 
     private List<Instruction> ins;
     FunctionEntity currentFunction;
-
-    Register rax = new Register("rax");
 
     public InstructionEmitter(IRBuilder irBuilder) {
         this.globalScope = irBuilder.globalScope();
@@ -65,8 +68,9 @@ public class InstructionEmitter {
     }
 
     /*
-     * IR Visitor
+     * Instruction Selection (match address)
      */
+
     private boolean isPowerOf2(Expr ir) {
         if (ir instanceof IntConst) {
             int x = ((IntConst) ir).value();
@@ -74,53 +78,20 @@ public class InstructionEmitter {
         }
         return false;
     }
-
-    int exprDepth = 0;
-    public Operand visitExpr(com.mercy.compiler.IR.Expr ir) {
-        boolean matched = false;
-        Operand ret = null;
-
-        exprDepth++;
-
-        Triple<Expr, Expr, Integer> addr;
-
-        if ((addr = matchAddress(ir)) != null) {
-            int backupTop = tmpTop;
-            Operand base = visitExpr(addr.first);
-            Operand index = visitExpr(addr.second);
-
-            if (base instanceof Reference) {
-                tmpTop = backupTop + 1; // only leave ret, remove other useless tmp register
-                ret = base;
-                ins.add(new Lea(ret, new Address(base, index, addr.third)));
-            } else if (base instanceof Immediate) {
-                ret = getTmp();
-                ins.add(new Move(ret, base));
-                ins.add(new Lea(ret, new Address(ret, index, addr.third)));
-            } else if (base instanceof Address) {
-                tmpTop = backupTop; // only leave ret, remove other useless tmp register
-                ret = getTmp();
-                ins.add(new Move(ret, base));
-                ins.add(new Lea(ret, new Address(ret, index, addr.third)));
-            } else {
-                throw new InternalError("Unhandled case in lea");
-            }
-            matched = true;
+    private class AddressTuple {
+        public Expr base, index;
+        public int mul, add;
+        public AddressTuple(Expr base, Expr index, int mul, int add) {
+            this.base = base;
+            this.index = index;
+            this.mul = mul;
+            this.add = add;
         }
-
-        if (!matched) {
-            ret = ir.accept(this);
-        }
-        exprDepth--;
-        return ret;
     }
 
-    public Operand visit(com.mercy.compiler.IR.Addr ir) {
-        return new Address(ir.entity());
-    }
-
-    // base, index, mul
-    private Triple<Expr, Expr, Integer> matchAddress(Expr expr) {
+    // only match [base + index * mul]
+    boolean matchSimpleAdd = false;  // whether to match [base + index]
+    private Triple<Expr, Expr, Integer>  matchBaseIndexMul(Expr expr) {
         if (!(expr instanceof Binary))
             return null;
         Binary bin = (Binary)expr;
@@ -153,6 +124,11 @@ public class InstructionEmitter {
                     mul = ((IntConst) left.left()).value();
                     matched = true;
                 }
+            } else if (matchSimpleAdd) {
+                base = bin.left();
+                index = bin.right();
+                mul = 1;
+                matched = true;
             }
         }
         if (matched) {
@@ -160,6 +136,97 @@ public class InstructionEmitter {
         } else {
             return null;
         }
+    }
+
+    // match all types of address [base + index * mul + offset]
+    // two step : 1.match offset 2. match [base + index * mul]
+    private AddressTuple matchAddress(Expr expr) {
+        if (!(expr instanceof Binary))
+            return null;
+        Binary bin = (Binary)expr;
+
+        Expr base = null, index = null;
+        int mul = 1, add = 0;
+        boolean matched = false;
+        Triple<Expr, Expr, Integer> baseIndexMul = null;
+        if (bin.operator() == ADD) {
+            if (bin.right() instanceof IntConst) {
+                add = ((IntConst)bin.right()).value();
+
+                if ((baseIndexMul = matchBaseIndexMul(bin.left())) != null) {
+                    matched = true;
+                } else {
+                    base = bin.left();
+                }
+            } else if (bin.left()  instanceof IntConst) {
+                add = ((IntConst)bin.left()).value();
+                if ((baseIndexMul = matchBaseIndexMul(bin.right())) != null) {
+                    matched = true;
+                } else {
+                    base = bin.right();
+                }
+            } else if ((baseIndexMul = matchBaseIndexMul(bin)) != null) {
+                matched = true;
+            }
+        }
+
+        if (matched) {
+            if (baseIndexMul == null)
+                return new AddressTuple(base, index, mul, add);
+            else   // copy from baseIndexMul
+                return new AddressTuple(baseIndexMul.first, baseIndexMul.second, baseIndexMul.third, add);
+        } else {
+            return null;
+        }
+    }
+
+    /*
+     * IR Visitor
+     */
+    int exprDepth = 0;
+    public Operand visitExpr(com.mercy.compiler.IR.Expr ir) {
+        boolean matched = false;
+        Operand ret = null;
+
+        exprDepth++;
+        AddressTuple addr;
+
+        // instruction selection for "lea"
+        if ((addr = matchAddress(ir)) != null) {
+            int backupTop = tmpTop;
+            Operand base = visitExpr(addr.base);
+            Operand index = null;
+            if (addr.index != null)
+                index = visitExpr(addr.index);
+
+            if (base instanceof Reference) {
+                tmpTop = backupTop + 1; // only leave ret, remove other useless tmp register
+                ret = base;
+                ins.add(new Lea(ret, new Address(base, index, addr.mul, addr.add)));
+            } else if (base instanceof Immediate) {
+                ret = getTmp();
+                ins.add(new Move(ret, base));
+                ins.add(new Lea(ret, new Address(ret, index, addr.mul, addr.add)));
+            } else if (base instanceof Address) {
+                tmpTop = backupTop; // only leave ret, remove other useless tmp register
+                ret = getTmp();
+                ins.add(new Move(ret, base));
+                ins.add(new Lea(ret, new Address(ret, index, addr.mul, addr.add)));
+            } else {
+                throw new InternalError("Unhandled case in lea");
+            }
+            matched = true;
+        }
+
+        if (!matched) {
+            ret = ir.accept(this);
+        }
+        exprDepth--;
+        return ret;
+    }
+
+    public Operand visit(com.mercy.compiler.IR.Addr ir) {
+        return new Address(ir.entity());
     }
 
     public Operand visit(com.mercy.compiler.IR.Assign ir) {
@@ -183,10 +250,23 @@ public class InstructionEmitter {
                 dest = new Address(lhs);
         }
 
-        exprDepth++;
-        Operand rhs = visitExpr(ir.right());
-        exprDepth--;
-        ins.add(new Move(dest, rhs));
+        /*matchSimpleAdd = false;
+        AddressTuple addr = matchAddress(ir.right());
+        matchSimpleAdd = false;
+
+        if (addr != null) {
+            Operand base = visitExpr(addr.base);
+            Operand index = null;
+            if (addr.index != null)
+                index = visitExpr(addr.index);
+
+            ins.add(new Lea(dest, new Address(base, index, addr.mul, addr.add)));
+        } else*/ {
+            exprDepth++;
+            Operand rhs = visitExpr(ir.right());
+            exprDepth--;
+            ins.add(new Move(dest, rhs));
+        }
 
         return null;
     }
@@ -194,20 +274,14 @@ public class InstructionEmitter {
     private Operand addBinary(com.mercy.compiler.IR.Binary.BinaryOp operator, Operand left, Operand right) {
         if (left instanceof Address) {
             switch (((Address) left).type()) {
-                case BASE_ONLY:
+                case BASE_OFFSET:
                     while(((Address) left).base() instanceof Address) {
                         left = ((Address) left).base();
                     }
                     ins.add(new Move(((Address) left).base(), left));
                     left = ((Address) left).base();
                     break;
-                case BASE_INDEX_MUL:
-                    while(((Address) left).base() instanceof Address) {
-                        left = ((Address) left).base();
-                    }
-                    ins.add(new Move(((Address) left).base(), left));
-                    left = ((Address) left).base();
-                    break;
+
                 case ENTITY:
                 default:
                     throw new InternalError("Unhandled case in IR Binary " + left.getClass());
@@ -351,12 +425,14 @@ public class InstructionEmitter {
     }
 
     public Operand visit(com.mercy.compiler.IR.Mem ir) {
-        Triple<Expr, Expr, Integer> addr;
+        AddressTuple addr;
 
         if ((addr = matchAddress(ir.expr())) != null) {
             int backupTop = tmpTop;
-            Operand base =  visitExpr(addr.first);
-            Operand index =  visitExpr(addr.second);
+            Operand base =  visitExpr(addr.base);
+            Operand index = null;
+            if (addr.index != null)
+                index =  visitExpr(addr.index);
             Operand ret = base;
             tmpTop = backupTop + 1;
 
@@ -364,18 +440,14 @@ public class InstructionEmitter {
                 ret = ((Address) ret).base();
             }
 
-            ins.add(new Move(ret, new Address(base, index, addr.third)));
+            ins.add(new Move(ret, new Address(base, index, addr.mul, addr.add)));
             return ret;
         } else {
             Operand expr = visitExpr(ir.expr());
             if (ir.expr() instanceof Addr) {
                 throw new InternalError("Unhandled case in IR Mem " + ir.expr());
             } else {       // should add address "[]" in this case
-                if (expr instanceof Reference) {
-                    return new Address(expr);
-                } else {
-                    throw new InternalError("unhanded address type in IR Mem: " + expr);
-                }
+                return new Address(expr);
             }
         }
     }

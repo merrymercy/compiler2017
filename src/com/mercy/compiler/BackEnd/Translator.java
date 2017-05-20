@@ -6,7 +6,10 @@ import com.mercy.compiler.INS.Operand.*;
 import com.mercy.compiler.IR.IR;
 import com.mercy.compiler.Utility.InternalError;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -381,32 +384,34 @@ public class Translator {
 
     private int mem2reg(Address addr, Register reg1, Register reg2) {
         switch (addr.type()) {
-            case BASE_ONLY:
-                if (addr.base().isRegister()) {
-                    return 0;
-                } else {
-                    add("mov", reg1, addr.base());
-                    addr.setBaseNasm(reg1);
-                    return 1;
-                }
-            case BASE_INDEX_MUL:
-                if (addr.base().isRegister()) {
-                    if (addr.index().isRegister()) {
+            case BASE_OFFSET:
+                if (addr.index() == null) {
+                    if (addr.base().isRegister()) {
                         return 0;
                     } else {
-                        add("mov", reg1, addr.index());
-                        addr.setIndexNasm(reg1);
+                        add("mov", reg1, addr.base());
+                        addr.setBaseNasm(reg1);
                         return 1;
                     }
                 } else {
-                    add("mov", reg1, addr.base());
-                    addr.setBaseNasm(reg1);
-                    if (addr.index().isRegister()) {
-                        return 1;
+                    if (addr.base().isRegister()) {
+                        if (addr.index().isRegister()) {
+                            return 0;
+                        } else {
+                            add("mov", reg1, addr.index());
+                            addr.setIndexNasm(reg1);
+                            return 1;
+                        }
                     } else {
-                        add("mov", reg2, addr.index());
-                        addr.setIndexNasm(reg2);
-                        return 2;
+                        add("mov", reg1, addr.base());
+                        addr.setBaseNasm(reg1);
+                        if (addr.index().isRegister()) {
+                            return 1;
+                        } else {
+                            add("mov", reg2, addr.index());
+                            addr.setIndexNasm(reg2);
+                            return 2;
+                        }
                     }
                 }
             case ENTITY:
