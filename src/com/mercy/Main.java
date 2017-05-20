@@ -100,7 +100,7 @@ public class Main {
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
         // DEBUG ~~~
-        //emitter.printSelf(System.out);
+        emitter.printSelf(System.out);
 
         // 5th pass, translate to x86 nasm
         Translator translator = new Translator(emitter);

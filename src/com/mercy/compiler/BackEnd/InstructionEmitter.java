@@ -70,7 +70,7 @@ public class InstructionEmitter {
     private boolean isPowerOf2(Expr ir) {
         if (ir instanceof IntConst) {
             int x = ((IntConst) ir).value();
-            return x == 1 || x == 2 || x == 4 || x == 8 || x == 16;
+            return x == 1 || x == 2 || x == 4 || x == 8;
         }
         return false;
     }
@@ -82,32 +82,31 @@ public class InstructionEmitter {
 
         exprDepth++;
 
-        /*if (ir instanceof Binary) {
-            Binary bin = (Binary)ir;
-            if (bin.operator() == ADD) {
-                if (bin.right() instanceof Binary && ((Binary) bin.right()).operator() == MUL
-                        && isPowerOf2(((Binary) bin.right()).right())) {
-                    int backupTop = tmpTop;
+        Triple<Expr, Expr, Integer> addr;
 
-                    Operand base = visitExpr(bin.left());
-                    Operand index = visitExpr(((Binary) bin.right()).left());
+        if ((addr = matchAddress(ir)) != null) {
+            int backupTop = tmpTop;
+            Operand base = visitExpr(addr.first);
+            Operand index = visitExpr(addr.second);
 
-
-                    if (base instanceof Reference) {
-                        ret = base;
-                        ins.add(new Lea(ret, new Address(base, index, ((IntConst) ((Binary) bin.right()).right()).value())));
-                        tmpTop = backupTop + 1; // only leave ret, remove other useless tmp register
-                    } else {
-                        tmpTop = backupTop; // only leave ret, remove other useless tmp register
-                        ret = getTmp();
-                        ins.add(new Move(ret, base));
-                        ins.add(new Lea(ret, new Address(ret, index, ((IntConst) ((Binary) bin.right()).right()).value())));
-                    }
-
-                    matched = true;
-                }
+            if (base instanceof Reference) {
+                tmpTop = backupTop + 1; // only leave ret, remove other useless tmp register
+                ret = base;
+                ins.add(new Lea(ret, new Address(base, index, addr.third)));
+            } else if (base instanceof Immediate) {
+                ret = getTmp();
+                ins.add(new Move(ret, base));
+                ins.add(new Lea(ret, new Address(ret, index, addr.third)));
+            } else if (base instanceof Address) {
+                tmpTop = backupTop; // only leave ret, remove other useless tmp register
+                ret = getTmp();
+                ins.add(new Move(ret, base));
+                ins.add(new Lea(ret, new Address(ret, index, addr.third)));
+            } else {
+                throw new InternalError("Unhandled case in lea");
             }
-        }*/
+            matched = true;
+        }
 
         if (!matched) {
             ret = ir.accept(this);
@@ -196,10 +195,16 @@ public class InstructionEmitter {
         if (left instanceof Address) {
             switch (((Address) left).type()) {
                 case BASE_ONLY:
+                    while(((Address) left).base() instanceof Address) {
+                        left = ((Address) left).base();
+                    }
                     ins.add(new Move(((Address) left).base(), left));
                     left = ((Address) left).base();
                     break;
                 case BASE_INDEX_MUL:
+                    while(((Address) left).base() instanceof Address) {
+                        left = ((Address) left).base();
+                    }
                     ins.add(new Move(((Address) left).base(), left));
                     left = ((Address) left).base();
                     break;
@@ -348,15 +353,20 @@ public class InstructionEmitter {
     public Operand visit(com.mercy.compiler.IR.Mem ir) {
         Triple<Expr, Expr, Integer> addr;
 
-        /*if ((addr = matchAddress(ir.expr())) != null) {
+        if ((addr = matchAddress(ir.expr())) != null) {
             int backupTop = tmpTop;
             Operand base =  visitExpr(addr.first);
             Operand index =  visitExpr(addr.second);
+            Operand ret = base;
             tmpTop = backupTop + 1;
 
-            ins.add(new Move(base, new Address(base, index, addr.third)));
-            return base;
-        } else */{
+            while(ret instanceof Address) {
+                ret = ((Address) ret).base();
+            }
+
+            ins.add(new Move(ret, new Address(base, index, addr.third)));
+            return ret;
+        } else {
             Operand expr = visitExpr(ir.expr());
             if (ir.expr() instanceof Addr) {
                 throw new InternalError("Unhandled case in IR Mem " + ir.expr());
@@ -385,7 +395,6 @@ public class InstructionEmitter {
         ins.add(new Move(ret, new Address(ir.entity())));
         return ret;
     }
-
 
     /*
      * temp virtual register
