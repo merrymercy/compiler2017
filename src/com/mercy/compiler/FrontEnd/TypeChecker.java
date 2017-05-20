@@ -286,7 +286,7 @@ public class TypeChecker extends Visitor {
             if (node.expr() instanceof MemberNode) {   // A.func(...) -> func(A, ...)
                 node.addThisPointer(((MemberNode)node.expr()).expr());
             } else {                                   // memberFunc(...) -> memberFunc(this, ...)
-                node.addThisPointer(new VariableNode(params.get(0)));
+                node.addThisPointer(new VariableNode(currentFunction.params().get(0)));  // "this" is always the first parameter
             }
         }
 

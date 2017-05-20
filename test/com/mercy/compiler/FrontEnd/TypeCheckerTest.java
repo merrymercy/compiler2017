@@ -55,21 +55,13 @@ public class TypeCheckerTest {
     public void testPass() throws Exception {
         System.out.println("# " + filename);
         System.out.flush();
-        try {
-            int status = compileFile(filename);
 
-            if (!shouldPass && status == 0) {
-                fail("should not pass");
-            }
-        } catch (SemanticError error) {
-            if (shouldPass) {
-                throw error;
-            } else {
-                System.out.println(error);
-            }
-        } catch (Exception error) {
-            throw error;
-        }
+        int status = compileFile(filename);
+
+        if (!shouldPass && status == 0)
+            fail("should not pass");
+        if (shouldPass && status != 0)
+            fail("should pass");
     }
 
 }

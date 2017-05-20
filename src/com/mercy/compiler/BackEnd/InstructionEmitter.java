@@ -346,25 +346,25 @@ public class InstructionEmitter {
     }
 
     public Operand visit(com.mercy.compiler.IR.Mem ir) {
-        Triple<Expr, Expr, Integer> triple;
+        Triple<Expr, Expr, Integer> addr;
 
-        /*if (!leftValueWanted && (triple = matchAddress(ir.expr())) != null) {
+        /*if ((addr = matchAddress(ir.expr())) != null) {
             int backupTop = tmpTop;
-            Operand base =  visitExpr(triple.first);
-            Operand index =  visitExpr(triple.second);
+            Operand base =  visitExpr(addr.first);
+            Operand index =  visitExpr(addr.second);
             tmpTop = backupTop + 1;
 
-            ins.add(new Move(base, new Address(base, index, triple.third)));
+            ins.add(new Move(base, new Address(base, index, addr.third)));
             return base;
         } else */{
-            Operand addr = visitExpr(ir.expr());
+            Operand expr = visitExpr(ir.expr());
             if (ir.expr() instanceof Addr) {
                 throw new InternalError("Unhandled case in IR Mem " + ir.expr());
             } else {       // should add address "[]" in this case
-                if (addr instanceof Reference) {
-                    return new Address(addr);
+                if (expr instanceof Reference) {
+                    return new Address(expr);
                 } else {
-                    throw new InternalError("unhanded address type in IR Mem" + addr);
+                    throw new InternalError("unhanded address type in IR Mem: " + expr);
                 }
             }
         }

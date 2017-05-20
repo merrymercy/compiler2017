@@ -34,7 +34,6 @@ public class VariableNode extends LHSNode {
 
     public Entity entity() {
         if (entity == null) {
-            System.err.println(this);
             throw new InternalError("Vairable.entity == null");
         }
         return entity;
