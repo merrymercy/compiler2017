@@ -468,7 +468,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (node.isMember()) {  // add "this" pointer
             Expr base = new Var(node.getThisPointer());
             int offset = node.entity().offset();
-            if (offset == 0)
+            if (false && offset == 0)  //TODO: see below
                 return new Mem(base);
             else
                 return new Mem(new Binary(base, ADD, new IntConst(offset)));
@@ -481,7 +481,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(MemberNode node) {
         Expr base = visitExpr(node.expr());
         int offset = node.entity().offset();
-        if (offset == 0)
+        if (false && offset == 0)  //TODO: see up
             return new Mem(base);
         else
             return new Mem(new Binary(base, ADD, new IntConst(offset)));
