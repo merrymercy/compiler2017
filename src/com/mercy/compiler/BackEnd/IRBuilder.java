@@ -10,6 +10,7 @@ import com.mercy.compiler.Utility.InternalError;
 import static com.mercy.compiler.IR.Binary.BinaryOp.*;
 import static com.mercy.compiler.IR.Unary.UnaryOp.*;
 import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
+import static java.lang.System.exit;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +29,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     private Stack<Scope> scopeStack = new Stack<>();
     private Scope currentScope;
+    private FunctionEntity currentFunction;
 
     private List<IR> globalInitializer;
 
@@ -48,32 +50,41 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     public void generateIR() {
-        currentScope = ast.scope();
-
         // calc offset in class
         for (ClassEntity entity : ast.classEntitsies()) {
             entity.initOffset(ALIGNMENT);
         }
 
-        // gather global variable initialization
-        for (DefinitionNode node : ast.definitionNodes()) {
-            if (node instanceof VariableDefNode) { // TODO: constructor !!!!
-                visit((VariableDefNode)node);
-            }
-        }
-        globalInitializer = fetchStmts();
-
         // generate global functions
         for (FunctionEntity entity : ast.functionEntities()) {
-            compileFunction(entity);
+            // body
+            tmpStack = new LinkedList<>();
+            tmpTop = 0;
+            currentFunction = entity;
+
             if (entity.name().equals("main")) {
-                entity.IR().addAll(0, globalInitializer);
+                // generate global variable initialization
+                for (DefinitionNode node : ast.definitionNodes()) {
+                    if (node instanceof VariableDefNode) {
+                        visit((VariableDefNode)node);
+                    }
+                }
+            } else {
+                entity.setAsmName(entity.name() + "_func__");
             }
+            compileFunction(entity);
         }
 
         // generate in-class functions
         for (ClassEntity entity : ast.classEntitsies()) {
             for (FunctionDefNode node : entity.memberFuncs()) {
+                // body
+                tmpStack = new LinkedList<>();
+                tmpTop = 0;
+                currentFunction = node.entity();
+
+                FunctionEntity func = node.entity();
+                func.setAsmName(entity.name() + "_" + func.name() + "_func__");
                 compileFunction(node.entity());
             }
         }
@@ -82,11 +93,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     public void compileFunction(FunctionEntity entity) {
-        // body
-        scopeStack.push(null);
         visit(entity.body());
         entity.setIR(fetchStmts());
-        assert (scopeStack.size() == 1);
     }
 
     @Override
@@ -101,23 +109,22 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     @Override
     public Void visit(VariableDefNode node) {
         ExprNode init = node.entity().initializer();
-        if (init != null)
-            addAssign(new Var(node.entity()), visitExpr(init));
+        if (init != null) {
+            visit(new AssignNode(new VariableNode(node.entity()), init));
+        }
         return null;
     }
 
     public Void visit(BlockNode node) {
-        currentScope = node.scope();
-        scopeStack.push(currentScope);
         for (StmtNode stmt : node.stmts()) {
             stmt.accept(this);
         }
-        scopeStack.pop();
-        currentScope = scopeStack.peek();
         return null;
     }
 
     public Expr visitExpr(ExprNode node) {
+        if (exprDepth == 0)
+            tmpTop = 0;
         exprDepth++;
         Expr expr = node.accept(this);
         exprDepth--;
@@ -134,14 +141,14 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         Label elseLable = new Label();
         Label endLable  = new Label();
 
-        if (node.elseBody() == null) {  // can be optimized here, see Lequn Chen's slide
-            stmts.add(new CJump(visitExpr(node.cond()), thenLable, endLable));
+        if (node.elseBody() == null) {
+            addCJump(node.cond(), thenLable, endLable);
             addLabel(thenLable, "if_then");
             if (node.thenBody() != null)
                 visitStmt(node.thenBody());
             addLabel(endLable, "if_end");
         } else {
-            stmts.add(new CJump(visitExpr(node.cond()), thenLable, elseLable));
+            addCJump(node.cond(), thenLable, elseLable);
             addLabel(thenLable, "if_then");
             if (node.thenBody() != null)
                 visitStmt(node.thenBody());
@@ -180,7 +187,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         addLabel(testLabel, "loop_test");
         if (cond != null)
-            stmts.add(new CJump(visitExpr(cond), beginLabel, endLabel));
+            addCJump(cond, beginLabel, endLabel);
         else
             stmts.add(new Jump(beginLabel));
         addLabel(endLabel, "loop_end");
@@ -223,17 +230,20 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         return null;
     }
 
+    private boolean notuseTmp = false;
     @Override
     public Expr visit(AssignNode node) {
         Expr lhs = visitExpr(node.lhs());
-        Expr rhs = visitExpr(node.rhs());
-        if (exprDepth == 0) { // is statement, which is always true in Mx* 2017
-            addAssign(lhs, rhs);
+        Expr rhs;
+
+        if (node.rhs() instanceof FuncallNode) {
+            notuseTmp = true;
+            rhs = visitExpr(node.rhs());
+            notuseTmp = false;
         } else {
-            addAssign(lhs, rhs);
-            // ATTENTION
-            //throw new InternalError(node.location(), "undefined behavior in nested assign expression (a = b = c)");
+            rhs = visitExpr(node.rhs());
         }
+        addAssign(lhs, rhs);
 
         return lhs;
     }
@@ -412,9 +422,13 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             stmts.add(new Call(entity, args));
             return null;
         } else {
-            Var tmp = newIntTemp();
-            addAssign(tmp, new Call(entity, args));
-            return tmp;
+            if (notuseTmp) {
+                return new Call(entity, args);
+            } else {
+                Var tmp = newIntTemp();
+                addAssign(tmp, new Call(entity, args));
+                return tmp;
+            }
         }
     }
 
@@ -442,8 +456,12 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         Expr index = visitExpr(node.index());
         int sizeof = ((ArrayType)(node.expr().type())).baseType().size();
 
-        return new Mem(new Binary(base, ADD, new Binary(
-                                    new IntConst(sizeof), MUL, index)));
+        if (index instanceof  IntConst) {
+            return new Mem(new Binary(base, ADD, new IntConst(sizeof * ((IntConst) index).value())));
+        } else {
+            return new Mem(new Binary(base, ADD, new Binary(
+                    index, MUL, new IntConst(sizeof))));
+        }
     }
 
     @Override
@@ -469,21 +487,23 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         Var tmpI = newIntTemp();
         // new int a[5][4][];
         /* s = expr[now];
-         * p = mallocFunc(s * pointerSize + lengthSize);
+         * p = malloc(s * pointerSize + lengthSize);
          * *p = s;
-         * p = p + 4;
+         * p += 4;
          * for (int i = 0; i < s; i++) {  /-----
          *     s2 = expr[now + 1]
-         *     p[i] = mallocFunc(s2 * pointerSize + lengthSize);
+         *     p[i] = malloc(s2 * pointerSize + lengthSize);
          *     *(p[i]) = s2;
-         *     p[i] = p[i] + 4;
+         *     p[i] += 4;
          *     for (int i2 = 0; i2 < s2; i++) { /-----
          *         s3 = expr[now + 2];
-         *         p[i][i2] = mallocFunc(s3 * elementSize + lengthSize);
-         *         p[i][i2][-1] = s3;
-         *         // None or Constructor for class
+         *         p[i][i2] = malloc(s3 * elementSize + lengthSize);
+         *         *(p[i][i2]) = s3;
+         *         p[i][i2] += 4;
+         *         // alloc memory for class
          *         for (int i3 = 0; i3 < s3; i3++)  /-----
-         *             constructor(p[i][i2][i3])
+         *             p[i][i2][i3] = malloc(classSize);
+         *             constructor(p[i][i2][i3]) ; if has
          *     }
          * }
          */
@@ -494,7 +514,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 new Binary(tmpS, MUL, sizeof), ADD, constLengthSize));}}));
         addAssign(new Mem(base), tmpS);
         addAssign(base, new Binary(base, ADD, constLengthSize));
-
         if (exprs.size() > now + 1) {
             addAssign(tmpI, constZero);
             Label testLabel = new Label();
@@ -509,7 +528,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             addLabel(testLabel, "creator_loop_test");
             stmts.add(new CJump(new Binary(tmpI, LT, tmpS), beginLabel, endLabel));
             addLabel(endLabel, "creator_loop_end");
-        } else if (exprs.size() == now + 1 && constructor != null) {
+        } else if (exprs.size() == now + 1 && type instanceof ClassType) {
             addAssign(tmpI, constZero);
             Label testLabel = new Label();
             Label beginLabel = new Label();
@@ -517,7 +536,13 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
             stmts.add(new Jump(testLabel));
             addLabel(beginLabel, "creator_loop_begin");
-            stmts.add(new Call(constructor, new LinkedList<Expr>() {{add( new Mem(new Binary(base, ADD, new Binary(tmpI, MUL, sizeof))));}}));
+
+            Var tmpAddress = newIntTemp();
+            addAssign(tmpAddress, new Binary(base, ADD, new Binary(tmpI, MUL, sizeof)));
+            // !!!!!!!!!
+            addAssign(new Mem(tmpAddress), new Call(mallocFunc, new LinkedList<Expr>(){{ add(sizeof); }}));
+            if (constructor != null)
+                stmts.add(new Call(constructor, new LinkedList<Expr>(){{ add(new Mem(tmpAddress)); }}));
             addAssign(tmpI, new Binary(tmpI, ADD, constOne));
 
             addLabel(testLabel, "creator_loop_test");
@@ -646,6 +671,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
     }
 
+    /*
+     * utility for generating IR
+     */
     private void addAssign(Expr lhs, Expr rhs) {
         stmts.add(new Assign(getAddress(lhs), rhs));
     }
@@ -657,19 +685,43 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         labelCounter++;
     }
 
-    static int tmpCounter = 0;
-    private Var newIntTemp() {
-        VariableEntity tmp = new VariableEntity(null, new IntegerType(),
-                "tmp" + tmpCounter, null);
-        currentScope.insert(tmp);
-        tmpCounter += 1;
-        return new Var(tmp);
+    private void addCJump(ExprNode cond, Label trueLabel, Label falseLabel) {
+        if (cond instanceof BinaryOpNode) {
+            BinaryOpNode node = (BinaryOpNode)cond;
+            Label goon = new Label();
+            switch (((BinaryOpNode) cond).operator()) {
+                case LOGIC_AND:
+                    addCJump(node.left(), goon, falseLabel);
+                    addLabel(goon, "goon");
+                    addCJump(node.right(), trueLabel, falseLabel);
+                    break;
+                case LOGIC_OR:
+                    addCJump(node.left(), trueLabel, goon);
+                    addLabel(goon, "goon");
+                    addCJump(node.right(), trueLabel, falseLabel);
+                    break;
+                default:
+                    stmts.add(new CJump(visitExpr(cond), trueLabel, falseLabel));
+            }
+        } else if (cond instanceof UnaryOpNode) {
+            addCJump(((UnaryOpNode) cond).expr(), falseLabel, trueLabel);
+        } else {
+            stmts.add(new CJump(visitExpr(cond), trueLabel, falseLabel));
+        }
     }
 
-    private VariableEntity newTemp(Type type) {
-        return new VariableEntity(null, type, "tmp" + tmpCounter, null);
+    List<Var> tmpStack = new LinkedList<>();
+    int tmpTop = 0;
+    public Var newIntTemp() {
+        if (tmpTop >= tmpStack.size()) {
+            VariableEntity tmp = new VariableEntity(null, new IntegerType(),
+                    "tmp" + tmpTop, null);
+            currentFunction.scope().insert(tmp);
+            //currentScope.insert(tmp);
+            tmpStack.add(new Var(tmp));
+        }
+        return tmpStack.get(tmpTop++);
     }
-
 
     /*
      * getter
@@ -685,69 +737,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public List<FunctionEntity> functionEntities() {
         return ast.functionEntities();
     }
+
+    public AST ast() {
+        return ast;
+    }
 }
-
-//public class IRBuilder {
-//    public IRBuilder(AST abstractSemanticTree) {}
-//    public void generateIR() {
-//
-//    }
-//}
-
-
-
-//    private BlockNode expandCreator(List<ExprNode> exprs, ExprNode base, int now, FunctionEntity constructor) {
-//        VariableNode tmpS = new VariableNode(newIntTemp().entity());
-//        VariableNode tmpI = new VariableNode(newIntTemp().entity());
-//        // new int a[5][4][];
-//        /* s = expr[now];
-//         * p = mallocFunc(s * pointerSize + lengthSize);
-//         *  = s;
-//         * for (int i = 0; i < s; i++) {  /-----
-//         *     s2 = expr[now + 1]
-//         *     p[i] = mallocFunc(s2 * pointerSize + lengthSize);
-//         *     p[-1] = s2
-//         *     for (int i2 = 0; i2 < s2; i++) { /-----
-//         *         s3 = expr[now + 2];
-//         *         p[i][i2] = mallocFunc(s3 * elementSize + lengthSize);
-//         *         p[i][i2][-1] = s3;
-//         *         // None or Constructor for class
-//         *         for (int i3 = 0; i3 < s3; i3++)  /-----
-//         *             constructor(p[i][i2][i3])
-//         *     }
-//         * }
-//         * p
-//         */
-//Type baseType = ((ArrayType)base.type()).baseType();
-//    ExprStmtNode calcSize = new ExprStmtNode(null,
-//            new AssignNode(tmpS, exprs.get(now)));
-//    ExprStmtNode alloc = new ExprStmtNode(null,
-//            new AssignNode(base, new FuncallNode(new VariableNode(mallocFunc),
-//                    new LinkedList<ExprNode>() {{
-//                        add(new BinaryOpNode(tmpS, BinaryOpNode.BinaryOp.Mul, constPointerSizeNode));
-//                    }})));
-//    ExprStmtNode storeLen = new ExprStmtNode(null,
-//            new AssignNode(new ArefNode(base, constMinusOneNode, baseType), tmpS));
-//
-//    ForNode forNode = null;
-//
-//        if (exprs.size() > now + 1) {
-//                forNode = new ForNode(null, new AssignNode(tmpI, constZeroNode),
-//                new BinaryOpNode(tmpI, BinaryOpNode.BinaryOp.LT, tmpS), new PrefixOpNode(UnaryOpNode.UnaryOp.PRE_INC, tmpI),
-//                expandCreator(exprs, new ArefNode(base, tmpI, baseType), now + 1, constructor));
-//                } else if (constructor != null) {
-//                forNode = new ForNode(null, new AssignNode(tmpI, constZeroNode),
-//                new BinaryOpNode(tmpI, BinaryOpNode.BinaryOp.LT, tmpS), new PrefixOpNode(UnaryOpNode.UnaryOp.PRE_INC, tmpI),
-//                new ExprStmtNode(null, new FuncallNode(new VariableNode(constructor),
-//                new LinkedList<ExprNode>(){{add(new ArefNode(base, tmpI, baseType));}})));
-//        }
-//
-//        LinkedList<StmtNode> rets = new LinkedList<>();
-//        rets.add(calcSize);
-//        rets.add(alloc);
-//        rets.add(storeLen);
-//        if (forNode != null)
-//        rets.add(forNode);
-//
-//        return new BlockNode(null, rets);
-//        }

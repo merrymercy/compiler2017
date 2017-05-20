@@ -5,11 +5,8 @@ import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.Operand.*;
 import com.mercy.compiler.IR.IR;
 import com.mercy.compiler.Utility.InternalError;
-import com.mercy.compiler.Utility.Pair;
-import com.sun.org.apache.regexp.internal.RE;
 
 import java.io.*;
-import java.sql.Ref;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -22,6 +19,7 @@ public class Translator {
     public static int ALIGNMENT = 4;
     public static String END_SUFFIX = "_ret";
     public static String GLOBAL_PREFIX = "__global_";
+    public static String FUNC_SUFFIX = "__func";
 
 
     private List<FunctionEntity> functionEntities;
@@ -192,7 +190,7 @@ public class Translator {
     }
 
     public int translateFunction(FunctionEntity entity, int frameSize) {
-        addLabel(entity.name());
+        addLabel(entity.asmName());
 
         int startPos = asm.size();
 
@@ -232,7 +230,7 @@ public class Translator {
         asm.addAll(startPos, prologue);
 
         /***** epilogue *****/
-        addLabel(entity.name() + END_SUFFIX);
+        addLabel(entity.asmName() + END_SUFFIX);
         add("add", rsp(), new Immediate((frameSize)));
         int savedRegNum = 0;
         for (int i = regUsed.length - 1; i >= 0; i--) {
@@ -302,24 +300,26 @@ public class Translator {
         visitBin(ins);
     }
 
-    public void visit(Div ins) {
-        Operand left, right;
-        left = ins.left();
-        right= ins.right();
+    private void genDivision(Operand left, Operand right, Register res) {
         add("mov", rax(), left);
         add("cqo");
-        add("idiv", right);
-        add("mov", left, rax());
+        if (right instanceof Immediate) {
+            add("mov", rcx(), right);
+            add("idiv", rcx());
+        } else {
+            if (right instanceof Address)
+                ((Address) right).setShowSize(true);
+            add("idiv", right);
+        }
+        add("mov", left, res);
+    }
+
+    public void visit(Div ins) {
+        genDivision(ins.left(), ins.right(), rax());
     }
 
     public void visit(Mod ins) {
-        Operand left, right;
-        left = ins.left();
-        right= ins.right();
-        add("mov", rax(), left);
-        add("cqo");
-        add("idiv", right);
-        add("mov", left, rdx());
+        genDivision(ins.left(), ins.right(), rdx());
     }
 
     public void visit(Neg ins) {
@@ -337,10 +337,18 @@ public class Translator {
         visitBin(ins);
     }
     public void visit(Sal ins) {
-        visitBin(ins);
+        Operand left, right;
+        left = ins.left();
+        right= ins.right();
+        add("mov", rcx(), right);
+        add("sal" + " " + left.toNASM() + ", " + "cl");
     }
     public void visit(Sar ins) {
-        visitBin(ins);
+        Operand left, right;
+        left = ins.left();
+        right= ins.right();
+        add("mov", rcx(), right);
+        add("sar" + " " + left.toNASM() + ", " + "cl");
     }
     public void visit(Xor ins) {
         visitBin(ins);
@@ -365,43 +373,82 @@ public class Translator {
         add("mov", left, rax());
     }
 
-    private Pair<Operand, Boolean> dealOneSize(Register tmp, Operand operand) {
-        if (operand instanceof Address) {
-            Address addr = (Address)operand;
-            Reference ref;
-
-            switch (addr.type()) {
-                case OPERAND:
-                    ref = (Reference) addr.operand();
-                    if (ref.isRegister()) {
-                        return new Pair<>(operand, true);
+    private int mem2reg(Address addr, Register reg1, Register reg2) {
+        switch (addr.type()) {
+            case BASE_ONLY:
+                if (addr.base().isRegister()) {
+                    return 0;
+                } else {
+                    add("mov", reg1, addr.base());
+                    addr.setBaseNasm(reg1);
+                    return 1;
+                }
+            case BASE_INDEX_MUL:
+                if (addr.base().isRegister()) {
+                    if (addr.index().isRegister()) {
+                        return 0;
                     } else {
-                        add("mov", tmp, ref);
-                        return new Pair<>(new Address(tmp), true);
+                        add("mov", reg1, addr.index());
+                        addr.setIndexNasm(reg1);
+                        return 1;
                     }
-                case ENTITY:
-                    return new Pair<>(operand, true);
-                default:
-                    throw new InternalError("invalid addr type " + addr.type());
-            }
+                } else {
+                    add("mov", reg1, addr.base());
+                    addr.setBaseNasm(reg1);
+                    if (addr.index().isRegister()) {
+                        return 1;
+                    } else {
+                        add("mov", reg2, addr.index());
+                        addr.setIndexNasm(reg2);
+                        return 2;
+                    }
+                }
+            case ENTITY:
+                return 0;
+            default:
+                throw new InternalError("invalid address type " + addr.type());
+        }
+    }
+
+    private boolean isAddress(Operand operand) {
+        if (operand instanceof Address) {
+            return true;
         } else if (operand instanceof Reference) {
-            Reference ref = (Reference) operand;
-            return new Pair<>(operand, !ref.isRegister());
+            return !operand.isRegister();
         } else {
-            return new Pair<>(operand, false);
+            return false;
         }
     }
 
     public void visit(Move ins) {
-        Pair<Operand, Boolean>  dest = dealOneSize(rax(), ins.dest());
-        Pair<Operand, Boolean>  src  = dealOneSize(rdx(), ins.src());
-        if (dest.second && src.second) {
-            add("mov", rcx(), src.first);
-            add("mov", dest.first, rcx());
+        boolean isAddrLeft  = isAddress(ins.dest());
+        boolean isAddrRight = isAddress(ins.src());
+
+        if (isAddrLeft && isAddrRight) {
+            if (ins.src() instanceof Address)
+                mem2reg((Address)ins.src(), rax(), rdx());
+            add("mov", rdx(), ins.src());
+            if (ins.dest() instanceof Address)
+                mem2reg((Address)ins.dest(), rax(), rcx());
+            add("mov", ins.dest(), rdx());
         } else {
-            add("mov", dest.first, src.first);
+            if (ins.dest() instanceof Address)  // cannot both be true
+                mem2reg((Address)ins.dest(), rax(), rcx());
+            if (ins.src() instanceof Address)   // cannot both be true
+                mem2reg((Address)ins.src(), rax(), rcx());
+            add("mov", ins.dest(), ins.src());
         }
-        // ATTENTION: HERE , double memory
+    }
+
+    public void visit(Lea ins) {
+        mem2reg(ins.addr(), rax(), rdx());
+        if (ins.dest().isRegister()) {
+            ins.addr().setShowSize(false);
+            add("lea", ins.dest(), ins.addr());
+        } else {
+            add("lea", rcx(), ins.addr());
+            add("mov", ins.dest(), rcx());
+        }
     }
 
     public void visit(Call ins) {
@@ -433,7 +480,7 @@ public class Translator {
     public void visit(Return ins) {
         if (ins.ret() != null)
             add("mov", rax(), ins.ret());
-        addJump(currentFunction.name() + END_SUFFIX);
+        addJump(currentFunction.asmName() + END_SUFFIX);
     }
 
     public void visit(CJump ins) {
@@ -443,6 +490,7 @@ public class Translator {
             add("mov", rax(), ins.cond());
             add("test", rax(), rax());
         }
+
         add("jz " + ins.falseLabel().name());
         addJump(ins.trueLabel().name());
     }
@@ -516,9 +564,6 @@ public class Translator {
         asm.add("\n;========== LIB BEGIN ==========");
         File f = new File("lib.s");
         try {
-            //FileWriter fout = new FileWriter(f);
-            //fout.write("aha");
-            //fout.close();
             BufferedReader fin = new BufferedReader(new FileReader(f));
             String line;
             while((line = fin.readLine()) != null)

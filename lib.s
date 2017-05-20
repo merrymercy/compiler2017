@@ -112,11 +112,8 @@ getString:
     ret
 
 __lib_array_size:
-    sub rsp, 8
-
     mov eax, dword [rdi -4]
 
-    add rsp, 8
     ret
 
 __lib_str_operator_ADD:
@@ -153,11 +150,8 @@ __lib_str_operator_ADD:
     ret
 
 __lib_str_length:
-    sub rsp, 8
-
     mov eax, dword [rdi -4]
 
-    add rsp, 8
     ret
 
 __lib_str_substring:
@@ -168,7 +162,6 @@ __lib_str_substring:
     lea r12, [rdi + rsi]
     neg rsi
     lea rbx, [rdx + rsi + 1]
-
 
     lea rdi, [rbx + 5]
     call malloc
@@ -197,11 +190,9 @@ __lib_str_parseInt:
     ret
 
 __lib_str_ord:
-    sub rsp, 8
     xor rax, rax
     mov al, byte [rdi + rsi]
 
-    add rsp, 8
     ret
 
 __lib_str_operator_LT:
@@ -221,6 +212,17 @@ __lib_str_operator_EQ:
     call strcmp
     cmp rax, 0
     sete al
+    movzx rax, al
+
+    add rsp, 8
+    ret
+
+__lib_str_operator_NE:
+    sub rsp, 8
+
+    call strcmp
+    cmp rax, 0
+    setne al
     movzx rax, al
 
     add rsp, 8

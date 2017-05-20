@@ -81,7 +81,7 @@ public class Reference extends Operand {
     public String toNASM() {
         switch (type) {
             case STRING: return name;
-            case GLOBAL: return "[" + GLOBAL_PREFIX + name + "]";
+            case GLOBAL: return "qword " + "[" + GLOBAL_PREFIX + name + "]";
             case OFFSET: return "qword " + "[" + reg.name() + "-" + offset + "]";
             case REG:    return reg.name();
             case UNKNOWN:

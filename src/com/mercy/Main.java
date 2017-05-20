@@ -25,13 +25,16 @@ import java.util.List;
 
 import static com.mercy.compiler.Type.Type.*;
 import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
+import static java.lang.System.exit;
 import static java.nio.file.StandardWatchEventKinds.*;
 
 public class Main {
     public static final String SOURCE_PATH = "testcase";
 
     public static void main(String[] args) throws Exception {
-        compileFile("testcase/test.c");
+        int status = compileFile("testcase/test.c");
+
+        exit(status);
     }
 
     public static int compileFile(String filename) throws Exception {
@@ -97,7 +100,7 @@ public class Main {
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
         // DEBUG ~~~
-        emitter.printSelf(System.out);
+        //emitter.printSelf(System.out);
 
         // 5th pass, translate to x86 nasm
         Translator translator = new Translator(emitter);

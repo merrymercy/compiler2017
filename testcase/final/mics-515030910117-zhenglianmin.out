@@ -1,26 +1,3 @@
-int [][] two;
-int i; int j;
-int a;
-
-int main() {
-
-    a = two[i][j];
-
-
-
-    return 0;
-}
-
-
-/*!! metadata:
-=== comment ===
-some correctness test
-=== input ===
-=== assert ===
-output
-=== timeout ===
-1.0
-=== output ===
 Constructed - 0
 Constructed - 1
 Constructed - 2
@@ -88,9 +65,3 @@ Constructed - 56
 1 - true
 2 - false
 3 - false
-=== phase ===
-optim extended
-=== is_public ===
-True
-
-!!*/

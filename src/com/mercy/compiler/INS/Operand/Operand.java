@@ -7,7 +7,7 @@ import java.util.List;
  */
 public class Operand {
     public String toNASM() {
-        return "operand";
+        return "base";
     }
 
     public boolean isRegister() {
