@@ -41,11 +41,11 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     public IRBuilder(AST abstractSemanticTree) {
         this.ast = abstractSemanticTree;
-        mallocFunc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "malloc");
-        printIntFunc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "printInt");
-        printlnIntFunc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "printlnInt");
-        printFunc = (FunctionEntity) ast.scope().find("print");
-        printlnFunc = (FunctionEntity) ast.scope().find("println");
+        mallocFunc = (FunctionEntity) ast.scope().lookupCurrentLevel(LIB_PREFIX + "malloc");
+        printIntFunc = (FunctionEntity) ast.scope().lookupCurrentLevel(LIB_PREFIX + "printInt");
+        printlnIntFunc = (FunctionEntity) ast.scope().lookupCurrentLevel(LIB_PREFIX + "printlnInt");
+        printFunc = (FunctionEntity) ast.scope().lookupCurrentLevel("print");
+        printlnFunc = (FunctionEntity) ast.scope().lookupCurrentLevel("println");
         scopeStack.push(ast.scope());
     }
 

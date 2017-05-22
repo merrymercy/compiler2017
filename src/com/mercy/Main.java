@@ -107,6 +107,8 @@ public class Main {
 
         ast.resolveSymbol();                         // 1st pass, extract info of class and function
         ast.checkType();                             // 2nd pass, check type
+        if (Option.enableOutputIrrelevantElimination)
+            ast.eliminateOutputIrrelevantNode();
 
         IRBuilder irBuilder = new IRBuilder(ast);
         irBuilder.generateIR();                      // 3rd pass, generate IR, do simple constant folding

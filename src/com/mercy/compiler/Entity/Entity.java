@@ -6,6 +6,9 @@ import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.InternalError;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Created by mercy on 17-3-18.
  */
@@ -15,6 +18,9 @@ abstract public class Entity {
     protected Type type;
     protected int offset;
     protected Reference reference;
+
+    protected Set<Entity> dependence = new HashSet<>();
+    boolean isOutputIrrelevant = true;
 
     public Entity(Location loc, Type type, String name) {
         this.location = loc;
@@ -57,6 +63,22 @@ abstract public class Entity {
 
     public void setReference(Reference reference) {
         this.reference = reference;
+    }
+
+    public boolean outputIrrelevant() {
+        return isOutputIrrelevant;
+    }
+
+    public void setOutputIrrelevant(boolean outputIrrelevant) {
+        isOutputIrrelevant = outputIrrelevant;
+    }
+
+    public Set<Entity> dependence() {
+        return dependence;
+    }
+
+    public void addDependence(Entity entity) {
+        dependence.add(entity);
     }
 
     abstract public <T> T accept(EntityVisitor<T> visitor);

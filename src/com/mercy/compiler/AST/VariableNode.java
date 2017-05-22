@@ -1,9 +1,7 @@
 package com.mercy.compiler.AST;
 
-import com.mercy.compiler.Entity.ClassEntity;
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.ParameterEntity;
-import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.FrontEnd.ASTVisitor;
 import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.InternalError;

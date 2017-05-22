@@ -330,7 +330,7 @@ public class TypeChecker extends Visitor {
 
         if (type.isClass()) {
             ClassEntity entity = ((ClassType) type).entity();
-            Entity member = entity.scope().find(node.member());
+            Entity member = entity.scope().lookupCurrentLevel(node.member());
             if (member == null)
                 throw new SemanticError(node.location(), "Cannot resolve member : "
                         + node.member());
@@ -339,9 +339,9 @@ public class TypeChecker extends Visitor {
         } else if (type.isArray() || type.isString()){
             Entity member;
             if (type.isArray())
-                member = ArrayType.scope().find(node.member());
+                member = ArrayType.scope().lookupCurrentLevel(node.member());
             else
-                member = StringType.scope().find(node.member());
+                member = StringType.scope().lookupCurrentLevel(node.member());
 
             if (member == null)
                 throw new SemanticError(node.location(), "Cannot resolve member : "

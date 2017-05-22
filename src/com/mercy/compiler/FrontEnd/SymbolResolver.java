@@ -130,7 +130,7 @@ public class SymbolResolver extends Visitor {
 
     @Override
     public Void visit(StringLiteralNode node) {
-        Entity entity = topLevelScope.find(StringType.STRING_CONSTANT_PREFIX + node.value());
+        Entity entity = topLevelScope.lookupCurrentLevel(StringType.STRING_CONSTANT_PREFIX + node.value());
         if (entity == null) {
             entity = new StringConstantEntity(node.location(), new StringType(), node.value(), node);
             topLevelScope.insert(entity);
@@ -178,7 +178,7 @@ public class SymbolResolver extends Visitor {
             throw new SemanticError(node.location(), "cannot resolve symbol : " + node.name());
         node.setEntity(entity);
 
-        if (currentClass != null && currentClass.scope().find(node.name()) != null) {
+        if (currentClass != null && currentClass.scope().lookupCurrentLevel(node.name()) != null) {
             node.setThisPointer(currentThis);
         }
 

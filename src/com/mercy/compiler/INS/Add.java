@@ -1,10 +1,7 @@
 package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
-import com.mercy.compiler.Entity.Scope;
 import com.mercy.compiler.INS.Operand.Operand;
-
-import java.util.List;
 
 /**
  * Created by mercy on 17-4-25.

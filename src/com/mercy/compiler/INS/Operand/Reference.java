@@ -1,11 +1,6 @@
 package com.mercy.compiler.INS.Operand;
 
-import com.mercy.compiler.Entity.Entity;
-import com.mercy.compiler.Entity.StringConstantEntity;
 import com.mercy.compiler.Utility.InternalError;
-import com.mercy.compiler.BackEnd.Translator;
-
-import java.util.List;
 
 import static com.mercy.compiler.BackEnd.Translator.GLOBAL_PREFIX;
 import static com.mercy.compiler.INS.Operand.Reference.Type.*;

@@ -1,9 +1,5 @@
 package com.mercy.compiler.INS.Operand;
 
-import com.mercy.compiler.INS.Cmp;
-
-import java.util.List;
-
 /**
  * Created by mercy on 17-5-4.
  */

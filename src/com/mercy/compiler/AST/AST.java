@@ -1,15 +1,12 @@
 package com.mercy.compiler.AST;
 
 import com.mercy.compiler.Entity.*;
-import com.mercy.compiler.FrontEnd.SymbolResolver;
-import com.mercy.compiler.FrontEnd.TypeChecker;
-import com.mercy.compiler.Type.*;
-import com.mercy.compiler.Utility.LibFunction;
+import com.mercy.compiler.FrontEnd.*;
 import com.mercy.compiler.Utility.SemanticError;
 
+import java.util.HashSet;
 import java.util.List;
-
-import static com.mercy.compiler.Type.Type.*;
+import java.util.Set;
 
 /**
  * Created by mercy on 17-3-18.
@@ -62,6 +59,50 @@ public class AST {
         if (!mainFunc.returnType().isInteger()) {
             throw new SemanticError(new Location(0, 0), "main must return a integer");
         }
+    }
+
+    Set<DependenceEdge> visited = new HashSet<>();
+    private void propaOutputIrrelevant(Entity entity, boolean flag) {
+        DependenceEdge edge = new DependenceEdge(null, null);
+        entity.setOutputIrrelevant(flag);
+        for (Entity base : entity.dependence()) {
+            edge.base = base; edge.rely = entity;
+            if (!visited.contains(edge)) {
+                visited.add(new DependenceEdge(base, entity));
+                propaOutputIrrelevant(base, flag);
+            }
+        }
+    }
+
+    public void eliminateOutputIrrelevantNode() {
+        OutputIrrelevantAnalyzer analyzer = new OutputIrrelevantAnalyzer(this);
+        analyzer.visitDefinitions(definitionNodes);
+
+        // print dependence info
+        for (DependenceEdge edge : analyzer.dependenceEdgeSet()) {
+            System.err.println(edge.base.name() + " <- " + edge.rely.name());
+        }
+
+        // propagate info
+        System.err.print("source:");
+        for (Entity entity : analyzer.source()) {
+            System.err.print("  " + entity.name());
+        }
+        System.err.println("");
+
+        for (Entity entity : analyzer.source()) {
+            propaOutputIrrelevant(entity, false);
+        }
+        // print result
+        for (VariableEntity entity : scope.allLocalVariables()) {
+            System.err.println(entity.name() + ": " + entity.outputIrrelevant());
+        }
+        for (FunctionEntity entity : functionEntities) {
+            System.err.println(entity.name() + ": " + entity.outputIrrelevant());
+        }
+
+        OutputIrrelevantMarker marker = new OutputIrrelevantMarker(this);
+        marker.visitDefinitions(definitionNodes);
     }
 
 

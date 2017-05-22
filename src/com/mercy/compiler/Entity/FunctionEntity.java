@@ -47,10 +47,6 @@ public class FunctionEntity extends Entity {
     }
 
     // check whether can be inlined
-    public void addCall(FunctionEntity entity) {
-        calls.add(entity);
-    }
-
     Map<FunctionEntity, Boolean> visited;
     public void checkInlinable() {
         if (name.equals("main")) {
@@ -147,6 +143,10 @@ public class FunctionEntity extends Entity {
 
     public List<FunctionEntity> calls() {
         return calls;
+    }
+
+    public void addCall(FunctionEntity entity) {
+        calls.add(entity);
     }
 
     public boolean canbeInlined() {

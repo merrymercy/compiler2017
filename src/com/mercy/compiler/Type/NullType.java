@@ -1,7 +1,5 @@
 package com.mercy.compiler.Type;
 
-import com.mercy.compiler.Entity.ClassEntity;
-
 /**
  * Created by mercy on 17-3-25.
  */

@@ -501,6 +501,10 @@ public class InstructionEmitter {
     /***** DEBUG TOOL *****/
     private void printFunction(PrintStream out, FunctionEntity entity) {
         out.println("========== INS " + entity.name() + entity.getClass().hashCode() + " ==========");
+        if (Option.enableInlineFunction && entity.canbeInlined()) {
+            out.println("BE INLINED");
+            return;
+        }
         for (Instruction instruction : entity.ins()) {
             out.println(instruction.toString());
         }

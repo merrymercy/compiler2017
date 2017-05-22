@@ -2,9 +2,6 @@ package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
 
-import java.io.PrintStream;
-import java.util.List;
-
 /**
  * Created by mercy on 17-4-25.
  */

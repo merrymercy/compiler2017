@@ -52,7 +52,7 @@ public class Scope {
     }
 
     // only search in current level
-    public Entity find(String name) {
+    public Entity lookupCurrentLevel(String name) {
         return entities.get(name);
     }
 
