@@ -7,10 +7,11 @@ import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.IR.IR;
 import com.mercy.compiler.Type.FunctionType;
 import com.mercy.compiler.Type.Type;
-import com.sun.org.apache.xpath.internal.operations.Variable;
 
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by mercy on 17-3-20.
@@ -21,7 +22,9 @@ public class FunctionEntity extends Entity {
     private BlockNode body;
     private Scope scope;
     private boolean isConstructor = false;
+    private boolean canbeInlined = false;
 
+    private List<FunctionEntity> calls = new LinkedList<>();
     private List<IR> irs;
     private List<Instruction> ins;
     private List<Reference> tmpStack;
@@ -43,17 +46,33 @@ public class FunctionEntity extends Entity {
         return thisPointer;
     }
 
-    public void setAsmName(String name) {
-        this.asmName = name;
+    // check whether can be inlined
+    public void addCall(FunctionEntity entity) {
+        calls.add(entity);
     }
 
-    public String asmName() {
-        return asmName == null ? name : asmName;
+    Map<FunctionEntity, Boolean> visited;
+    public void checkInlinable() {
+        if (name.equals("main")) {
+            canbeInlined = false;
+        } else {
+            visited = new Hashtable<>();
+            canbeInlined = !findLoop(this, this);
+            if (body.stmts().size() > 3)
+                canbeInlined = false;
+        }
     }
+    private boolean findLoop(FunctionEntity called, FunctionEntity root) {
+        if (visited.containsKey(called)) {
+            return called == root;
+        }
 
-    @Override
-    public String name() {
-        return name;
+        visited.put(called, true);
+        for (FunctionEntity func : called.calls()) {
+            if (findLoop(func, root))
+                return true;
+        }
+        return false;
     }
 
     // for locating local variabes
@@ -116,6 +135,27 @@ public class FunctionEntity extends Entity {
 
     public void setTmpStack(List<Reference> tmpStack) {
         this.tmpStack = tmpStack;
+    }
+
+    public String asmName() {
+        return asmName == null ? name : asmName;
+    }
+
+    public void setAsmName(String name) {
+        this.asmName = name;
+    }
+
+    public List<FunctionEntity> calls() {
+        return calls;
+    }
+
+    public boolean canbeInlined() {
+        return canbeInlined;
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override

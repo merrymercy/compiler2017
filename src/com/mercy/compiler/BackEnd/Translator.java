@@ -1,5 +1,6 @@
 package com.mercy.compiler.BackEnd;
 
+import com.mercy.Option;
 import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.Operand.*;
@@ -111,6 +112,8 @@ public class Translator {
         // translate functions
         add("section .text");
         for (FunctionEntity entity : functionEntities) {
+            if (Option.enableInlineFunction && entity.canbeInlined())
+                continue;
             // init
             for (int i = 0; i < regUsed.length; i++)
                 regUsed[i] = false;
@@ -217,7 +220,8 @@ public class Translator {
         if (regUsed[5])
             add("mov", rbp(), rsp());
         frameSize += (16 - (frameSize + 8 + calleeSaveRegSize) % 16) % 16;
-        add("sub", rsp(), new Immediate((frameSize)));
+        if (entity.calls().size() != 0)   // leaf function optimization
+            add("sub", rsp(), new Immediate((frameSize)));
         // store parameters
         List<ParameterEntity> params = entity.params();
         for (int i = 0; i < params.size(); i++) {
@@ -234,7 +238,8 @@ public class Translator {
 
         /***** epilogue *****/
         addLabel(entity.asmName() + END_SUFFIX);
-        add("add", rsp(), new Immediate((frameSize)));
+        if (entity.calls().size() != 0)   // leaf function optimization
+            add("add", rsp(), new Immediate((frameSize)));
         int savedRegNum = 0;
         for (int i = regUsed.length - 1; i >= 0; i--) {
             if (regUsed[i] && isCalleeSave[i]) {

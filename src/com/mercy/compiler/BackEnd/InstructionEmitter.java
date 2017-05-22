@@ -1,5 +1,6 @@
 package com.mercy.compiler.BackEnd;
 
+import com.mercy.Option;
 import com.mercy.compiler.AST.FunctionDefNode;
 import com.mercy.compiler.Entity.ClassEntity;
 import com.mercy.compiler.Entity.FunctionEntity;
@@ -59,6 +60,8 @@ public class InstructionEmitter {
     }
 
     public List<Instruction> emitFunction(FunctionEntity entity) {
+        if (Option.enableInlineFunction && entity.canbeInlined())
+            return null;
         ins = new LinkedList<>();
         for (IR ir : entity.IR()) {
             tmpTop = exprDepth = 0;
@@ -141,6 +144,9 @@ public class InstructionEmitter {
     // match all types of address [base + index * mul + offset]
     // two step : 1.match offset 2. match [base + index * mul]
     private AddressTuple matchAddress(Expr expr) {
+        if (!Option.enableInstructionSelection)
+            return null;
+
         if (!(expr instanceof Binary))
             return null;
         Binary bin = (Binary)expr;
@@ -494,7 +500,7 @@ public class InstructionEmitter {
 
     /***** DEBUG TOOL *****/
     private void printFunction(PrintStream out, FunctionEntity entity) {
-        out.println("========== INS " + entity.name() + " ==========");
+        out.println("========== INS " + entity.name() + entity.getClass().hashCode() + " ==========");
         for (Instruction instruction : entity.ins()) {
             out.println(instruction.toString());
         }

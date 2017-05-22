@@ -1,15 +1,15 @@
 package com.mercy.compiler.BackEnd;
 
+import com.mercy.Option;
 import com.mercy.compiler.AST.*;
 import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.FrontEnd.ASTVisitor;
 import com.mercy.compiler.IR.*;
 import com.mercy.compiler.Type.*;
 import com.mercy.compiler.Utility.InternalError;
+import com.mercy.compiler.Utility.Pair;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 import static com.mercy.compiler.IR.Binary.BinaryOp.*;
 import static com.mercy.compiler.IR.Unary.UnaryOp.*;
@@ -46,12 +46,25 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         printlnIntFunc = (FunctionEntity) ast.scope().find(LIB_PREFIX + "printlnInt");
         printFunc = (FunctionEntity) ast.scope().find("print");
         printlnFunc = (FunctionEntity) ast.scope().find("println");
+        scopeStack.push(ast.scope());
     }
 
     public void generateIR() {
         // calc offset in class
         for (ClassEntity entity : ast.classEntitsies()) {
             entity.initOffset(ALIGNMENT);
+        }
+
+        // check all functions whether inlined
+        if (Option.enableInlineFunction) {
+            for (FunctionEntity entity : ast.functionEntities()) {
+                entity.checkInlinable();
+            }
+            for (ClassEntity entity : ast.classEntitsies()) {
+                for (FunctionDefNode node : entity.memberFuncs()) {
+                    ;//node.entity().checkInlinable();
+                }
+            }
         }
 
         // generate global functions
@@ -92,9 +105,12 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     public void compileFunction(FunctionEntity entity) {
+        if (Option.enableInlineFunction && entity.canbeInlined())
+            return;
         visit(entity.body());
         entity.setIR(fetchStmts());
     }
+
 
     @Override
     public Void visit(FunctionDefNode node) {
@@ -114,19 +130,221 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         return null;
     }
 
+
     public Void visit(BlockNode node) {
+        Scope newScope = node.scope();
+        if (inlineMode > 0) {
+            newScope = new Scope(currentScope);
+            Map<Entity, Entity> map = inlineMap.peek();
+
+            // copy scope
+            for (Entity entity : node.scope().entities().values()) {
+                if (entity instanceof VariableEntity) {
+                    VariableEntity clone = new VariableEntity(entity.location(), entity.type(),
+                            entity.name() + "_inline_" + inlineCt++, ((VariableEntity) entity).initializer());
+                    newScope.insert(clone);
+                    map.put(entity, clone);
+                }
+            }
+        }
+
+        currentScope = newScope;
+        scopeStack.push(currentScope);
         for (StmtNode stmt : node.stmts()) {
             stmt.accept(this);
         }
+        scopeStack.pop();
+        currentScope = scopeStack.peek();
         return null;
     }
 
+
+    private class ExprTuple {
+        int nodehash;
+        CommonExprInfo left, right;
+
+        ExprTuple (int nodehash, CommonExprInfo left, CommonExprInfo right) {
+            this.nodehash = nodehash;
+            this.left = left;
+            this.right = right;
+        }
+
+        @Override
+        public int hashCode() {
+            int base = nodehash;
+            if (left != null)
+                base |= left.hashCode();
+            if (right != null)
+                base &= right.hashCode();
+            return base;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return hashCode() == o.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            String base = Integer.toString(nodehash);
+            if (left != null)
+                base += " " + left.toString();
+            if (right != null)
+                base += " " + right.toString();
+            return base;
+        }
+    }
+
+    public class CommonExprInfo {
+        Expr expr;
+        int ref, depth;
+        String str;
+        Var var; // assigned temp var
+        boolean replaced;
+
+        CommonExprInfo(Expr expr) {
+            this.expr = expr;
+        }
+
+        CommonExprInfo(Expr expr, String str) {
+            this.expr = expr;
+            this.str = str;
+            this.ref = 1;
+        }
+
+        @Override
+        public String toString() {
+            return str;
+        }
+    }
+
+    Map<ExprTuple, CommonExprInfo> commontExprMap;
+
+    private Expr CommonExpressionElimination(Expr expr) {
+        if (!Option.enableCommonExpressionElimination)
+            return null;
+
+        Pair<Boolean, CommonExprInfo> ret = calcSubTree(expr);
+
+       if (!ret.first) {
+            return null;
+        }
+
+        /*for (Map.Entry<ExprTuple, CommonExprInfo> entry : commontExprMap.entrySet()) {
+            System.err.println(entry.getKey().hashCode() + "   " + entry.getValue() + "  " + entry.getValue().ref + " " + entry.getValue().depth);
+        }*/
+
+        for (CommonExprInfo info : commontExprMap.values()) {
+            info.replaced = (info.depth >= 2 && info.ref >= 2);
+        }
+
+        return replaceSubtree(expr);
+    }
+
+    private Pair<Boolean, CommonExprInfo> calcSubTree(Expr expr) {
+        CommonExprInfo ret = null;
+        if (expr instanceof Binary) {
+            Pair<Boolean, CommonExprInfo> left =  calcSubTree(((Binary) expr).left());
+            Pair<Boolean, CommonExprInfo> right = calcSubTree(((Binary) expr).right());
+
+            if (left.first && right.first) {
+                ExprTuple tuple = new ExprTuple(((Binary) expr).operator().getClass().hashCode(), left.second, right.second);
+                ret = commontExprMap.get(tuple);
+                if (ret == null) {
+                    ret = new CommonExprInfo(expr, left.second + " " + ((Binary) expr).operator().toString() + " " + right.second);
+                    ret.depth = (left.second.depth > right.second.depth ? left.second.depth : right.second.depth) + 1;
+                    commontExprMap.put(tuple, ret);
+                } else {
+                    ret.ref++;
+                }
+            }
+        } else if (expr instanceof Var) {
+            ExprTuple tuple = new ExprTuple(((Var) expr).entity().hashCode(), null, null);
+            ret = commontExprMap.get(tuple);
+            if (ret == null) {
+                ret = new CommonExprInfo(expr, ((Var) expr).entity().name());
+                ret.depth = 0;
+                commontExprMap.put(tuple, ret);
+            } else {
+                ret.ref++;
+            }
+        } else if (expr instanceof IntConst) {
+            ExprTuple tuple = new ExprTuple(((IntConst) expr).value(), null, null);
+            ret = commontExprMap.get(tuple);
+            if (ret == null) {
+                ret = new CommonExprInfo(expr, Integer.toString(((IntConst) expr).value()));
+                ret.depth = 0;
+                commontExprMap.put(tuple, ret);
+            } else {
+                ret.ref++;
+            }
+        } else if (expr instanceof Mem) {
+            Pair<Boolean, CommonExprInfo> base =  calcSubTree(((Mem) expr).expr());
+
+            if (base.first) {
+                ExprTuple tuple = new ExprTuple(expr.getClass().hashCode(), base.second, null);
+                ret = commontExprMap.get(tuple);
+                if (ret == null) {
+                    ret = new CommonExprInfo(expr, "mem " + base.second);
+                    ret.depth = base.second.depth + 1;
+                    commontExprMap.put(tuple, ret);
+                } else {
+                    ret.ref++;
+                }
+            }
+        }
+        expr.setCommonExprInfo(ret);
+        return new Pair<>(ret != null, ret);
+    }
+
+    private Expr replaceSubtree(Expr expr) {
+        CommonExprInfo info = expr.commonExprInfo();
+        if (info.replaced) {
+            if (info.var == null) {
+                Var tmp = newIntTemp();
+                info.var = tmp;
+                addAssign(tmp, info.expr);
+            }
+        }
+
+        if (expr instanceof Binary) {
+            if (info.replaced) {
+                return info.var;
+            }
+            Expr left = replaceSubtree(((Binary) expr).left());
+            Expr right = replaceSubtree(((Binary) expr).right());
+
+            return new Binary(left, ((Binary) expr).operator(), right);
+        } else if (expr instanceof Var || expr instanceof  IntConst) {
+            return expr;
+        } else if (expr instanceof Mem) {
+            if (info.replaced)
+                return info.var;
+
+            Expr base = replaceSubtree(((Mem) expr).expr());
+            return new Mem(base);
+        }
+        return expr;
+    }
+
+    int maxDepth = 0;
     public Expr visitExpr(ExprNode node) {
-        if (exprDepth == 0)
+        if (exprDepth == 0) {
+            commontExprMap = new HashMap<>();
             tmpTop = 0;
+            maxDepth = 0;
+        }
         exprDepth++;
+        if (maxDepth < exprDepth)
+            maxDepth = exprDepth;
         Expr expr = node.accept(this);
         exprDepth--;
+
+        if (exprDepth == 0) {
+            Expr replaced = CommonExpressionElimination(expr);
+            if (replaced != null)
+                return replaced;
+        }
         return expr;
     }
 
@@ -218,8 +436,13 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Void visit(ReturnNode node) {
-        stmts.add(new Return(
-                node.expr() == null ? null : visitExpr(node.expr())));
+        if (inlineMode > 0) {
+            if (node.expr() != null && inlineReturnVar.peek() != inlineNoUse)
+                addAssign(inlineReturnVar.peek(), visitExpr(node.expr()));
+            stmts.add(new Jump(inlineReturnLabel.peek()));
+        } else {
+            stmts.add(new Return(node.expr() == null ? null : visitExpr(node.expr())));
+        }
         return null;
     }
 
@@ -402,9 +625,55 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
     }
 
+    int inlineCt = 0;
+    int inlineMode = 0;
+    Var inlineNoUse = new Var(new VariableEntity(null, null, null, null));
+    Stack<Map<Entity, Entity>> inlineMap = new Stack<>();
+    Stack<Label> inlineReturnLabel = new Stack<>();
+    Stack<Var> inlineReturnVar = new Stack<>();
+    private void inlineFunction(FunctionEntity entity, Var returnVar, List<Expr> args) {
+        Label returnLable = new Label();
+        Map<Entity, Entity> map = new HashMap<>();
+
+        inlineMap.push(map);
+        inlineReturnLabel.push(returnLable);
+        inlineReturnVar.push(returnVar);
+
+        // new scope
+        Scope scope = new Scope(currentScope);
+
+        // copy parameters, and assign init
+        Iterator<Expr> iter = args.iterator();
+        for (ParameterEntity par : entity.params()) {
+            VariableEntity clone = new VariableEntity(par.location(), par.type(),
+                    par.name() + "_inline_" + inlineCt++, null);
+            scope.insert(clone);
+            map.put(par, clone);
+            addAssign(new Var(clone), iter.next());
+        }
+
+        // compile body
+        currentScope = scope;
+        scopeStack.push(currentScope);
+
+        inlineMode++;
+        visit(entity.body());
+        addLabel(returnLable, "inline_return_" + entity.name());
+        inlineMode--;
+
+        scopeStack.pop();
+        currentScope = scopeStack.peek();
+
+        inlineMap.pop();
+        inlineReturnLabel.pop();
+        inlineReturnVar.pop();
+    }
+
     @Override
     public Expr visit(FuncallNode node) {
         FunctionEntity entity = node.functionType().entity();
+
+        // expand print (optimization)
         if (entity.name().equals("print")) {
             expandPrint(node.args().get(0), false, true);
             return null;
@@ -413,22 +682,34 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             return null;
         }
 
+        // visit arguments
         List<Expr> args = new LinkedList<>();
         for (ExprNode exprNode : node.args())
             args.add(visitExpr(exprNode));
 
-        if (exprDepth == 0) {
-            stmts.add(new Call(entity, args));
-            return null;
-        } else {
-            if (notuseTmp) {
-                return new Call(entity, args);
+        // make call
+        if (Option.enableInlineFunction && entity.canbeInlined()) {
+            if (exprDepth == 0) {
+                inlineFunction(entity, inlineNoUse, args);
             } else {
                 Var tmp = newIntTemp();
-                addAssign(tmp, new Call(entity, args));
+                inlineFunction(entity, tmp, args);
                 return tmp;
             }
+        } else {
+            if (exprDepth == 0) {
+                stmts.add(new Call(entity, args));
+            } else {
+                if (notuseTmp) {
+                    return new Call(entity, args);
+                } else {
+                    Var tmp = newIntTemp();
+                    addAssign(tmp, new Call(entity, args));
+                    return tmp;
+                }
+            }
         }
+        return null;
     }
 
     @Override
@@ -468,12 +749,18 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (node.isMember()) {  // add "this" pointer
             Expr base = new Var(node.getThisPointer());
             int offset = node.entity().offset();
+
             if (false && offset == 0)  //TODO: see below
                 return new Mem(base);
             else
                 return new Mem(new Binary(base, ADD, new IntConst(offset)));
         } else {
-            return new Var(node.entity());
+            if (inlineMode > 0) {
+                Entity entity = inlineMap.peek().get(node.entity());
+                return new Var(entity == null ? node.entity() : entity);
+            } else {
+                return new Var(node.entity());
+            }
         }
     }
 
@@ -481,6 +768,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(MemberNode node) {
         Expr base = visitExpr(node.expr());
         int offset = node.entity().offset();
+
         if (false && offset == 0)  //TODO: see up
             return new Mem(base);
         else
@@ -558,6 +846,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Expr visit(CreatorNode node) {
+        currentFunction.addCall(mallocFunc);
         if (node.type() instanceof ArrayType) {
             Type baseType = ((ArrayType) node.type()).baseType();
             Type deepType = ((ArrayType) node.type()).deepType();

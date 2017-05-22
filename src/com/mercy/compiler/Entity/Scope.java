@@ -1,6 +1,5 @@
 package com.mercy.compiler.Entity;
 
-import com.mercy.compiler.IR.Var;
 import com.mercy.compiler.Utility.SemanticError;
 
 import java.util.*;
@@ -104,7 +103,6 @@ public class Scope {
                 offset += (align - offset % align) % align; // can be optimized here, use shift
             }
         }
-
         int maxi = 0;
         for (Scope child : children) {
             int tmp = child.locateLocalVariable(base + offset, align);

@@ -22,7 +22,7 @@ public class TypeChecker extends Visitor {
     static final Type stringType = new StringType();
 
     private int loopDepth = 0;
-    private FunctionEntity currentFunction;
+    private FunctionEntity currentFunction = null;
 
     static private void checkCompatibility(Location loc, Type real, Type expect, boolean isExpected) {
         if (!real.isCompatible(expect)) {
@@ -257,6 +257,11 @@ public class TypeChecker extends Visitor {
             throw new SemanticError(node.location(), "Invalid type : " + type
                     + " expecting function");
         FunctionEntity entity = ((FunctionType)type).entity();
+
+        if (currentFunction != null) {
+            currentFunction.addCall(entity);
+        }
+
         List<ParameterEntity> params = entity.params();
         List<ExprNode> exprs = node.args();
 
