@@ -110,8 +110,6 @@ public class AST {
                 System.err.println();
             }*/
 
-            // print source info
-
             // begin iteration
             int before = 0, after = -1;
 

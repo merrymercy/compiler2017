@@ -38,6 +38,9 @@ public class Main {
                 case "--print-ins":
                     Option.printInsturction = true;
                     break;
+                case "--print-remove":
+                    Option.printRemoveInfo = true;
+                    break;
                 case "-in":
                     if (i + 1 >= args.length)
                         System.err.println("invalid argument for input file, use default setting instead");

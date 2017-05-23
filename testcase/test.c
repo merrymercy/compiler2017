@@ -1,133 +1,132 @@
-
-int main() {
-int i;
-    for (i = 0; i < 100;i ++)
-        i = i + 2;
-
-println("hell");
-    return 0;
+bool check(int a, int N) {
+    return ((a < N) && (a >= 0));
 }
 
-/*!! metadata:
-=== comment ===
-some correctness test
-=== input ===
-=== assert ===
-output
-=== timeout ===
-1.0
-=== output ===
-Constructed - 0
-Constructed - 1
-Constructed - 2
-Constructed - 3
-Constructed - 4
-Constructed - 5
-Constructed - 6
-Constructed - 7
-Constructed - 8
-Constructed - 9
-Constructed - 10
-Constructed - 11
-Constructed - 12
-Constructed - 13
-Constructed - 14
-Constructed - 15
-Constructed - 16
-Constructed - 17
-Constructed - 18
-Constructed - 19
-Constructed - 20
-Constructed - 21
-Constructed - 22
-Constructed - 23
-Constructed - 24
-Constructed - 25
-Constructed - 26
-Constructed - 27
-Constructed - 28
-Constructed - 29
-Constructed - 30
-Constructed - 31
-Constructed - 32
-Constructed - 33
-Constructed - 34
-Constructed - 35
-Constructed - 36
-Constructed - 37
-Constructed - 38
-Constructed - 39
-Constructed - 40
-Constructed - 41
-Constructed - 42
-Constructed - 43
-Constructed - 44
-Constructed - 45
-Constructed - 46
-Constructed - 47
-Constructed - 48
-Constructed - 49
-Constructed - 50
-Constructed - 51
-Constructed - 52
-Constructed - 53
-Constructed - 54
-Constructed - 55
-Constructed - 56
-0
-1
-3
-5
-7
-8
-9
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-1 - true
-2 - false
-3 - false
-4 - true
-5 - false
-0 -2176
-1 -2176
-2 -2176
-3 -2176
-4 -2176
-5 -2176
-6 -2176
-7 -2176
-8 -2176
-9 -2176
-494
-973680
-=== phase ===
-optim extended
-=== is_public ===
-True
+int main() {
+    int N;
+    int head;
+	int startx;
+	int starty;
+    int targetx;
+	int targety;
+	int tail;
+	int ok;
+	int now;
+    int x;
+	int y;
+    int[] xlist;
+	int[] ylist;
+    int[][] step;
+    int i;
+	int j;
 
-!!*/
+    N = getInt();
+    head = tail = startx = starty = 0;
+    targetx = targety  = N - 1;
+    x = y = 0;
+    now = ok = 0;
+    xlist = new int[N * N];
+    for (i = 0; i < N * N; i ++ )
+        xlist[i] = 0;
+    ylist = new int[N * N];
+    for (i = 0; i < N * N; i ++ )
+        ylist[i] = 0;
+    step = new int[N][];
+    for (i = 0; i < N;  i ++ ) {
+		step[i] = new int[N];
+        for (j = 0; j < N; j ++ )
+        step[i][j] = -1;
+    }
+    xlist[0] = startx;
+    ylist[0] = starty;
+    step[startx][starty] == 0;
+    while (head <= tail)
+    {
+        now = step[xlist[head]][ylist[head]];
+        x = xlist[head] - 1;
+        y = ylist[head] - 2;
+        if (check(x, N) && check(y, N) && step[x][y] == -1)
+        {
+            tail = tail + 1;
+            xlist[tail] = x;
+            ylist[tail] = y;
+            step[x][y] = now + 1;
+            if (x == targetx && y == targety) ok = 1;
+        }
+        x = xlist[head] - 1;
+        y = ylist[head] + 2;
+        if (check(x, N) && check(y, N) && step[x][y] == -1)
+        {
+            tail = tail + 1;
+            xlist[tail] = x;
+            ylist[tail] = y;
+            step[x][y] = now + 1;
+            if (x == targetx && y == targety) ok = 1;
+        }
+        x = xlist[head] + 1;
+        y = ylist[head] - 2;
+        if (check(x, N) && check(y, N) && step[x][y] == -1)
+        {
+            tail = tail + 1;
+            xlist[tail] = x;
+            ylist[tail] = y;
+            step[x][y] = now + 1;
+            if (x == targetx && y == targety) ok = 1;
+        }
+        x = xlist[head] + 1;
+        y = ylist[head] + 2;
+        if (check(x, N) && check(y, N) && step[x][y] == -1)
+        {
+            tail = tail + 1;
+            xlist[tail] = x;
+            ylist[tail] = y;
+            step[x][y] = now + 1;
+            if (x == targetx && y == targety) ok = 1;
+        }
+        x = xlist[head] - 2;
+        y = ylist[head] - 1;
+        if (check(x, N) && check(y, N) && step[x][y] == -1)
+        {
+            tail = tail + 1;
+            xlist[tail] = x;
+            ylist[tail] = y;
+            step[x][y] = now + 1;
+            if (x == targetx && y == targety) ok = 1;
+        }
+        x = xlist[head] - 2;
+        y = ylist[head] + 1;
+        if (check(x, N) && check(y, N) && step[x][y] == -1)
+        {
+            tail = tail + 1;
+            xlist[tail] = x;
+            ylist[tail] = y;
+            step[x][y] = now + 1;
+            if (x == targetx && y == targety) ok = 1;
+        }
+        x = xlist[head] + 2;
+        y = ylist[head] - 1;
+        if (check(x, N) && check(y, N) && step[x][y] == -1)
+        {
+            tail = tail + 1;
+            xlist[tail] = x;
+            ylist[tail] = y;
+            step[x][y] = now + 1;
+            if (x == targetx && y == targety) ok = 1;
+        }
+        x = xlist[head] + 2;
+        y = ylist[head] + 1;
+        if (check(x, N) && check(y, N) && step[x][y] == -1)
+        {
+            tail = tail + 1;
+            xlist[tail] = x;
+            ylist[tail] = y;
+            step[x][y] = now + 1;
+            if (x == targetx && y == targety) ok = 1;
+        }
+        if (ok == 1) break;
+        head = head + 1;
+    }
+    if (ok == 1) println(toString(step[targetx][targety]));
+    else print("no solution!\n");
+    return 0;
+}

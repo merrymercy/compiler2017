@@ -239,7 +239,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         Pair<Boolean, CommonExprInfo> ret = calcSubTree(expr);
 
-       if (!ret.first) {
+        if (!ret.first) {
             return null;
         }
 

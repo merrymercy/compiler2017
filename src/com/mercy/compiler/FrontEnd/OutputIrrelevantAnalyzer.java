@@ -107,7 +107,11 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
                 // add dependency edge
                 Entity base = getBaseEntity(lhs);
 
+
+
                 reliedEntityStack.push(new HashSet<>());
+                sideEffect = false;
+
                 visitExpr(node.lhs());
                 visitExpr(node.rhs());
 
@@ -115,11 +119,12 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
                     dependenceEdgeSet.add(new DependenceEdge(base, entity));
                     base.addDependence(entity);
                 }
-                reliedEntityStack.pop();
 
-                if (base.outputIrrelevant()) {
+                if (base.outputIrrelevant() && sideEffect == false) {
                     node.setOutputIrrelevant(true);
                 }
+
+                reliedEntityStack.pop();
             }
         }
         return null;
@@ -312,6 +317,9 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
 
                 collectSetStack.pop();
             }
+
+            for (int i = 0; i< irrelevantStack.size(); i++)
+                irrelevantStack.set(i, false);
         }
         return null;
     }
@@ -335,6 +343,33 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
         if (node.exprs() != null)
             visitExprs(node.exprs());
         return null;
+    }
+
+    boolean sideEffect;
+    @Override
+    public Void visit(PrefixOpNode node) {
+        if (!collectSetStack.empty()) {
+            return super.visit(node);
+        } else {
+            visitExpr(node.expr());
+            if (node.operator() == UnaryOpNode.UnaryOp.PRE_DEC || node.operator() == UnaryOpNode.UnaryOp.PRE_INC) {
+                sideEffect = true;
+            }
+            return null;
+        }
+    }
+
+    @Override
+    public Void visit(SuffixOpNode node) {
+        if (!collectSetStack.empty()) {
+            return super.visit(node);
+        } else {
+            visitExpr(node.expr());
+            if (node.operator() == UnaryOpNode.UnaryOp.SUF_DEC || node.operator() == UnaryOpNode.UnaryOp.SUF_INC) {
+                sideEffect = true;
+            }
+            return null;
+        }
     }
 
 
