@@ -208,9 +208,10 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
                 visitExpr(n.cond());
             if (n.incr() != null)
                 visitExpr(n.incr());
-            visitStmt(n.body());
+            if (n.body() != null)
+                visitStmt(n.body());
 
-            if (!n.body().outputIrrelevant()) {  // node - entity iteration
+            if (n.body() != null && !n.body().outputIrrelevant()) {  // node - entity iteration
                 collectSetStack.push(new HashSet<>());
 
                 if (n.init() != null)
@@ -226,6 +227,8 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
 
                 collectSetStack.pop();
                 n.setOutputIrrelevant(false);
+            } else {
+                n.setOutputIrrelevant(true);
             }
         }
         return null;
@@ -254,6 +257,8 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
 
                 collectSetStack.pop();
                 n.setOutputIrrelevant(false);
+            } else {
+                n.setOutputIrrelevant(true);
             }
         }
         return null;
@@ -284,6 +289,8 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
 
                 collectSetStack.pop();
                 n.setOutputIrrelevant(false);
+            } else {
+                n.setOutputIrrelevant(true);
             }
         }
         return null;

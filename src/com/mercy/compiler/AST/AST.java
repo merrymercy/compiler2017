@@ -86,23 +86,19 @@ public class AST {
 
     public void eliminateOutputIrrelevantNode() {
         if (classEntitsies().size() != 0) {
-            // gather all entity
-            List<Entity> allEntity = scope.gatherAll();
-            for (Entity entity : allEntity) {
-                System.err.println(entity.name());
-                entity.setOutputIrrelevant(false);
-            }
-
-            OutputIrrelevantAnalyzer analyzer = new OutputIrrelevantAnalyzer(this);
-            analyzer.visitDefinitions(definitionNodes);
+            return;
         } else {
             OutputIrrelevantAnalyzer analyzer = new OutputIrrelevantAnalyzer(this);
             analyzer.visitDefinitions(definitionNodes);
 
-            // gather all entity
+            // gather all entity, mark irrelevant default
             List<Entity> allEntity = scope.gatherAll();
+            for (Entity entity : allEntity) {
+                entity.setOutputIrrelevant(true);
+            }
+
             // print dependence info
-            HashSet<Entity> printed = new HashSet<>();
+           /* HashSet<Entity> printed = new HashSet<>();
             for (DependenceEdge edge : analyzer.dependenceEdgeSet()) {
                 if (printed.contains(edge.base))
                     continue;
@@ -112,7 +108,7 @@ public class AST {
                     System.err.print("  " + entity.name());
                 }
                 System.err.println();
-            }
+            }*/
 
             // print source info
 
@@ -135,13 +131,11 @@ public class AST {
             analyzer.visitDefinitions(definitionNodes);
 
             // print result
-            for (Entity entity : allEntity) {
+            /*for (Entity entity : allEntity) {
                 if (entity instanceof FunctionEntity)
                     continue;
                 System.err.println(entity.name() + ": " + entity.outputIrrelevant());
-            }
-       /* OutputIrrelevantMarker marker = new OutputIrrelevantMarker(this);
-        marker.visitDefinitions(definitionNodes);*/
+            }*/
         }
     }
 

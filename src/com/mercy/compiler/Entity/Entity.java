@@ -20,7 +20,7 @@ abstract public class Entity {
     protected Reference reference;
 
     protected Set<Entity> dependence = new HashSet<>();
-    boolean isOutputIrrelevant = true;
+    boolean isOutputIrrelevant = false;
 
     public Entity(Location loc, Type type, String name) {
         this.location = loc;

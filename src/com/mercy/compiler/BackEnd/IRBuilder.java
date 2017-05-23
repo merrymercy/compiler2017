@@ -134,11 +134,11 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Void visit(VariableDefNode node) {
         ExprNode init = node.entity().initializer();
         if (init != null) {
-            /*if (Option.enableOutputIrrelevantElimination && node.entity().outputIrrelevant()) {
+            if (Option.enableOutputIrrelevantElimination && node.entity().outputIrrelevant()) {
                 if (Option.printRemoveInfo)
                     System.out.println("remove init " + node.location());
             }
-            else*/
+            else
                 visit(new AssignNode(new VariableNode(node.entity(), node.location()), init));
         }
         return null;
@@ -154,8 +154,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             // copy scope
             for (Entity entity : node.scope().entities().values()) {
                 if (entity instanceof VariableEntity) {
-                    VariableEntity clone = new VariableEntity(entity.location(), entity.type(),
-                            entity.name() + "_inline_" + inlineCt++, ((VariableEntity) entity).initializer());
+                    VariableEntity clone = ((VariableEntity) entity).copy();
                     newScope.insert(clone);
                     map.put(entity, clone);
                 }
@@ -426,22 +425,22 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Void visit(WhileNode node) {
-        /*if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
+        if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
                 System.out.println("remove while " + node.location());
             return null;
-        }*/
+        }
         visitLoop(null, node.cond(), null, node.body());
         return null;
     }
 
     @Override
     public Void visit(ForNode node) {
-        /*if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
+        if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
                 System.out.println("remove for " + node.location());
             return null;
-        }*/
+        }
         visitLoop(node.init(), node.cond(), node.incr(), node.body());
         return null;
     }
@@ -483,11 +482,11 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         Expr lhs = visitExpr(node.lhs());
         Expr rhs;
 
-        /*if (exprDepth == 0 && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
+        if (exprDepth == 0 && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
                 System.out.println("remove assign " + node.location());
             return null;
-        }*/
+        }
 
         if (node.rhs() instanceof FuncallNode) {
             notuseTmp = true;

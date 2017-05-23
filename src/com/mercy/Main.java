@@ -1,6 +1,7 @@
 package com.mercy;
 
 import com.mercy.compiler.AST.AST;
+import com.mercy.compiler.BackEnd.ControlFlowAnalyzer;
 import com.mercy.compiler.BackEnd.IRBuilder;
 import com.mercy.compiler.BackEnd.InstructionEmitter;
 import com.mercy.compiler.BackEnd.Translator;
@@ -107,8 +108,8 @@ public class Main {
 
         ast.resolveSymbol();                          // extract info of class and function
         ast.checkType();                              // check type
-        /*if (Option.enableOutputIrrelevantElimination) // eliminate output-irrelevant code
-            ast.eliminateOutputIrrelevantNode();*/
+        if (Option.enableOutputIrrelevantElimination) // eliminate output-irrelevant code
+            ast.eliminateOutputIrrelevantNode();
 
         IRBuilder irBuilder = new IRBuilder(ast);
         irBuilder.generateIR();                      // generate IR, do simple constant folding
@@ -120,10 +121,10 @@ public class Main {
             emitter.printSelf(System.out);
 
         // build control flow graph
-        /*ControlFlowAnalyzer cfgBuilder = new ControlFlowAnalyzer(emitter);
+        ControlFlowAnalyzer cfgBuilder = new ControlFlowAnalyzer(emitter);
         cfgBuilder.buildControlFlow();
         if (Option.printBasicBlocks)
-            cfgBuilder.printSelf(System.out);*/
+            cfgBuilder.printSelf(System.out);
 
         // translate to x86 nasm
         Translator translator = new Translator(emitter);

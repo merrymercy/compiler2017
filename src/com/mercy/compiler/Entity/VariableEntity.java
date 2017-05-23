@@ -15,6 +15,12 @@ public class VariableEntity extends Entity {
         initializer = init;
     }
 
+    public VariableEntity copy() {
+        VariableEntity a = new VariableEntity(location(), type(), name(), initializer());
+        a.setOutputIrrelevant(outputIrrelevant());
+        return a;
+    }
+
     public ExprNode initializer() {
         return initializer;
     }

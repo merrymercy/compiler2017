@@ -48,7 +48,6 @@ public class FunctionEntity extends Entity {
 
     public ParameterEntity addThisPointer(Location loc, ClassEntity entity) {
         ParameterEntity thisPointer = new ParameterEntity(entity.location(), entity.type(), "this");
-        thisPointer.setOutputIrrelevant(false);
         params.add(0, thisPointer);
         return thisPointer;
     }
