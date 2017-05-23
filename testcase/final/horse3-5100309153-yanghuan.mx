@@ -45,7 +45,8 @@ void addList(int x, int y) {
 int main() {
 	origin(106);
     N = getInt();
-    targetx = targety  = N - 1;
+    targety = N-1;
+    targetx  = targety;
     for (i = 0; i < N; i ++)
         for (j = 0; j < N; j ++)
         step[i][j] = -1;

@@ -186,9 +186,10 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         public int hashCode() {
             int base = nodehash;
             if (left != null)
-                base |= left.hashCode();
-            if (right != null)
-                base &= right.hashCode();
+                base *= left.hashCode();
+            if (right != null) {
+                base ^= right.hashCode();
+            }
             return base;
         }
 
