@@ -17,6 +17,12 @@ public class Return extends Instruction {
     }
 
     @Override
+    public void calcDefAndUse() {
+        if (ret != null)
+            use.addAll(ret.getAllRef());
+    }
+
+    @Override
     public void accept(Translator translator) {
         translator.visit(this);
     }

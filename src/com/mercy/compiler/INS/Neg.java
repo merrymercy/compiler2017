@@ -2,6 +2,7 @@ package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Operand;
+import com.mercy.compiler.INS.Operand.Reference;
 
 /**
  * Created by mercy on 17-4-25.
@@ -15,6 +16,14 @@ public class Neg extends Instruction {
 
     public Operand operand() {
         return operand;
+    }
+
+    @Override
+    public void calcDefAndUse() {
+        if (operand instanceof Reference) {
+            def.addAll(operand().getAllRef());
+        }
+        use.addAll(operand().getAllRef());
     }
 
     @Override

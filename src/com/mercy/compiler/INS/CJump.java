@@ -16,6 +16,12 @@ public class CJump extends Instruction {
         this.falseLabel = falseLabel;
     }
 
+    @Override
+    public void calcDefAndUse() {
+        use.addAll(cond.getAllRef());
+    }
+
+    // getter
     public Operand cond() {
         return cond;
     }

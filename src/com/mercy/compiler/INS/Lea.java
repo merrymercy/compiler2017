@@ -2,26 +2,32 @@ package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Address;
-import com.mercy.compiler.INS.Operand.Operand;
+import com.mercy.compiler.INS.Operand.Reference;
 
 /**
  * Created by mercy on 17-4-25.
  */
 public class Lea extends Instruction {
-    Operand dest;
+    Reference dest;
     Address addr;
 
-    public Lea (Operand dest, Address addr) {
+    public Lea (Reference dest, Address addr) {
         this.dest = dest;
         this.addr = addr;
     }
 
-    public Operand dest() {
+    public Reference dest() {
         return dest;
     }
 
     public Address addr() {
         return addr;
+    }
+
+    @Override
+    public void calcDefAndUse() {
+        def.add(dest);
+        use.addAll(addr.getAllRef());
     }
 
     @Override

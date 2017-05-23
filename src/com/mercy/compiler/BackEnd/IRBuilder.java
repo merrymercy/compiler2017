@@ -136,7 +136,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (init != null) {
             if (Option.enableOutputIrrelevantElimination && node.entity().outputIrrelevant()) {
                 if (Option.printRemoveInfo)
-                    System.out.println("remove init " + node.location());
+                    System.err.println("remove init " + node.location());
             }
             else
                 visit(new AssignNode(new VariableNode(node.entity(), node.location()), init));
@@ -188,7 +188,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             if (left != null)
                 base *= left.hashCode();
             if (right != null) {
-                base ^= right.hashCode();
+                base += right.hashCode();
             }
             return base;
         }
@@ -439,7 +439,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Void visit(ForNode node) {
         if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
-                System.out.println("remove for " + node.location());
+                System.err.println("remove for " + node.location());
             return null;
         }
         visitLoop(node.init(), node.cond(), node.incr(), node.body());
@@ -485,7 +485,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         if (exprDepth == 0 && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
-                System.out.println("remove assign " + node.location());
+                System.err.println("remove assign " + node.location());
             return null;
         }
 
@@ -882,6 +882,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             Type baseType = ((ArrayType) node.type()).baseType();
             Type deepType = ((ArrayType) node.type()).deepType();
             Var pointer = newIntTemp();
+
             FunctionEntity constructor = null;
             if (node.exprs().size() == node.total() && deepType instanceof ClassType)
                 constructor = ((ClassType)deepType).entity().constructor();

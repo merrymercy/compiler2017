@@ -16,6 +16,10 @@ public class Jmp extends Instruction {
     }
 
     @Override
+    public void calcDefAndUse() {
+    }
+
+    @Override
     public void accept(Translator translator) {
         translator.visit(this);
     }

@@ -1,10 +1,7 @@
 package com.mercy;
 
 import com.mercy.compiler.AST.AST;
-import com.mercy.compiler.BackEnd.ControlFlowAnalyzer;
-import com.mercy.compiler.BackEnd.IRBuilder;
-import com.mercy.compiler.BackEnd.InstructionEmitter;
-import com.mercy.compiler.BackEnd.Translator;
+import com.mercy.compiler.BackEnd.*;
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.FrontEnd.ASTBuilder;
@@ -128,6 +125,12 @@ public class Main {
         cfgBuilder.buildControlFlow();
         if (Option.printBasicBlocks)
             cfgBuilder.printSelf(System.out);
+
+        // allocate register
+        if (Option.enableRegisterAllocation) {
+            Allocator allocator = new Allocator(emitter);
+            allocator.allocate();
+        }
 
         // translate to x86 nasm
         Translator translator = new Translator(emitter);

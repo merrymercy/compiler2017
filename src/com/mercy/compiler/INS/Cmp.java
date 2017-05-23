@@ -32,6 +32,12 @@ public class Cmp extends Instruction {
     }
 
     @Override
+    public void calcDefAndUse() {
+        use.addAll(left().getAllRef());
+        use.addAll(right().getAllRef());
+    }
+
+    @Override
     public void accept(Translator translator) {
         translator.visit(this);
     }

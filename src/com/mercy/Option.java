@@ -12,11 +12,14 @@ public class Option {
     public static boolean printInsturction = false;
     public static boolean printBasicBlocks = false;
     public static boolean printRemoveInfo = false;
+    public static boolean printInlineInfo = false;
 
     // OPTIMIZATION
-    public static boolean enableInstructionSelection = true;
-    public static boolean enableInlineFunction = true;
-    public static boolean enableCommonExpressionElimination = true;
+    public static boolean enableRegisterAllocation = true;
 
-    public static boolean enableOutputIrrelevantElimination = true;
+    public static boolean enableInstructionSelection = false;
+    public static boolean enableInlineFunction = false;
+    public static boolean enableCommonExpressionElimination = false;
+
+    public static boolean enableOutputIrrelevantElimination = false;
 }

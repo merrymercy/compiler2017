@@ -26,6 +26,10 @@ public class Label extends Instruction {
     }
 
     @Override
+    public void calcDefAndUse() {
+    }
+
+    @Override
     public void accept(Translator translator) {
         translator.visit(this);
     }

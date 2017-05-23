@@ -1,33 +1,24 @@
 package com.mercy.compiler.INS.Operand;
 
 import com.mercy.compiler.Entity.Entity;
-import com.mercy.compiler.Utility.InternalError;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by mercy on 17-5-4.
  */
 public class Address extends Operand {
-    public enum Type {
-        ENTITY, BASE_OFFSET
-    }
-
     Entity entity;
     Operand base = null, index = null;  // however, these two member can only be register/reference, cannot be address!
     int mul = 1, add = 0;
-    Type type;
 
     boolean showSize = true;
 
     Operand baseNasm, indexNasm;
 
-    public Address(Entity entity) {
-        this.entity = entity;
-        this.type = Type.ENTITY;
-    }
-
     public Address(Operand base) {
         this.base = base;
-        this.type = Type.BASE_OFFSET;
     }
 
     public Address(Operand base, Operand index, int mul, int add) {
@@ -35,17 +26,22 @@ public class Address extends Operand {
         this.index = index;
         this.mul = mul;
         this.add = add;
-        this.type = Type.BASE_OFFSET;
+    }
+
+    @Override
+    public Set<Reference> getAllRef() {
+        Set<Reference> ret = new HashSet<>();
+        if (base != null)
+            ret.addAll(base.getAllRef());
+        if (index != null) {
+            ret.addAll(index.getAllRef());
+        }
+        return ret;
     }
 
     /*
      * getter and setter
      */
-
-    public Type type() {
-        return type;
-    }
-
     public Operand base() {
         return base;
     }
@@ -90,56 +86,42 @@ public class Address extends Operand {
     public String toNASM() {
         String ret = showSize ? "qword" + " [" : "[";
         String gap = "";
-        switch (type) {
-            case ENTITY:
-                return entity.reference().toNASM();
-            case BASE_OFFSET:
-                if (base != null) {
-                    ret += gap + baseNasm().toNASM();
-                    gap = " + ";
-                }
-                if (index != null) {
-                    ret += gap + indexNasm().toNASM();
-                    gap = " + ";
-                    if (mul != 1) {
-                        ret += " * " + mul;
-                    }
-                }
-                if (add != 0) {
-                    ret += gap + add;
-                }
-
-                return ret + "]";
-            default:
-                throw new InternalError("invalid type " + type);
+        if (base != null) {
+            ret += gap + baseNasm().toNASM();
+            gap = " + ";
         }
+        if (index != null) {
+            ret += gap + indexNasm().toNASM();
+            gap = " + ";
+            if (mul != 1) {
+                ret += " * " + mul;
+            }
+        }
+        if (add != 0) {
+            ret += gap + add;
+        }
+
+        return ret + "]";
     }
 
     @Override
     public String toString() {
         String str = "";
-        switch (type) {
-            case ENTITY:
-                str = entity.name(); break;
-            case BASE_OFFSET:
-                String gap = "";
-                if (base != null) {
-                    str += gap + base;
-                    gap = " + ";
-                }
-                if (index != null) {
-                    str += gap + index;
-                    gap = " + ";
-                    if (mul != 1) {
-                        str += " * " + mul;
-                    }
-                }
-                if (add != 0) {
-                    str += gap + add;
-                }
-                break;
-            default:
-                throw new InternalError("invalid type " + type);
+
+        String gap = "";
+        if (base != null) {
+            str += gap + base;
+            gap = " + ";
+        }
+        if (index != null) {
+            str += gap + index;
+            gap = " + ";
+            if (mul != 1) {
+                str += " * " + mul;
+            }
+        }
+        if (add != 0) {
+            str += gap + add;
         }
         return "[" + str + "]";
     }

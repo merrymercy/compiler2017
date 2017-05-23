@@ -2,6 +2,7 @@ package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Operand;
+import com.mercy.compiler.INS.Operand.Reference;
 
 /**
  * Created by mercy on 17-4-25.
@@ -19,6 +20,17 @@ public class Move extends Instruction {
 
     public Operand src() {
         return src;
+    }
+
+    @Override
+    public void calcDefAndUse() {
+        if (dest instanceof Reference) {
+            def.add((Reference)dest);
+            use.addAll(src.getAllRef());
+        } else {
+            use.addAll(dest.getAllRef());
+            use.addAll(src.getAllRef());
+        }
     }
 
     @Override

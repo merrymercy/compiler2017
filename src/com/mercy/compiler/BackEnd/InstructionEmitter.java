@@ -2,9 +2,7 @@ package com.mercy.compiler.BackEnd;
 
 import com.mercy.Option;
 import com.mercy.compiler.AST.FunctionDefNode;
-import com.mercy.compiler.Entity.ClassEntity;
-import com.mercy.compiler.Entity.FunctionEntity;
-import com.mercy.compiler.Entity.Scope;
+import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.CJump;
 import com.mercy.compiler.INS.Call;
@@ -47,6 +45,18 @@ public class InstructionEmitter {
     }
 
     public void emit() {
+        int stringCounter = 1;
+
+        // set reference for global variables
+        for (Entity entity : globalScope.entities().values()) {
+            //System.out.println(entity.name());
+            if (entity instanceof VariableEntity) {
+                entity.setReference(new Reference(entity.name()));
+            } else if (entity instanceof  StringConstantEntity) {
+                ((StringConstantEntity) entity).setAsmName(StringConstantEntity.STRING_CONSTANT_ASM_LABEL_PREFIX + stringCounter++);
+            }
+        }
+
         // emit functions
         for (FunctionEntity functionEntity : functionEntities) {
             currentFunction = functionEntity;
@@ -60,6 +70,15 @@ public class InstructionEmitter {
     public List<Instruction> emitFunction(FunctionEntity entity) {
         if (Option.enableInlineFunction && entity.canbeInlined())
             return null;
+
+        // set reference for params and local variable
+        for (ParameterEntity parameterEntity : entity.params()) {
+            parameterEntity.setReference(new Reference(parameterEntity));
+        }
+        for (VariableEntity variableEntity : entity.allLocalVariables()) {
+            variableEntity.setReference(new Reference(variableEntity));
+        }
+
         entity.setLabelINS(getLabel(entity.beginLabelIR().name()), getLabel(entity.endLabelIR().name()));
         ins = new LinkedList<>();
         for (IR ir : entity.IR()) {
@@ -207,16 +226,16 @@ public class InstructionEmitter {
             if (base instanceof Reference) {
                 tmpTop = backupTop + 1; // only leave ret, remove other useless tmp register
                 ret = base;
-                ins.add(new Lea(ret, new Address(base, index, addr.mul, addr.add)));
+                ins.add(new Lea((Reference) ret, new Address(base, index, addr.mul, addr.add)));
             } else if (base instanceof Immediate) {
                 ret = getTmp();
                 ins.add(new Move(ret, base));
-                ins.add(new Lea(ret, new Address(ret, index, addr.mul, addr.add)));
+                ins.add(new Lea((Reference) ret, new Address(ret, index, addr.mul, addr.add)));
             } else if (base instanceof Address) {
                 tmpTop = backupTop; // only leave ret, remove other useless tmp register
                 ret = getTmp();
                 ins.add(new Move(ret, base));
-                ins.add(new Lea(ret, new Address(ret, index, addr.mul, addr.add)));
+                ins.add(new Lea((Reference) ret, new Address(ret, index, addr.mul, addr.add)));
             } else {
                 throw new InternalError("Unhandled case in lea");
             }
@@ -231,66 +250,38 @@ public class InstructionEmitter {
     }
 
     public Operand visit(com.mercy.compiler.IR.Addr ir) {
-        return new Address(ir.entity());
+        throw new InternalError("Unhandled case in IR Addr");
     }
 
     public Operand visit(com.mercy.compiler.IR.Assign ir) {
         Operand dest = null;
 
         if (ir.left() instanceof Var) {
-            dest = new Address(new Address(((Var) ir.left()).entity()));
-        } else if (ir.left() instanceof Addr) {
-            dest = new Address(((Addr) ir.left()).entity());
-        }/* else if (ir.left() instanceof Mem) {
-        } else if (ir.left() instanceof Binary) {
-        } else {
-            throw new InternalError("Unhandled case in IR Assign left: " + ir.left());
-        }*/
+            dest = new Address(((Var) ir.left()).entity().reference());
+        } else  if (ir.left() instanceof Addr) {
+            dest = ((Addr) ir.left()).entity().reference();
+        }
 
         if (dest == null) {
             Operand lhs = visitExpr(ir.left());
-            if (ir.left() instanceof Addr)
-                dest = lhs;
-            else
-                dest = new Address(lhs);
+            dest = new Address(lhs);
         }
 
-        /*matchSimpleAdd = false;
-        AddressTuple addr = matchAddress(ir.right());
-        matchSimpleAdd = false;
-
-        if (addr != null) {
-            Operand base = visitExpr(addr.base);
-            Operand index = null;
-            if (addr.index != null)
-                index = visitExpr(addr.index);
-
-            ins.add(new Lea(dest, new Address(base, index, addr.mul, addr.add)));
-        } else*/ {
-            exprDepth++;
-            Operand rhs = visitExpr(ir.right());
-            exprDepth--;
-            ins.add(new Move(dest, rhs));
-        }
+        exprDepth++;
+        Operand rhs = visitExpr(ir.right());
+        exprDepth--;
+        ins.add(new Move(dest, rhs));
 
         return null;
     }
 
     private Operand addBinary(com.mercy.compiler.IR.Binary.BinaryOp operator, Operand left, Operand right) {
         if (left instanceof Address) {
-            switch (((Address) left).type()) {
-                case BASE_OFFSET:
-                    while(((Address) left).base() instanceof Address) {
-                        left = ((Address) left).base();
-                    }
-                    ins.add(new Move(((Address) left).base(), left));
-                    left = ((Address) left).base();
-                    break;
-
-                case ENTITY:
-                default:
-                    throw new InternalError("Unhandled case in IR Binary " + left.getClass());
+            while(((Address) left).base() instanceof Address) {
+                left = ((Address) left).base();
             }
+            ins.add(new Move(((Address) left).base(), left));
+            left = ((Address) left).base();
         }
         switch (operator) {
             case ADD: ins.add(new Add(left, right)); break;
@@ -469,9 +460,7 @@ public class InstructionEmitter {
     }
 
     public Operand visit(com.mercy.compiler.IR.StrConst ir) {
-        Reference ret = getTmp();
-        ins.add(new Move(ret, new Address(ir.entity())));
-        return ret;
+        return new Immediate(ir.entity().asmName());
     }
 
     public Operand visit(com.mercy.compiler.IR.IntConst ir) {
@@ -480,7 +469,7 @@ public class InstructionEmitter {
 
     public Operand visit(com.mercy.compiler.IR.Var ir) {
         Reference ret = getTmp();
-        ins.add(new Move(ret, new Address(ir.entity())));
+        ins.add(new Move(ret, ir.entity().reference()));
         return ret;
     }
 
@@ -490,8 +479,10 @@ public class InstructionEmitter {
     List<Reference> tmpStack;
     int tmpTop = 0;
     public Reference getTmp() {
-        if (tmpTop >= tmpStack.size())
-            tmpStack.add(new Reference());
+        if (tmpTop >= tmpStack.size()) {
+            Entity tmp = new VariableEntity(null, null, "ref_" + tmpTop, null);
+            tmpStack.add(new Reference(tmp));
+        }
         return tmpStack.get(tmpTop++);
     }
 
@@ -510,7 +501,7 @@ public class InstructionEmitter {
 
     /***** DEBUG TOOL *****/
     private void printFunction(PrintStream out, FunctionEntity entity) {
-        out.println("========== INS " + entity.name() + entity.getClass().hashCode() + " ==========");
+        out.println("========== INS " + entity.name() + " ==========");
         if (Option.enableInlineFunction && entity.canbeInlined()) {
             out.println("BE INLINED");
             return;

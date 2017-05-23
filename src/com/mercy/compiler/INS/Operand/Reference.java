@@ -1,6 +1,10 @@
 package com.mercy.compiler.INS.Operand;
 
+import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Utility.InternalError;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import static com.mercy.compiler.BackEnd.Translator.GLOBAL_PREFIX;
 import static com.mercy.compiler.INS.Operand.Reference.Type.*;
@@ -17,17 +21,7 @@ public class Reference extends Operand {
     String name;
     int offset;
     Register reg;
-
-    static private int counter = 0;
-
-    public Reference(int offset, Register reg) {
-        setOffset(offset, reg);
-    }
-
-    public Reference(String name, boolean isString) {
-        this.name = name;
-        this.type = STRING;
-    }
+    Entity entity;
 
     public Reference(String name) {
         this.name = name;
@@ -38,8 +32,9 @@ public class Reference extends Operand {
         setRegister(reg);
     }
 
-    public Reference() {
-        this.name = "ref_" + (counter++);
+    public Reference(Entity entity) {
+        this.name = entity.name();
+        this.entity = entity;
         this.type = UNKNOWN;
     }
 
@@ -63,8 +58,14 @@ public class Reference extends Operand {
     }
 
     public Register reg() {
-        assert type == REG;
         return reg;
+    }
+
+    @Override
+    public Set<Reference> getAllRef() {
+        Set<Reference> ret = new HashSet<>();
+        ret.add(this);
+        return ret;
     }
 
     @Override

@@ -8,10 +8,7 @@ import com.mercy.compiler.INS.Jmp;
 import com.mercy.compiler.INS.Label;
 
 import java.io.PrintStream;
-import java.util.ArrayDeque;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 
 /**
  * Created by mercy on 17-5-23.
@@ -27,13 +24,14 @@ public class ControlFlowAnalyzer {
         for (FunctionEntity functionEntity : functionEntities) {
             if (Option.enableInlineFunction && functionEntity.canbeInlined())
                 return;
-            buildFunction(functionEntity);
+            buildBasicBlock(functionEntity);
+            buildControFlowGraph(functionEntity);
             layoutFunction(functionEntity);
         }
     }
 
     int ct = 0;
-    private void buildFunction(FunctionEntity entity) {
+    private void buildBasicBlock(FunctionEntity entity) {
         List<BasicBlock> bbs = new LinkedList<>();
 
         BasicBlock bb = null;
@@ -83,6 +81,34 @@ public class ControlFlowAnalyzer {
         }
 
         entity.setBbs(bbs);
+    }
+
+    private void buildControFlowGraph(FunctionEntity entity) {
+        for (BasicBlock basicBlock : entity.bbs()) {
+            // inside bb
+            List<Instruction> ins = basicBlock.ins();
+            Iterator<Instruction> iter = ins.iterator();
+            if (iter.hasNext()) {
+                Instruction pre = iter.next();
+                while(iter.hasNext()) {
+                    Instruction now = iter.next();
+                    pre.sucessor().add(now);
+                    now.predessor().add(pre);
+                    pre = now;
+                }
+            }
+
+            // between two bb
+            Instruction first = ins.get(0);
+            for (BasicBlock pre : basicBlock.predecessor()) {
+                pre.ins().get(pre.ins().size()-1).sucessor().add(first);
+            }
+
+            Instruction last = ins.get(ins.size()-1);
+            for (BasicBlock suc : basicBlock.successor()) {
+                suc.ins().get(0).predessor().add(last);
+            }
+        }
     }
 
     void layoutFunction(FunctionEntity entity) {

@@ -5,7 +5,6 @@ import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.Operand.*;
 import com.mercy.compiler.IR.IR;
-import com.mercy.compiler.Utility.InternalError;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -71,9 +70,6 @@ public class Translator {
     }
 
     public List<String> translate() {
-        // set reference for global variable
-        int stringCounter = 1;
-
         // add extern
         add("global main");
         add("extern printf, scanf, puts, gets, sprintf, sscanf, getchar, strlen, strcmp, strcpy, strncpy, malloc");
@@ -82,15 +78,12 @@ public class Translator {
         // add data section
         add("section .data");
         for (Entity entity : globalScope.entities().values()) {
-            //System.out.println(entity.name());
             if (entity instanceof VariableEntity) {
-                entity.setReference(new Reference(entity.name()));
                 addLabel(GLOBAL_PREFIX + entity.name());
                 add("dq 0");
             } else if (entity instanceof  StringConstantEntity) {
-                String name = "__STR_CONST_" + stringCounter++;
+                String name = ((StringConstantEntity) entity).asmName();
                 String value = ((StringConstantEntity) entity).strValue();
-                entity.setReference(new Reference(name, true));
 
                 add("dd " + value.length());
                 addLabel(name);
@@ -147,7 +140,7 @@ public class Translator {
             if (i < paraRegister.size()) {
                 lvarBase += par.type().size();
                 par.setOffset(lvarBase);
-                par.setReference(new Reference(lvarBase, rbp()));
+                par.reference().setOffset(lvarBase, rbp());
             }
         }
 
@@ -155,11 +148,10 @@ public class Translator {
         stackBase = lvarBase;
         stackBase += entity.scope().locateLocalVariable(lvarBase, ALIGNMENT);
         for (VariableEntity variableEntity : entity.scope().allLocalVariables()) {
-            variableEntity.setReference(new Reference(variableEntity.offset(),
-                    rbp()));
+            variableEntity.reference().setOffset(variableEntity.offset(), rbp());
         }
 
-        int[] toAllocate = {12, 13, 14, 15, 3};//, 10, 11};
+        int[] toAllocate = {12, 13, 14, 15, 3, 10, 11};
 
         // locate tmpStack
         savedRegBase = stackBase;
@@ -188,7 +180,7 @@ public class Translator {
             ParameterEntity par = params.get(i);
             if (i >= paraRegister.size()) {
                 par.setOffset(-base);
-                par.setReference(new Reference(-base, rbp()));
+                par.reference().setOffset(-base, rbp());
                 base += par.type().size();
             }
         }
@@ -388,41 +380,34 @@ public class Translator {
     }
 
     private int mem2reg(Address addr, Register reg1, Register reg2) {
-        switch (addr.type()) {
-            case BASE_OFFSET:
-                if (addr.index() == null) {
-                    if (addr.base().isRegister()) {
-                        return 0;
-                    } else {
-                        add("mov", reg1, addr.base());
-                        addr.setBaseNasm(reg1);
-                        return 1;
-                    }
-                } else {
-                    if (addr.base().isRegister()) {
-                        if (addr.index().isRegister()) {
-                            return 0;
-                        } else {
-                            add("mov", reg1, addr.index());
-                            addr.setIndexNasm(reg1);
-                            return 1;
-                        }
-                    } else {
-                        add("mov", reg1, addr.base());
-                        addr.setBaseNasm(reg1);
-                        if (addr.index().isRegister()) {
-                            return 1;
-                        } else {
-                            add("mov", reg2, addr.index());
-                            addr.setIndexNasm(reg2);
-                            return 2;
-                        }
-                    }
-                }
-            case ENTITY:
+        if (addr.index() == null) {
+            if (addr.base().isRegister()) {
                 return 0;
-            default:
-                throw new InternalError("invalid address type " + addr.type());
+            } else {
+                add("mov", reg1, addr.base());
+                addr.setBaseNasm(reg1);
+                return 1;
+            }
+        } else {
+            if (addr.base().isRegister()) {
+                if (addr.index().isRegister()) {
+                    return 0;
+                } else {
+                    add("mov", reg1, addr.index());
+                    addr.setIndexNasm(reg1);
+                    return 1;
+                }
+            } else {
+                add("mov", reg1, addr.base());
+                addr.setBaseNasm(reg1);
+                if (addr.index().isRegister()) {
+                    return 1;
+                } else {
+                    add("mov", reg2, addr.index());
+                    addr.setIndexNasm(reg2);
+                    return 2;
+                }
+            }
         }
     }
 
@@ -570,10 +555,6 @@ public class Translator {
         for (FunctionEntity functionEntity : functionEntities) {
             printFunction(out, functionEntity);
         }
-        /*out.println("========== NASM ==========");
-        for (String s : asm) {
-            out.println(s);
-        }*/
     }
 
     private void pasteLibfunction() {

@@ -12,10 +12,9 @@ public class Comment extends Instruction {
         this.comment = comment;
     }
 
-    /*@Override
-    public void toNASM(List<String> asm) {
-
-    }*/
+    @Override
+    public void calcDefAndUse() {
+    }
 
     @Override
     public void accept(Translator translator) {
