@@ -125,4 +125,20 @@ public class Scope {
         }
         return offset;
     }
+
+    public List<Entity> gatherAll() {
+        List<Entity> ret = new LinkedList<>();
+
+        for (Entity entity : entities.values()) {
+            if (entity instanceof FunctionEntity) {
+                ret.addAll(((FunctionEntity) entity).params());
+            }
+            ret.add(entity);
+        }
+
+        for (Scope child : children) {
+            ret.addAll(child.allLocalVariables());
+        }
+        return ret;
+    }
 }

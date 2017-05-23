@@ -1,7 +1,10 @@
 package com.mercy.compiler.AST;
 
 import com.mercy.compiler.Entity.*;
-import com.mercy.compiler.FrontEnd.*;
+import com.mercy.compiler.FrontEnd.DependenceEdge;
+import com.mercy.compiler.FrontEnd.OutputIrrelevantAnalyzer;
+import com.mercy.compiler.FrontEnd.SymbolResolver;
+import com.mercy.compiler.FrontEnd.TypeChecker;
 import com.mercy.compiler.Utility.SemanticError;
 
 import java.util.HashSet;
@@ -63,46 +66,83 @@ public class AST {
 
     Set<DependenceEdge> visited = new HashSet<>();
     private void propaOutputIrrelevant(Entity entity, boolean flag) {
+        if (flag)
+            return;
         DependenceEdge edge = new DependenceEdge(null, null);
-        entity.setOutputIrrelevant(flag);
+        entity.setOutputIrrelevant(false);
+        if (entity instanceof FunctionEntity) {
+            for (ParameterEntity parameterEntity : ((FunctionEntity) entity).params()) {
+                parameterEntity.setOutputIrrelevant(false);
+            }
+        }
         for (Entity base : entity.dependence()) {
             edge.base = base; edge.rely = entity;
             if (!visited.contains(edge)) {
                 visited.add(new DependenceEdge(base, entity));
-                propaOutputIrrelevant(base, flag);
+                propaOutputIrrelevant(base, false);
             }
         }
     }
 
     public void eliminateOutputIrrelevantNode() {
-        OutputIrrelevantAnalyzer analyzer = new OutputIrrelevantAnalyzer(this);
-        analyzer.visitDefinitions(definitionNodes);
+        if (classEntitsies().size() != 0) {
+            // gather all entity
+            List<Entity> allEntity = scope.gatherAll();
+            for (Entity entity : allEntity) {
+                System.err.println(entity.name());
+                entity.setOutputIrrelevant(false);
+            }
 
-        // print dependence info
-        for (DependenceEdge edge : analyzer.dependenceEdgeSet()) {
-            System.err.println(edge.base.name() + " <- " + edge.rely.name());
-        }
+            OutputIrrelevantAnalyzer analyzer = new OutputIrrelevantAnalyzer(this);
+            analyzer.visitDefinitions(definitionNodes);
+        } else {
+            OutputIrrelevantAnalyzer analyzer = new OutputIrrelevantAnalyzer(this);
+            analyzer.visitDefinitions(definitionNodes);
 
-        // propagate info
-        System.err.print("source:");
-        for (Entity entity : analyzer.source()) {
-            System.err.print("  " + entity.name());
-        }
-        System.err.println("");
+            // gather all entity
+            List<Entity> allEntity = scope.gatherAll();
+            // print dependence info
+            HashSet<Entity> printed = new HashSet<>();
+            for (DependenceEdge edge : analyzer.dependenceEdgeSet()) {
+                if (printed.contains(edge.base))
+                    continue;
+                printed.add(edge.base);
+                System.err.print(edge.base.name() + ": ");
+                for (Entity entity : edge.base.dependence()) {
+                    System.err.print("  " + entity.name());
+                }
+                System.err.println();
+            }
 
-        for (Entity entity : analyzer.source()) {
-            propaOutputIrrelevant(entity, false);
-        }
-        // print result
-        for (VariableEntity entity : scope.allLocalVariables()) {
-            System.err.println(entity.name() + ": " + entity.outputIrrelevant());
-        }
-        for (FunctionEntity entity : functionEntities) {
-            System.err.println(entity.name() + ": " + entity.outputIrrelevant());
-        }
+            // print source info
 
-        OutputIrrelevantMarker marker = new OutputIrrelevantMarker(this);
-        marker.visitDefinitions(definitionNodes);
+            // begin iteration
+            int before = 0, after = -1;
+
+            while(before != after) {
+                analyzer.visitDefinitions(definitionNodes);
+                visited.clear();
+                before = after;
+                after = 0;
+                for (Entity entity : allEntity) {
+                    propaOutputIrrelevant(entity, entity.outputIrrelevant());
+                }
+                for (Entity entity : allEntity) {
+                    if (!entity.outputIrrelevant())
+                        after++;
+                }
+            }
+            analyzer.visitDefinitions(definitionNodes);
+
+            // print result
+            for (Entity entity : allEntity) {
+                if (entity instanceof FunctionEntity)
+                    continue;
+                System.err.println(entity.name() + ": " + entity.outputIrrelevant());
+            }
+       /* OutputIrrelevantMarker marker = new OutputIrrelevantMarker(this);
+        marker.visitDefinitions(definitionNodes);*/
+        }
     }
 
 

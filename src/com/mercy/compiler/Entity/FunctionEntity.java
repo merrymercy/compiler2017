@@ -2,7 +2,9 @@ package com.mercy.compiler.Entity;
 
 import com.mercy.compiler.AST.BlockNode;
 import com.mercy.compiler.AST.Location;
+import com.mercy.compiler.BackEnd.BasicBlock;
 import com.mercy.compiler.INS.Instruction;
+import com.mercy.compiler.INS.Label;
 import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.IR.IR;
 import com.mercy.compiler.Type.FunctionType;
@@ -22,11 +24,15 @@ public class FunctionEntity extends Entity {
     private BlockNode body;
     private Scope scope;
     private boolean isConstructor = false;
+    
     private boolean canbeInlined = false;
-
     private List<FunctionEntity> calls = new LinkedList<>();
+    
+    private com.mercy.compiler.IR.Label beginLabelIR, endLabelIR;
+    private com.mercy.compiler.INS.Label beginLabelINS, endLabelINS;
     private List<IR> irs;
     private List<Instruction> ins;
+    private List<BasicBlock> bbs;
     private List<Reference> tmpStack;
 
     private String asmName;
@@ -42,6 +48,7 @@ public class FunctionEntity extends Entity {
 
     public ParameterEntity addThisPointer(Location loc, ClassEntity entity) {
         ParameterEntity thisPointer = new ParameterEntity(entity.location(), entity.type(), "this");
+        thisPointer.setOutputIrrelevant(false);
         params.add(0, thisPointer);
         return thisPointer;
     }
@@ -151,6 +158,40 @@ public class FunctionEntity extends Entity {
 
     public boolean canbeInlined() {
         return canbeInlined;
+    }
+    
+    public void setLabelIR(com.mercy.compiler.IR.Label begin, com.mercy.compiler.IR.Label end) {
+        this.beginLabelIR = begin;
+        this.endLabelIR   = end;
+    }
+
+    public com.mercy.compiler.IR.Label beginLabelIR() {
+        return beginLabelIR;
+    }
+
+    public com.mercy.compiler.IR.Label endLabelIR() {
+        return endLabelIR;
+    }
+
+    public void setLabelINS(com.mercy.compiler.INS.Label begin, com.mercy.compiler.INS.Label end) {
+        this.beginLabelINS = begin;
+        this.endLabelINS   = end;
+    }
+    
+    public Label beginLabelINS() {
+        return beginLabelINS;
+    }
+
+    public Label endLabelINS() {
+        return endLabelINS;
+    }
+
+    public List<BasicBlock> bbs() {
+        return bbs;
+    }
+
+    public void setBbs(List<BasicBlock> bbs) {
+        this.bbs = bbs;
     }
 
     @Override

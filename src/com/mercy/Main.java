@@ -105,21 +105,27 @@ public class Main {
         ast.loadLibrary(getLibrary());// load library function
         Type.initializeBuiltinType();
 
-        ast.resolveSymbol();                         // 1st pass, extract info of class and function
-        ast.checkType();                             // 2nd pass, check type
-        if (Option.enableOutputIrrelevantElimination)
-            ast.eliminateOutputIrrelevantNode();
+        ast.resolveSymbol();                          // extract info of class and function
+        ast.checkType();                              // check type
+        /*if (Option.enableOutputIrrelevantElimination) // eliminate output-irrelevant code
+            ast.eliminateOutputIrrelevantNode();*/
 
         IRBuilder irBuilder = new IRBuilder(ast);
-        irBuilder.generateIR();                      // 3rd pass, generate IR, do simple constant folding
+        irBuilder.generateIR();                      // generate IR, do simple constant folding
 
-        // 4th pass, emit instructions
+        // emit instructions
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
         if (Option.printInsturction)
             emitter.printSelf(System.out);
 
-        // 5th pass, translate to x86 nasm
+        // build control flow graph
+        /*ControlFlowAnalyzer cfgBuilder = new ControlFlowAnalyzer(emitter);
+        cfgBuilder.buildControlFlow();
+        if (Option.printBasicBlocks)
+            cfgBuilder.printSelf(System.out);*/
+
+        // translate to x86 nasm
         Translator translator = new Translator(emitter);
         List<String> asm = translator.translate();
         //translator.printSelf(System.out);

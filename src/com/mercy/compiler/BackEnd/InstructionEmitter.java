@@ -19,9 +19,7 @@ import com.mercy.compiler.Utility.InternalError;
 import com.mercy.compiler.Utility.Triple;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 import static com.mercy.compiler.IR.Binary.BinaryOp.ADD;
 import static com.mercy.compiler.IR.Binary.BinaryOp.MUL;
@@ -62,6 +60,7 @@ public class InstructionEmitter {
     public List<Instruction> emitFunction(FunctionEntity entity) {
         if (Option.enableInlineFunction && entity.canbeInlined())
             return null;
+        entity.setLabelINS(getLabel(entity.beginLabelIR().name()), getLabel(entity.endLabelIR().name()));
         ins = new LinkedList<>();
         for (IR ir : entity.IR()) {
             tmpTop = exprDepth = 0;
@@ -382,20 +381,31 @@ public class InstructionEmitter {
         return ret;
     }
 
+    // make the label unique, i.e. point to the same object
+    Map<String, Label> labelMap = new HashMap<>();
+    private Label getLabel(String name) {
+        Label ret = labelMap.get(name);
+        if (ret == null) {
+            ret = new Label(name);
+            labelMap.put(name, ret);
+        }
+        return ret;
+    }
+
     public Operand visit(com.mercy.compiler.IR.CJump ir) {
         Operand tmp = visitExpr(ir.cond());
-        ins.add(new CJump(tmp, new Label(ir.trueLabel().name()),
-                new Label(ir.falseLabel().name())));
+        ins.add(new CJump(tmp, getLabel(ir.trueLabel().name()),
+                getLabel(ir.falseLabel().name())));
         return null;
     }
 
     public Operand visit(com.mercy.compiler.IR.Jump ir) {
-        ins.add(new Jmp(new Label(ir.label().name())));
+        ins.add(new Jmp(getLabel(ir.label().name())));
         return null;
     }
 
     public Operand visit(com.mercy.compiler.IR.Label ir) {
-        ins.add(new Label(ir.name()));
+        ins.add(getLabel(ir.name()));
         return null;
     }
 

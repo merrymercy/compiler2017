@@ -74,16 +74,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             tmpTop = 0;
             currentFunction = entity;
 
-            if (entity.name().equals("main")) {
-                // generate global variable initialization
-                for (DefinitionNode node : ast.definitionNodes()) {
-                    if (node instanceof VariableDefNode) {
-                        visit((VariableDefNode)node);
-                    }
-                }
-            } else {
+            if (!entity.name().equals("main")) // rename functions to avoiding name conflict
                 entity.setAsmName(entity.name() + "_func__");
-            }
+
             compileFunction(entity);
         }
 
@@ -100,15 +93,31 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 compileFunction(node.entity());
             }
         }
-
-        // generate built-in functions ?
     }
 
     public void compileFunction(FunctionEntity entity) {
         if (Option.enableInlineFunction && entity.canbeInlined())
             return;
+        Label begin = new Label();
+        Label end = new Label();
+        entity.setLabelIR(begin, end);
+
+        addLabel(begin, entity.name() + "_begin");  // for building basic block, the first statement must be a label
+
+        if (entity.name().equals("main")) {
+            // generate global variable initialization
+            for (DefinitionNode node : ast.definitionNodes()) {
+                if (node instanceof VariableDefNode) {
+                    visit((VariableDefNode) node);
+                }
+            }
+        }
+
         visit(entity.body());
         entity.setIR(fetchStmts());
+
+        addLabel(end, entity.name() + "_end");
+        fetchStmts(); // discard end label
     }
 
 
@@ -125,7 +134,12 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Void visit(VariableDefNode node) {
         ExprNode init = node.entity().initializer();
         if (init != null) {
-            visit(new AssignNode(new VariableNode(node.entity()), init));
+            /*if (Option.enableOutputIrrelevantElimination && node.entity().outputIrrelevant()) {
+                if (Option.printRemoveInfo)
+                    System.out.println("remove init " + node.location());
+            }
+            else*/
+                visit(new AssignNode(new VariableNode(node.entity(), node.location()), init));
         }
         return null;
     }
@@ -412,12 +426,22 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Void visit(WhileNode node) {
+        /*if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
+            if (Option.printRemoveInfo)
+                System.out.println("remove while " + node.location());
+            return null;
+        }*/
         visitLoop(null, node.cond(), null, node.body());
         return null;
     }
 
     @Override
     public Void visit(ForNode node) {
+        /*if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
+            if (Option.printRemoveInfo)
+                System.out.println("remove for " + node.location());
+            return null;
+        }*/
         visitLoop(node.init(), node.cond(), node.incr(), node.body());
         return null;
     }
@@ -442,6 +466,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             stmts.add(new Jump(inlineReturnLabel.peek()));
         } else {
             stmts.add(new Return(node.expr() == null ? null : visitExpr(node.expr())));
+            stmts.add(new Jump(currentFunction.endLabelIR()));
         }
         return null;
     }
@@ -457,6 +482,12 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(AssignNode node) {
         Expr lhs = visitExpr(node.lhs());
         Expr rhs;
+
+        /*if (exprDepth == 0 && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
+            if (Option.printRemoveInfo)
+                System.out.println("remove assign " + node.location());
+            return null;
+        }*/
 
         if (node.rhs() instanceof FuncallNode) {
             notuseTmp = true;

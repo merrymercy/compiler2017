@@ -97,6 +97,9 @@ public class FinalTest {
             System.out.println(line);
         }
 
+
+        System.out.println("########## " + srcFile + " ##########" );
+        System.out.flush();
         assertTrue(correct);
     }
 

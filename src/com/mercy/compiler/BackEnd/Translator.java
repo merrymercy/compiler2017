@@ -237,7 +237,7 @@ public class Translator {
         asm.addAll(startPos, prologue);
 
         /***** epilogue *****/
-        addLabel(entity.asmName() + END_SUFFIX);
+        addLabel(entity.endLabelINS().name());
         if (entity.calls().size() != 0)   // leaf function optimization
             add("add", rsp(), new Immediate((frameSize)));
         int savedRegNum = 0;
@@ -496,7 +496,7 @@ public class Translator {
     public void visit(Return ins) {
         if (ins.ret() != null)
             add("mov", rax(), ins.ret());
-        addJump(currentFunction.asmName() + END_SUFFIX);
+        //addJump(currentFunction.asmName() + END_SUFFIX);
     }
 
     public void visit(CJump ins) {

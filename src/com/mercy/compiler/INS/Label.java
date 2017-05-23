@@ -1,5 +1,6 @@
 package com.mercy.compiler.INS;
 
+import com.mercy.compiler.BackEnd.BasicBlock;
 import com.mercy.compiler.BackEnd.Translator;
 
 /**
@@ -7,6 +8,7 @@ import com.mercy.compiler.BackEnd.Translator;
  */
 public class Label extends Instruction {
     String name;
+    BasicBlock basicBlock;
     public Label(String name) {
         this.name = name;
     }
@@ -15,11 +17,13 @@ public class Label extends Instruction {
         return name;
     }
 
+    public BasicBlock basicBlock() {
+        return basicBlock;
+    }
 
-    /*@Override
-    public void toNASM(List<String> asm) {
-        asm.add(name + ":");
-    }*/
+    public void setBasicBlock(BasicBlock basicBlock) {
+        this.basicBlock = basicBlock;
+    }
 
     @Override
     public void accept(Translator translator) {

@@ -10,6 +10,8 @@ public class Option {
 
     // DEBUG
     public static boolean printInsturction = false;
+    public static boolean printBasicBlocks = false;
+    public static boolean printRemoveInfo = true;
 
     // OPTIMIZATION
     public static boolean enableInstructionSelection = true;

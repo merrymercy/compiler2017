@@ -26,6 +26,13 @@ public class VariableNode extends LHSNode {
         this.name = var.name();
     }
 
+    public VariableNode(Entity var, Location loc) {
+        this.entity = var;
+        this.location = loc;
+        this.name = var.name();
+    }
+
+
     public String name() {
         return name;
     }
