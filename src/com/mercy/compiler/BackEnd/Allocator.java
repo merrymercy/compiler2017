@@ -69,6 +69,8 @@ public class Allocator {
         }
         err.println();
 
+        // build bitset
+
         // solve dataflow equation
         boolean modified = true;
         while (modified) {

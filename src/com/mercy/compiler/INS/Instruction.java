@@ -18,8 +18,8 @@ abstract public class Instruction {
     protected Set<Reference> in = new HashSet<>();
     protected Set<Reference> out = new HashSet<>();
 
-    protected Set<Reference> use = new HashSet<>();
-    protected Set<Reference> def = new HashSet<>();
+    protected Set<Reference> use;
+    protected Set<Reference> def;
 
     /*
      * getter and setter
@@ -41,10 +41,20 @@ abstract public class Instruction {
     }
 
     public Set<Reference> use() {
+        if (use == null) {
+            use = new HashSet<>();
+            def = new HashSet<>();
+            this.calcDefAndUse();
+        }
         return use;
     }
 
     public Set<Reference> def() {
+        if (def == null) {
+            use = new HashSet<>();
+            def = new HashSet<>();
+            this.calcDefAndUse();
+        }
         return def;
     }
 

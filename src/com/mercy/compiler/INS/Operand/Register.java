@@ -9,6 +9,7 @@ import java.util.Set;
  */
 public class Register extends Operand {
     private String name;
+    private boolean isCalleeSave;
 
     public Register(String name) {
         this.name = name;
@@ -16,6 +17,22 @@ public class Register extends Operand {
 
     public String name() {
         return name;
+    }
+
+    public boolean calleeSave() {
+        return isCalleeSave;
+    }
+
+    public void setCalleeSave(boolean calleeSave) {
+        isCalleeSave = calleeSave;
+    }
+
+    public boolean callerSave() {
+        return !isCalleeSave;
+    }
+
+    public void setCallerSave(boolean callerSave) {
+        isCalleeSave = !callerSave;
     }
 
     @Override

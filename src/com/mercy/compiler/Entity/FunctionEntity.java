@@ -7,14 +7,12 @@ import com.mercy.compiler.BackEnd.BasicBlock;
 import com.mercy.compiler.INS.Instruction;
 import com.mercy.compiler.INS.Label;
 import com.mercy.compiler.INS.Operand.Reference;
+import com.mercy.compiler.INS.Operand.Register;
 import com.mercy.compiler.IR.IR;
 import com.mercy.compiler.Type.FunctionType;
 import com.mercy.compiler.Type.Type;
 
-import java.util.Hashtable;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by mercy on 17-3-20.
@@ -35,6 +33,10 @@ public class FunctionEntity extends Entity {
     private List<Instruction> ins;
     private List<BasicBlock> bbs;
     private List<Reference> tmpStack;
+    private int frameSize;
+
+    private List<Register> regUsed = new LinkedList<>();
+    private Set<Reference> allReference = new HashSet<>();
 
     private String asmName;
 
@@ -194,6 +196,30 @@ public class FunctionEntity extends Entity {
 
     public void setBbs(List<BasicBlock> bbs) {
         this.bbs = bbs;
+    }
+
+    public int frameSize() {
+        return frameSize;
+    }
+
+    public void setFrameSize(int frameSize) {
+        this.frameSize = frameSize;
+    }
+
+    public List<Register> regUsed() {
+        return regUsed;
+    }
+
+    public void setRegUsed(List<Register> regUsed) {
+        this.regUsed = regUsed;
+    }
+
+    public Set<Reference> allReference() {
+        return allReference;
+    }
+
+    public void setAllReference(Set<Reference> allReference) {
+        this.allReference = allReference;
     }
 
     @Override

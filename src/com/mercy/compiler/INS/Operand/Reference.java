@@ -22,6 +22,7 @@ public class Reference extends Operand {
     int offset;
     Register reg;
     Entity entity;
+    int refTimes;
 
     public Reference(String name) {
         this.name = name;
@@ -32,12 +33,19 @@ public class Reference extends Operand {
         setRegister(reg);
     }
 
+    public Reference(int offset, Register reg) {
+        setOffset(offset, reg);
+    }
+
     public Reference(Entity entity) {
         this.name = entity.name();
         this.entity = entity;
         this.type = UNKNOWN;
     }
 
+    /*
+     * getter and setter
+     */
     public String name() {
         return name;
     }
@@ -59,6 +67,47 @@ public class Reference extends Operand {
 
     public Register reg() {
         return reg;
+    }
+
+    public Type type() {
+        return type;
+    }
+
+    public int offset() {
+        return offset;
+    }
+
+    public Entity entity() {
+        return entity;
+    }
+
+    public boolean isUnknown() {
+        return type == UNKNOWN;
+    }
+
+    public void addRefTime() {
+        refTimes++;
+    }
+
+    public int refTimes() {
+        return refTimes;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Reference) {
+            Reference other = (Reference)o;
+            if (type != other.type)
+                return false;
+            switch (type) {
+                case REG: return reg == other.reg;
+                case OFFSET:
+                    return reg == other.reg && offset == other.offset;
+                default:
+                    throw new InternalError("Unhandled case in Reference.equals()");
+            }
+        }
+        return false;
     }
 
     @Override

@@ -10,9 +10,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
+
+import static com.mercy.Option.FRAME_ALIGNMENT_SIZE;
+import static com.mercy.Option.REG_SIZE;
 
 /**
  * Created by mercy on 17-5-4.
@@ -31,42 +34,24 @@ public class Translator {
 
     private FunctionEntity currentFunction;
 
-    private Register rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
-    private List<Register> registers = new ArrayList<>();
-    private List<Register> paraRegister = new ArrayList<>();
-    private boolean [] regUsed = new boolean[16];
-    private boolean [] isCalleeSave = new boolean[16];
+    private Register rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp;
+    private List<Register> registers;
+    private List<Register> paraRegister;
     private List<String> asm = new LinkedList<>();
 
-    public Translator(InstructionEmitter emitter) {
+    public Translator(InstructionEmitter emitter, RegisterConfig registerConfig) {
         functionEntities = emitter.functionEntities();
         globalScope = emitter.globalScope();
         globalInitializer = emitter.globalInitializer();
 
-        // init registers
-        rax = new Register("rax"); registers.add(rax);
-        rcx = new Register("rcx"); registers.add(rcx);
-        rdx = new Register("rdx"); registers.add(rdx);
-        rbx = new Register("rbx"); registers.add(rbx);
-        rsp = new Register("rsp"); registers.add(rsp);
-        rbp = new Register("rbp"); registers.add(rbp);
-        rsi = new Register("rsi"); registers.add(rsi);
-        rdi = new Register("rdi"); registers.add(rdi);
+        // load registers
+        registers = registerConfig.registers();
+        paraRegister = registerConfig.paraRegister();
 
-        for (int i = 8; i < 16; i++) {
-            registers.add(new Register("r" + i));
-        }
-
-        // set registers for parameter
-        paraRegister.add(rdi); paraRegister.add(rsi);
-        paraRegister.add(rdx); paraRegister.add(rcx);
-        paraRegister.add(registers.get(8));
-        paraRegister.add(registers.get(9));
-
-        // set callee save
-        for (int i = 12; i < 16; i++)
-            isCalleeSave[i] = true;
-        isCalleeSave[3] = isCalleeSave[5] = true;
+        rax = registers.get(0); rbx = registers.get(1);
+        rcx = registers.get(2); rdx = registers.get(3);
+        rsi = registers.get(4); rdi = registers.get(5);
+        rbp = registers.get(6); rsp = registers.get(7);
     }
 
     public List<String> translate() {
@@ -107,12 +92,9 @@ public class Translator {
         for (FunctionEntity entity : functionEntities) {
             if (Option.enableInlineFunction && entity.canbeInlined())
                 continue;
-            // init
-            for (int i = 0; i < regUsed.length; i++)
-                regUsed[i] = false;
             currentFunction = entity;
-            int frameSize = locateFrame(entity);
-            int savedRegNum = translateFunction(entity, frameSize);
+            locateFrame(entity);
+            translateFunction(entity);
             add("");
         }
 
@@ -127,67 +109,64 @@ public class Translator {
     // saved regs
     // return address
 
-    public int locateFrame(FunctionEntity entity) {
-        int savedRegBase, paraBase, lvarBase, stackBase, total;
+    public void locateFrame(FunctionEntity entity) {
+        // calc number of callee-save register
+        int savedRegNum = 0;
+        for (Register register : entity.regUsed()) {
+            if (register.calleeSave())
+                savedRegNum++;
+        }
 
+        int savedRegBase, paraBase, lvarBase, stackBase, total;
         paraBase = 0;
 
-        // locate parameter
+        // locate and set source for para
         lvarBase = paraBase;
+        int sourceBase = savedRegNum * REG_SIZE + REG_SIZE;  // + return address
         List<ParameterEntity> params = entity.params();
         for (int i = 0; i < params.size(); i++) {
             ParameterEntity par = params.get(i);
             if (i < paraRegister.size()) {
-                lvarBase += par.type().size();
-                par.setOffset(lvarBase);
-                par.reference().setOffset(lvarBase, rbp());
+                par.setSource(new Reference(paraRegister.get(i)));
+                if (par.reference().isUnknown()) {
+                    lvarBase += par.type().size();
+                    par.reference().setOffset(lvarBase, rbp());
+                }
+            } else {
+                par.setSource(new Reference(-sourceBase, rbp()));
+                sourceBase += par.type().size();
+                if (par.reference().isUnknown()) { // refer to source, to save frame size
+                    par.reference().setOffset(par.source().offset(), par.source().reg());
+                }
             }
         }
 
         // locate local variable
         stackBase = lvarBase;
         stackBase += entity.scope().locateLocalVariable(lvarBase, ALIGNMENT);
-        for (VariableEntity variableEntity : entity.scope().allLocalVariables()) {
-            variableEntity.reference().setOffset(variableEntity.offset(), rbp());
+        for (VariableEntity var : entity.scope().allLocalVariables()) {
+            if (var.reference().isUnknown()) {
+                var.reference().setOffset(var.offset(), rbp());
+            }
         }
 
-        int[] toAllocate = {12, 13, 14, 15, 3, 10, 11};
-
         // locate tmpStack
-        savedRegBase = stackBase;
         List<Reference> tmpStack = entity.tmpStack();
+        savedRegBase = stackBase;
         for (int i = 0; i < tmpStack.size(); i++) {
-            if (i < toAllocate.length) {
-                tmpStack.get(i).setRegister(registers.get(toAllocate[i]));
-                regUsed[toAllocate[i]] = true;
-            } else {
-                savedRegBase += VIRTUAL_STACK_REG_SIZE;
+            if (tmpStack.get(i).isUnknown()) {
+                savedRegBase += REG_SIZE;
                 tmpStack.get(i).setOffset(savedRegBase, rbp());
             }
         }
 
-        // locate outside parameters
-        int savedRegNum = 0;
-        for (int i = 0; i < regUsed.length; i++) {
-            if (regUsed[i] && isCalleeSave[i])
-                savedRegNum++;
-        }
-        // locate callee-save register
         total = savedRegBase;
-
-        int base = savedRegNum * VIRTUAL_STACK_REG_SIZE + VIRTUAL_STACK_REG_SIZE;  // + return address
-        for (int i = 0; i < params.size(); i++) {
-            ParameterEntity par = params.get(i);
-            if (i >= paraRegister.size()) {
-                par.setOffset(-base);
-                par.reference().setOffset(-base, rbp());
-                base += par.type().size();
-            }
-        }
-        return total;
+        total += (FRAME_ALIGNMENT_SIZE - (total + REG_SIZE  + REG_SIZE * savedRegNum) % FRAME_ALIGNMENT_SIZE)
+                 % FRAME_ALIGNMENT_SIZE;
+        entity.setFrameSize(total);
     }
 
-    public int translateFunction(FunctionEntity entity, int frameSize) {
+    public void translateFunction(FunctionEntity entity) {
         addLabel(entity.asmName());
 
         int startPos = asm.size();
@@ -200,25 +179,24 @@ public class Translator {
         /***** prologue *****/
         List<String> backup = asm, prologue;
         asm = new LinkedList<>();
+
         // push and pop callee-save registers
-        int calleeSaveRegSize = 0;
-        for (int i = 0; i < regUsed.length; i++) {
-            if (regUsed[i] && isCalleeSave[i]) {
-                add("push", registers.get(i));
-                calleeSaveRegSize += VIRTUAL_STACK_REG_SIZE;
+        for (Register register : entity.regUsed()) {
+            if (register.calleeSave()) {
+                add("push", register);
             }
         }
         // set rbp and rsp
-        if (regUsed[5])
+        if (entity.regUsed().contains(rbp))
             add("mov", rbp(), rsp());
-        frameSize += (16 - (frameSize + 8 + calleeSaveRegSize) % 16) % 16;
         if (entity.calls().size() != 0)   // leaf function optimization
-            add("sub", rsp(), new Immediate((frameSize)));
+            add("sub", rsp(), new Immediate(entity.frameSize()));
+
         // store parameters
         List<ParameterEntity> params = entity.params();
-        for (int i = 0; i < params.size(); i++) {
-            if (i < paraRegister.size()) {
-                add("mov", params.get(i).reference(), paraRegister.get(i));
+        for (ParameterEntity param : params) {
+            if (!param.reference().equals(param.source())) {  // copy when source and ref are different
+                add("mov", param.reference(), param.source());
             }
         }
         add("");
@@ -229,18 +207,19 @@ public class Translator {
         asm.addAll(startPos, prologue);
 
         /***** epilogue *****/
+        // restore rsp
         addLabel(entity.endLabelINS().name());
         if (entity.calls().size() != 0)   // leaf function optimization
-            add("add", rsp(), new Immediate((frameSize)));
-        int savedRegNum = 0;
-        for (int i = regUsed.length - 1; i >= 0; i--) {
-            if (regUsed[i] && isCalleeSave[i]) {
-                add("pop", registers.get(i));
-                savedRegNum++;
-            }
+            add("add", rsp(), new Immediate((entity.frameSize())));
+
+        // pop callee-save regs
+        ListIterator iter = entity.regUsed().listIterator(entity.regUsed().size());
+        while (iter.hasPrevious()) {
+            Register reg = (Register) iter.previous();
+            if (reg.calleeSave())
+               add("pop", reg);
         }
         add("ret");
-        return savedRegNum;
     }
 
     private void add(String op, Operand l, Operand r) {
@@ -261,6 +240,20 @@ public class Translator {
     private void addComment(String comment) {
         asm.add("\t;" + comment);
     }
+    private int addMove(Register reg, Operand operand) {
+        if (operand instanceof Address) {
+            if (((Address) operand).base().isRegister()) {
+                add("mov", reg, operand);
+            } else {
+                add("mov", reg, ((Address) operand).base());
+                add("mov", reg, new Address(reg));
+            }
+        } else {
+            add("mov", reg, operand);
+        }
+        return 0;
+    }
+
 
     /*
      * INS visitor
@@ -287,11 +280,18 @@ public class Translator {
             if (right.isRegister()) {   // add meml, regr
                 add("mov", rax(), left);
                 add(name, rax(), right);
-                add("movm", left, rax());
-            } else {                    // add meml, memr
-                add("mov", rax(), left);
-                add(name, rax(), right);
                 add("mov", left, rax());
+            } else {                    // add meml, memr
+                if (right instanceof Address) {   // add meml, [memr]
+                    add("mov", rax(), left);
+                    addMove(rdx(), right);
+                    add(name, rax(), rdx());
+                    add("mov", left, rax());
+                } else {
+                    add("mov", rax(), left);   // add meml, memr
+                    add(name, rax(), right);
+                    add("mov", left, rax());
+                }
             }
         }
     }
@@ -307,15 +307,23 @@ public class Translator {
     }
 
     private void genDivision(Operand left, Operand right, Register res) {
-        add("mov", rax(), left);
+        addMove(rax(), left);
         add("cqo");
         if (right instanceof Immediate) {
-            add("mov", rcx(), right);
+            addMove(rcx(), right);
             add("idiv", rcx());
         } else {
-            if (right instanceof Address)
+            if (right instanceof Address) {
                 ((Address) right).setShowSize(true);
-            add("idiv", right);
+                if (!((Address) right).base().isRegister()) {
+                    addMove(rcx(), right);
+                    add("idiv", rcx());
+                } else {
+                    add("idiv", right);
+                }
+            } else {
+                add("idiv", right);
+            }
         }
         add("mov", left, res);
     }
@@ -346,14 +354,14 @@ public class Translator {
         Operand left, right;
         left = ins.left();
         right= ins.right();
-        add("mov", rcx(), right);
+        addMove(rcx(), right);
         add("sal" + " " + left.toNASM() + ", " + "cl");
     }
     public void visit(Sar ins) {
         Operand left, right;
         left = ins.left();
         right= ins.right();
-        add("mov", rcx(), right);
+        addMove(rcx(), right);
         add("sar" + " " + left.toNASM() + ", " + "cl");
     }
     public void visit(Xor ins) {
@@ -364,7 +372,29 @@ public class Translator {
         Operand left, right;
         left = ins.left();
         right= ins.right();
-        add("cmp", left, right);
+        if (left.isRegister() || right.isRegister()) {
+            if (right instanceof Address) {
+                if (!((Address) right).base().isRegister()) {
+                    addMove(rax(), right);
+                    add("cmp", left, rax());
+                } else {
+                    add("cmp", left, right);
+                }
+            } else
+                add("cmp", left, right);
+        } else {                                        // cmp mem, mem
+            addMove(rdx(), left);
+            if (right instanceof Address) {
+                if (!((Address) right).base().isRegister()) {
+                    addMove(rax(), right);
+                    add("cmp", rdx(), rax());
+                } else {
+                    add("cmp", rdx(), right);
+                }
+            } else
+                add("cmp", rdx(), right);
+        }
+
         String set = "";
         switch (ins.operator()) {
             case EQ: set = "sete";  break;
@@ -381,29 +411,29 @@ public class Translator {
 
     private int mem2reg(Address addr, Register reg1, Register reg2) {
         if (addr.index() == null) {
-            if (addr.base().isRegister()) {
+            if (addr.base().isRegister()) {  // [reg]
                 return 0;
-            } else {
-                add("mov", reg1, addr.base());
+            } else {                         // [mem]
+                addMove(reg1, addr.base());
                 addr.setBaseNasm(reg1);
                 return 1;
             }
         } else {
             if (addr.base().isRegister()) {
-                if (addr.index().isRegister()) {
+                if (addr.index().isRegister()) {   // [reg + reg * 2]
                     return 0;
                 } else {
-                    add("mov", reg1, addr.index());
+                    addMove(reg1, addr.index());   // [reg + mem * 2]
                     addr.setIndexNasm(reg1);
                     return 1;
                 }
             } else {
-                add("mov", reg1, addr.base());
+                addMove(reg1, addr.base());
                 addr.setBaseNasm(reg1);
-                if (addr.index().isRegister()) {
+                if (addr.index().isRegister()) {   // [mem + reg * 2]
                     return 1;
-                } else {
-                    add("mov", reg2, addr.index());
+                } else {                           // [mem + mem * 2]
+                    addMove(reg2, addr.index());
                     addr.setIndexNasm(reg2);
                     return 2;
                 }
@@ -456,12 +486,12 @@ public class Translator {
         List<Operand> operands = ins.operands();
         for (int i = operands.size() - 1; i >= 0; i--) {
             if (i < paraRegister.size()) {
-                add("mov", paraRegister.get(i), operands.get(i));
+                addMove(paraRegister.get(i), operands.get(i));
             } else {
                 if (operands.get(i).isRegister()) {
                     add("push", operands.get(i));
                 } else {
-                    add("mov", rax(), operands.get(i));
+                    addMove(rax(), operands.get(i));
                     add("push", rax());
                 }
             }
@@ -480,15 +510,14 @@ public class Translator {
 
     public void visit(Return ins) {
         if (ins.ret() != null)
-            add("mov", rax(), ins.ret());
-        //addJump(currentFunction.asmName() + END_SUFFIX);
+            addMove(rax, ins.ret());
     }
 
     public void visit(CJump ins) {
         if (ins.cond().isRegister()) {
             add("test", ins.cond(), ins.cond());
         } else {
-            add("mov", rax(), ins.cond());
+            addMove(rax(), ins.cond());
             add("test", rax(), rax());
         }
 
@@ -512,31 +541,31 @@ public class Translator {
      * register getter
      */
     private Register rax() {
-        regUsed[0] = true; return rax;
+        return rax;
     }
     private Register rcx() {
-        regUsed[1] = true; return rcx;
+        return rcx;
     }
     private Register rdx() {
-        regUsed[2] = true; return rdx;
+        return rdx;
     }
     private Register rbx() {
-        regUsed[3] = true; return rbx;
+        return rbx;
     }
     private Register rsp() {
-        regUsed[4] = true; return rsp;
+        return rsp;
     }
     private Register rbp() {
-        regUsed[5] = true; return rbp;
+        return rbp;
     }
     private Register rsi() {
-        regUsed[6] = true; return rsi;
+        return rsi;
     }
     private Register rdi() {
-        regUsed[7] = true; return rdi;
+        return rdi;
     }
     private Register R(int i) {
-        regUsed[i] = true; return registers.get(i);
+        return registers.get(i);
     }
 
     /********** DEBUG TOOL **********/

@@ -126,14 +126,20 @@ public class Main {
         if (Option.printBasicBlocks)
             cfgBuilder.printSelf(System.out);
 
+
         // allocate register
+        RegisterConfig registerConfig = new RegisterConfig();
+
         if (Option.enableRegisterAllocation) {
             Allocator allocator = new Allocator(emitter);
+            allocator.allocate();
+        } else {
+            NaiveAllocator allocator = new NaiveAllocator(emitter, registerConfig);
             allocator.allocate();
         }
 
         // translate to x86 nasm
-        Translator translator = new Translator(emitter);
+        Translator translator = new Translator(emitter, registerConfig);
         List<String> asm = translator.translate();
         //translator.printSelf(System.out);
 
