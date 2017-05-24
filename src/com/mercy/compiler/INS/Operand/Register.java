@@ -47,6 +47,11 @@ public class Register extends Operand {
     }
 
     @Override
+    public boolean isDirect() {
+        return true;
+    }
+
+    @Override
     public String toNASM() {
         return name;
     }

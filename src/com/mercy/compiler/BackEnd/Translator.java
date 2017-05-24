@@ -5,6 +5,7 @@ import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.Operand.*;
 import com.mercy.compiler.IR.IR;
+import com.mercy.compiler.Utility.InternalError;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -58,6 +59,7 @@ public class Translator {
         // add extern
         add("global main");
         add("extern printf, scanf, puts, gets, sprintf, sscanf, getchar, strlen, strcmp, strcpy, strncpy, malloc");
+        add("extern stdin, _IO_getc");
         add("");
 
         // add data section
@@ -241,15 +243,15 @@ public class Translator {
         asm.add("\t;" + comment);
     }
     private int addMove(Register reg, Operand operand) {
-        if (operand instanceof Address) {
+        if (operand.isDirect()) {
+            add("mov", reg, operand);
+        } else {
             if (((Address) operand).base().isRegister()) {
                 add("mov", reg, operand);
             } else {
                 add("mov", reg, ((Address) operand).base());
                 add("mov", reg, new Address(reg));
             }
-        } else {
-            add("mov", reg, operand);
         }
         return 0;
     }
@@ -266,32 +268,26 @@ public class Translator {
         name = ins.name();
 
         if (left.isRegister()) {
-            if (right.isRegister()) {  // add regl, regr
+            if (right.isDirect()) {  // add regl, regr | [reg] | mem
                 add(name, left, right);
             } else {
-                if (right instanceof Address) {    // add regl, [memr]
-                    add("mov", rax(), ((Address) right).base());
-                    add(name, left, new Address(rax()));
-                } else {                           // add regl, memr
-                    add(name, left, right);
+                if (((Address)right).baseOnly()) {            // add regl, [memr]
+                    addMove(rax(), ((Address) right).base());
+                    add(name , left, new Address(rax()));
+                } else {
+                    throw new InternalError("Unhandled case in translate bin");
                 }
             }
         } else {
-            if (right.isRegister()) {   // add meml, regr
-                add("mov", rax(), left);
+            if (right.isDirect()) {   // add meml, regr | [regr] | memr
+                addMove(rax(), left);
                 add(name, rax(), right);
                 add("mov", left, rax());
-            } else {                    // add meml, memr
-                if (right instanceof Address) {   // add meml, [memr]
-                    add("mov", rax(), left);
-                    addMove(rdx(), right);
-                    add(name, rax(), rdx());
-                    add("mov", left, rax());
-                } else {
-                    add("mov", rax(), left);   // add meml, memr
-                    add(name, rax(), right);
-                    add("mov", left, rax());
-                }
+            } else {  // add meml, [memr]
+                add("mov", rax(), left);
+                addMove(rdx(), right);
+                add(name, rax(), rdx());
+                add("mov", left, rax());
             }
         }
     }
@@ -315,14 +311,12 @@ public class Translator {
         } else {
             if (right instanceof Address) {
                 ((Address) right).setShowSize(true);
-                if (!((Address) right).base().isRegister()) {
-                    addMove(rcx(), right);
-                    add("idiv", rcx());
-                } else {
-                    add("idiv", right);
-                }
-            } else {
+            }
+            if (right.isDirect()){
                 add("idiv", right);
+            } else {
+                addMove(rcx(), right);
+                add("idiv", rcx());
             }
         }
         add("mov", left, res);
@@ -373,26 +367,20 @@ public class Translator {
         left = ins.left();
         right= ins.right();
         if (left.isRegister() || right.isRegister()) {
-            if (right instanceof Address) {
-                if (!((Address) right).base().isRegister()) {
-                    addMove(rax(), right);
-                    add("cmp", left, rax());
-                } else {
-                    add("cmp", left, right);
-                }
-            } else
+            // ONLY HANDLE ONE SITUATION ?
+            if (right.isDirect()) {
                 add("cmp", left, right);
+            } else {
+                addMove(rax(), right);
+                add("cmp", left, rax());
+            }
         } else {                                        // cmp mem, mem
-            addMove(rdx(), left);
-            if (right instanceof Address) {
-                if (!((Address) right).base().isRegister()) {
-                    addMove(rax(), right);
-                    add("cmp", rdx(), rax());
-                } else {
-                    add("cmp", rdx(), right);
-                }
-            } else
+            addMove(rax(), left);
+            if (right.isDirect()) {
                 add("cmp", rdx(), right);
+            } else {
+                add("cmp", rax(), rdx());
+            }
         }
 
         String set = "";
@@ -514,15 +502,59 @@ public class Translator {
     }
 
     public void visit(CJump ins) {
-        if (ins.cond().isRegister()) {
-            add("test", ins.cond(), ins.cond());
-        } else {
-            addMove(rax(), ins.cond());
-            add("test", rax(), rax());
-        }
+        if (ins.type() == CJump.Type.BOOL) {
+            if (ins.cond().isRegister()) {
+                add("test", ins.cond(), ins.cond());
+            } else {
+                addMove(rax(), ins.cond());
+                add("test", rax(), rax());
+            }
 
-        add("jz " + ins.falseLabel().name());
-        addJump(ins.trueLabel().name());
+
+            if (ins.fallThrough() == ins.trueLabel()) {
+                add("jz " + ins.falseLabel().name());
+            } else if (ins.fallThrough() == ins.falseLabel()) {
+                add("jnz " + ins.trueLabel().name());
+            } else {
+                add("jnz " + ins.trueLabel().name());
+                addJump(ins.falseLabel().name());
+            }
+        } else {
+            String name = ins.name();
+            Operand left = ins.left(), right =  ins.right();
+
+            if (left instanceof  Immediate) {
+                Operand t = left; left = right; right = t;
+                name = CJump.getReflect(name);
+            }
+
+            if ((left.isRegister() || right.isRegister()) && left.isDirect()) {
+                if (right.isDirect()) {
+                    add("cmp", left, right);
+                } else {
+                    addMove(rax(), right);
+                    add("cmp", left, rax());
+                }
+            }  else {
+                addMove(rax(), left);
+                if (ins.right().isDirect()) {
+                    add("cmp", rax(), right);
+                } else {
+                    addMove(rdx(), right);
+                    add("cmp", rax(), rdx());
+                }
+            }
+
+            if (ins.fallThrough() == ins.trueLabel()) {
+                name = CJump.getNotName(name);
+                add(name + " " + ins.falseLabel().name());
+            } else if (ins.fallThrough() == ins.falseLabel()) {
+                add(name + " " + ins.trueLabel().name());
+            } else {
+                add(name + " " + ins.trueLabel().name());
+                addJump(ins.falseLabel().name());
+            }
+        }
     }
 
     public void visit(Jmp ins) {

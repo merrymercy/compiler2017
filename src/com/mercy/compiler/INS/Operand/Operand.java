@@ -15,4 +15,8 @@ abstract public class Operand {
     public boolean isRegister() {
         return false;
     }
+
+    public boolean isDirect() {
+        return false;
+    }
 }

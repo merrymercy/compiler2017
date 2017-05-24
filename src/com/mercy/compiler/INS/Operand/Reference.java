@@ -14,7 +14,7 @@ import static com.mercy.compiler.INS.Operand.Reference.Type.*;
  */
 public class Reference extends Operand {
     public enum Type {
-        STRING, GLOBAL, OFFSET, REG, UNKNOWN
+        GLOBAL, OFFSET, REG, UNKNOWN
     }
 
     Type type;
@@ -123,9 +123,13 @@ public class Reference extends Operand {
     }
 
     @Override
+    public boolean isDirect() {
+        return true;
+    }
+
+    @Override
     public String toNASM() {
         switch (type) {
-            case STRING: return name;
             case GLOBAL: return "qword " + "[" + GLOBAL_PREFIX + name + "]";
             case OFFSET: return "qword " + "[" + reg.name() + "-" + offset + "]";
             case REG:    return reg.name();

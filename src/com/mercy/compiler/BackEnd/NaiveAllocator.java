@@ -86,7 +86,7 @@ public class NaiveAllocator  {
         });
 
         // allocate register
-        int[] toAllocate = {12, 13, 14, 15, 1};//}, 10, 11};
+        int[] toAllocate = {12, 13, 14, 15, 1};// 10, 11};
 
         /*List<Reference> tmpStack = entity.tmpStack();
         for (int i = 0; i < tmpStack.size(); i++) {

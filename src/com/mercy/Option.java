@@ -26,5 +26,9 @@ public class Option {
     public static boolean enableInlineFunction = true;
     public static boolean enableCommonExpressionElimination = true;
 
-    public static boolean enableOutputIrrelevantElimination = true;
+    public static boolean enableOutputIrrelevantElimination = false;
+
+
+    //
+    public static boolean enablePrintExpand = false;
 }

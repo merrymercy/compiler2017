@@ -383,10 +383,41 @@ public class InstructionEmitter {
         return ret;
     }
 
+    private boolean isCompare(Binary.BinaryOp op) {
+        switch (op) {
+            case EQ: case NE:
+            case GT: case GE:
+            case LT: case LE:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public Operand visit(com.mercy.compiler.IR.CJump ir) {
-        Operand tmp = visitExpr(ir.cond());
-        ins.add(new CJump(tmp, getLabel(ir.trueLabel().name()),
-                getLabel(ir.falseLabel().name())));
+        if (ir.cond() instanceof Binary && isCompare(((Binary) ir.cond()).operator())) {
+            Operand left = visitExpr(((Binary) ir.cond()).left());
+            Operand right = visitExpr(((Binary) ir.cond()).right());
+
+            CJump.Type type;
+            switch (((Binary) ir.cond()).operator()) {
+                case EQ: type = CJump.Type.EQ; break;
+                case NE: type = CJump.Type.NE; break;
+                case GT: type = CJump.Type.GT; break;
+                case GE: type = CJump.Type.GE; break;
+                case LT: type = CJump.Type.LT; break;
+                case LE: type = CJump.Type.LE; break;
+                default:
+                    throw new InternalError("invalid compare operator");
+            }
+
+            ins.add(new CJump(left, right, type, getLabel(ir.trueLabel().name()),
+                    getLabel(ir.falseLabel().name())));
+        } else {
+            Operand tmp = visitExpr(ir.cond());
+            ins.add(new CJump(tmp, getLabel(ir.trueLabel().name()),
+                    getLabel(ir.falseLabel().name())));
+        }
         return null;
     }
 

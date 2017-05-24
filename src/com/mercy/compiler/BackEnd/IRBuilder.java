@@ -114,6 +114,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
 
         visit(entity.body());
+        if (!(stmts.get(stmts.size()-1) instanceof Jump)) {  // add return
+            stmts.add(new Jump(end));
+        }
         entity.setIR(fetchStmts());
 
         addLabel(end, entity.name() + "_end");
@@ -704,13 +707,15 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(FuncallNode node) {
         FunctionEntity entity = node.functionType().entity();
 
-        // expand print (optimization)
-        if (entity.name().equals("print")) {
-            expandPrint(node.args().get(0), false, true);
-            return null;
-        } else if (entity.name().equals("println")) {
-            expandPrint(node.args().get(0), true, true);
-            return null;
+        if (Option.enablePrintExpand) {
+            // expand print (optimization)
+            if (entity.name().equals("print")) {
+                expandPrint(node.args().get(0), false, true);
+                return null;
+            } else if (entity.name().equals("println")) {
+                expandPrint(node.args().get(0), true, true);
+                return null;
+            }
         }
 
         // visit arguments

@@ -16,7 +16,8 @@ int makeHeap() {
     t = j = 0;
     while (i >= 0) {
         j = i * 2;
-        if (i*2+1<n && a[i*2+1]<a[i*2]) j = i*2+1;
+        if (i*2+1<n && a[i*2+1]<a[i*2])
+            j = i*2+1;
         if (a[i] > a[j]) {
             exchange(i,j);
         }

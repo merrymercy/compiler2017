@@ -82,6 +82,21 @@ public class Address extends Operand {
         this.showSize = showSize;
     }
 
+    public boolean baseOnly() {
+        return base != null && index == null && mul == 1 && add == 0;
+    }
+
+
+    @Override
+    public boolean isDirect() {
+        if (base == null) {
+            return index().isRegister();
+        } if (index == null) {
+            return base.isRegister();
+        } else
+            return index.isRegister() && base().isRegister();
+    }
+
     @Override
     public String toNASM() {
         String ret = showSize ? "qword" + " [" : "[";

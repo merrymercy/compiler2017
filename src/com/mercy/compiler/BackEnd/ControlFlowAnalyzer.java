@@ -10,6 +10,9 @@ import com.mercy.compiler.INS.Label;
 import java.io.PrintStream;
 import java.util.*;
 
+import static java.lang.System.err;
+
+
 /**
  * Created by mercy on 17-5-23.
  */
@@ -26,6 +29,7 @@ public class ControlFlowAnalyzer {
                 return;
             buildBasicBlock(functionEntity);
             buildControFlowGraph(functionEntity);
+            Optimize(functionEntity);
             layoutFunction(functionEntity);
         }
     }
@@ -111,6 +115,53 @@ public class ControlFlowAnalyzer {
         }
     }
 
+    void Optimize(FunctionEntity entity) {
+        Set<BasicBlock> toMerge = new HashSet<>();
+
+        boolean modified = true;
+        while(modified) {
+            modified = false;
+
+            toMerge.clear();
+
+            BasicBlock now;
+            // merge
+            for (BasicBlock basicBlock : entity.bbs()) {
+                if (basicBlock.successor().size() == 1 && basicBlock.successor().get(0).predecessor().size() == 1) {
+                    now = basicBlock;
+                    BasicBlock next = now.successor().get(0);
+                    if (next.successor().size() != 0) {
+                        modified = true;
+                        for (BasicBlock next_next : next.successor()) {
+                            err.println("merge " + now.label() + " <- " + next.label());
+                            next_next.predecessor().remove(next);
+                            next_next.predecessor().add(now);
+                        }
+
+                        now.ins().addAll(next.ins());
+                        entity.bbs().remove(next);
+                        now.successor().remove(next);
+                        break;
+                    }
+                }
+            }
+
+            // same branch
+            for (BasicBlock basicBlock : entity.bbs()) {
+                if (basicBlock.successor().size() == 2 && basicBlock.successor().get(0) == basicBlock.successor().get(1)) {
+                    ;
+                }
+            }
+
+            // empty block
+            for (BasicBlock basicBlock : entity.bbs()) {
+                if (basicBlock.ins().size() == 1) {
+                    ;
+                }
+            }
+        }
+    }
+
     void layoutFunction(FunctionEntity entity) {
         List<Instruction> ins = new LinkedList<>();
         List<BasicBlock> bbs = entity.bbs();
@@ -124,8 +175,11 @@ public class ControlFlowAnalyzer {
                 BasicBlock next = null;
                 for (BasicBlock suc : bb.successor()) {
                     if (!suc.layouted()) {
-                        if (bb.ins().get(bb.ins().size()-1) instanceof Jmp) {
+                        Instruction last = bb.ins().get(bb.ins().size()-1);
+                        if (last instanceof Jmp) {
                             bb.ins().remove(bb.ins().size()-1);  // remove redundant jump
+                        } else if (last instanceof CJump) {
+                            ((CJump) last).setFallThrough(suc.label());
                         }
                         next = suc;
                         break;
@@ -137,10 +191,10 @@ public class ControlFlowAnalyzer {
             }
         }
 
+        entity.setINS(ins);
     }
 
     /********** DEBUG TOOL **********/
-
     public void printSelf(PrintStream out) {
         for (FunctionEntity functionEntity : functionEntities) {
             if (Option.enableInlineFunction && functionEntity.canbeInlined())
@@ -151,11 +205,11 @@ public class ControlFlowAnalyzer {
                 continue;
             }
             for (BasicBlock basicBlock : functionEntity.bbs()) {
-                out.print("----- b -----");
+                out.print("----- b -----"  + "  jump to:");
                 for (Label label : basicBlock.jumpTo()) {
-                    out.print("  " + label.name());
+                    out.print("   " + label.name());
                 }
-                out.println("");
+                out.println();
                 for (Instruction instruction : basicBlock.ins()) {
                     out.println(instruction.toString());
                 }

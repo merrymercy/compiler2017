@@ -25,6 +25,10 @@ public class Immediate extends Operand {
         this.type = Type.LABEL;
     }
 
+    @Override
+    public boolean isDirect() {
+        return true;
+    }
 
     @Override
     public Set<Reference> getAllRef() {
