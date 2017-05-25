@@ -39,7 +39,11 @@ public class Call extends Instruction {
 
     @Override
     public void calcDefAndUse() {
-
+        if (ret != null)
+            def.add(ret);
+        for (Operand operand : operands) {
+            use.addAll(operand.getAllRef());
+        }
     }
 
     @Override

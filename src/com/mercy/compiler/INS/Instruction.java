@@ -20,6 +20,8 @@ abstract public class Instruction {
 
     protected Set<Reference> use;
     protected Set<Reference> def;
+    protected Set<Reference> live;
+
 
     /*
      * getter and setter
@@ -42,8 +44,7 @@ abstract public class Instruction {
 
     public Set<Reference> use() {
         if (use == null) {
-            use = new HashSet<>();
-            def = new HashSet<>();
+            initDefAndUse();
             this.calcDefAndUse();
         }
         return use;
@@ -51,11 +52,15 @@ abstract public class Instruction {
 
     public Set<Reference> def() {
         if (def == null) {
-            use = new HashSet<>();
-            def = new HashSet<>();
+            initDefAndUse();
             this.calcDefAndUse();
         }
         return def;
+    }
+
+    public void initDefAndUse() {
+        use = new HashSet<>();
+        def = new HashSet<>();
     }
 
     abstract public void calcDefAndUse();
@@ -66,6 +71,19 @@ abstract public class Instruction {
 
     public void setOut(Set<Reference> out) {
         this.out = out;
+    }
+
+    public Set<Reference> live() {
+        if (live == null) {
+            live = new HashSet<>();
+            live.addAll(in);
+            live.addAll(out);
+        }
+        return live;
+    }
+
+    public void setLive(Set<Reference> live) {
+        this.live = live;
     }
 
     abstract public void accept(Translator translator);

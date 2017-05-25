@@ -86,18 +86,10 @@ public class NaiveAllocator  {
         });
 
         // allocate register
-        int[] toAllocate = {12, 13, 14, 15, 1};// 10, 11};
+        int[] toAllocate = {12, 13, 14, 15, 1, 10, 11};
 
-        /*List<Reference> tmpStack = entity.tmpStack();
-        for (int i = 0; i < tmpStack.size(); i++) {
-            if (i < toAllocate.length) {
-                tmpStack.get(i).setRegister(registers.get(toAllocate[i]));
-                entity.regUsed().add(registers.get(toAllocate[i]));
-            }
-        }
-        entity.regUsed().add(rbp);*/
-
-        err.println(entity.name() + "=========");
+        if (Option.printNaiveAllocatorInfo)
+            err.println("naive allocator : " + entity.name());
         for (int i = 0; i < tosort.size(); i++) {
             if (i < toAllocate.length) {
                 Reference ref = tosort.get(i);
@@ -107,7 +99,8 @@ public class NaiveAllocator  {
 
                 ref.setRegister(registers.get(toAllocate[i]));
                 entity.regUsed().add(registers.get(toAllocate[i]));
-                err.printf("%-10s %s\n", ref.name(), ref.reg());
+                if (Option.printNaiveAllocatorInfo)
+                    err.printf("%-8s -> %s\n", ref.name(), ref.reg());
             }
         }
         entity.regUsed().add(rbp);

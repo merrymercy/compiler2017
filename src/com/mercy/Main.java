@@ -118,13 +118,13 @@ public class Main {
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
         if (Option.printInsturction)
-            emitter.printSelf(System.out);
+            emitter.printSelf(System.err);
 
         // build control flow graph
         ControlFlowAnalyzer cfgBuilder = new ControlFlowAnalyzer(emitter);
         cfgBuilder.buildControlFlow();
         if (Option.printBasicBlocks)
-            cfgBuilder.printSelf(System.out);
+            cfgBuilder.printSelf(System.err);
 
 
         // allocate register
@@ -133,10 +133,9 @@ public class Main {
         if (Option.enableRegisterAllocation) {
             Allocator allocator = new Allocator(emitter);
             allocator.allocate();
-        } else {
-            NaiveAllocator allocator = new NaiveAllocator(emitter, registerConfig);
-            allocator.allocate();
         }
+        NaiveAllocator allocator = new NaiveAllocator(emitter, registerConfig);
+        allocator.allocate();
 
         // translate to x86 nasm
         Translator translator = new Translator(emitter, registerConfig);

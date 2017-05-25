@@ -22,6 +22,10 @@ public class Move extends Instruction {
         return src;
     }
 
+    public boolean isRefMove() {
+        return dest instanceof Reference && src instanceof Reference;
+    }
+
     @Override
     public void calcDefAndUse() {
         if (dest instanceof Reference) {

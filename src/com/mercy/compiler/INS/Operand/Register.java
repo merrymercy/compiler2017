@@ -19,7 +19,7 @@ public class Register extends Operand {
         return name;
     }
 
-    public boolean calleeSave() {
+    public boolean isCalleeSave() {
         return isCalleeSave;
     }
 

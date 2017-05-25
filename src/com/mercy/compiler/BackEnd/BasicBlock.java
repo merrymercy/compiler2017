@@ -2,9 +2,12 @@ package com.mercy.compiler.BackEnd;
 
 import com.mercy.compiler.INS.Instruction;
 import com.mercy.compiler.INS.Label;
+import com.mercy.compiler.INS.Operand.Reference;
 
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by mercy on 17-5-23.
@@ -16,6 +19,12 @@ public class BasicBlock {
     private List<Instruction> ins = new LinkedList<>();
     private List<Label> jumpTo = new LinkedList<>();
     private boolean layouted = false;
+
+    private Set<Reference> use = new HashSet<>();
+    private Set<Reference> def = new HashSet<>();
+
+    private Set<Reference> liveIn = new HashSet<>();
+    private Set<Reference> liveOut = new HashSet<>();
 
     BasicBlock(Label label) {
         this.label = label;
@@ -50,19 +59,35 @@ public class BasicBlock {
         this.layouted = layouted;
     }
 
-    void addIns(Instruction instruction) {
-        ins.add(instruction);
+    public Set<Reference> liveIn() {
+        return liveIn;
     }
 
-    void addPredecessor(BasicBlock bb) {
-        predecessor.add(bb);
+    public void setLiveIn(Set<Reference> liveIn) {
+        this.liveIn = liveIn;
     }
 
-    void addSuccessor(BasicBlock bb) {
-        successor.add(bb);
+    public Set<Reference> liveOut() {
+        return liveOut;
     }
 
-    void addJumpTo(Label label) {
-        jumpTo.add(label);
+    public void setLiveOut(Set<Reference> liveOut) {
+        this.liveOut = liveOut;
+    }
+
+    public Set<Reference> use() {
+        return use;
+    }
+
+    public void setUse(Set<Reference> use) {
+        this.use = use;
+    }
+
+    public Set<Reference> def() {
+        return def;
+    }
+
+    public void setDef(Set<Reference> def) {
+        this.def = def;
     }
 }

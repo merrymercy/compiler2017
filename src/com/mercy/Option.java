@@ -15,20 +15,22 @@ public class Option {
 
     // DEBUG
     public static boolean printInsturction = false;
-    public static boolean printBasicBlocks = false;
+    public static boolean printBasicBlocks = true;
     public static boolean printRemoveInfo = false;
-    public static boolean printInlineInfo = false;
+    public static boolean printInlineInfo = true;
+
+    public static boolean printNaiveAllocatorInfo = true;
 
     // OPTIMIZATION
-    public static boolean enableRegisterAllocation = false;
+    public static boolean enableRegisterAllocation = true;
 
-    public static boolean enableInstructionSelection = true;
-    public static boolean enableInlineFunction = true;
+    public static boolean enableInstructionSelection        = true;
+    public static boolean enableInlineFunction              = true;
     public static boolean enableCommonExpressionElimination = true;
 
+    public static boolean enableControlFlowOptimization     = true;
     public static boolean enableOutputIrrelevantElimination = false;
 
-
-    //
-    public static boolean enablePrintExpand = false;
+    // STEADY
+    public static boolean enablePrintExpand = true;
 }

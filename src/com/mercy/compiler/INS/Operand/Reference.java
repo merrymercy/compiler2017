@@ -1,6 +1,7 @@
 package com.mercy.compiler.INS.Operand;
 
 import com.mercy.compiler.Entity.Entity;
+import com.mercy.compiler.INS.Move;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.util.HashSet;
@@ -23,6 +24,16 @@ public class Reference extends Operand {
     Register reg;
     Entity entity;
     int refTimes;
+
+    // for allocator, speed
+    public Set<Reference> adjList = new HashSet<>();
+    public int degree;
+    public Reference alias;
+    public Register color;
+    public Set<Move> moveList = new HashSet<>();
+    public boolean isPrecolored;
+
+
 
     public Reference(String name) {
         this.name = name;

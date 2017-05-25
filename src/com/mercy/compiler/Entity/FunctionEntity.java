@@ -65,7 +65,7 @@ public class FunctionEntity extends Entity {
             canbeInlined = !findLoop(this, this);
             if (body.stmts().size() > 3)
                 canbeInlined = false;
-            if (Option.enableInlineFunction && Option.printInlineInfo)
+            if (canbeInlined && Option.enableInlineFunction && Option.printInlineInfo)
                 System.err.println(name() + " is inlined");
         }
     }

@@ -115,7 +115,7 @@ public class Translator {
         // calc number of callee-save register
         int savedRegNum = 0;
         for (Register register : entity.regUsed()) {
-            if (register.calleeSave())
+            if (register.isCalleeSave())
                 savedRegNum++;
         }
 
@@ -184,7 +184,7 @@ public class Translator {
 
         // push and pop callee-save registers
         for (Register register : entity.regUsed()) {
-            if (register.calleeSave()) {
+            if (register.isCalleeSave()) {
                 add("push", register);
             }
         }
@@ -218,7 +218,7 @@ public class Translator {
         ListIterator iter = entity.regUsed().listIterator(entity.regUsed().size());
         while (iter.hasPrevious()) {
             Register reg = (Register) iter.previous();
-            if (reg.calleeSave())
+            if (reg.isCalleeSave())
                add("pop", reg);
         }
         add("ret");
@@ -472,6 +472,16 @@ public class Translator {
 
     public void visit(Call ins) {
         List<Operand> operands = ins.operands();
+
+        // save callor-save register
+        List<Register> callorSaved = new LinkedList<>();
+        for (Reference ref : ins.live()) {
+            if (ref.isRegister() && !ref.reg().isCalleeSave()) {
+                add("push", ref.reg());
+                callorSaved.add(ref.reg());
+            }
+        }
+
         for (int i = operands.size() - 1; i >= 0; i--) {
             if (i < paraRegister.size()) {
                 addMove(paraRegister.get(i), operands.get(i));
@@ -488,12 +498,20 @@ public class Translator {
             add("xor", rax(), rax());
         add("call " + ins.entity().asmName());
 
-        if (ins.ret() != null)
-            add("mov", ins.ret(), rax());
 
         if (operands.size() > paraRegister.size())
             add("add", rsp(), new Immediate(
                     (operands.size() - paraRegister.size()) * VIRTUAL_STACK_REG_SIZE));
+
+        // restore callor-save register
+        ListIterator li = callorSaved.listIterator(callorSaved.size());
+        while (li.hasPrevious()) {
+            Register reg = (Register) li.previous();
+            add("pop", reg);
+        }
+
+        if (ins.ret() != null)
+            add("mov", ins.ret(), rax());
     }
 
     public void visit(Return ins) {

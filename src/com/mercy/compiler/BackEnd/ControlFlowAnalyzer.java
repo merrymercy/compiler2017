@@ -10,8 +10,6 @@ import com.mercy.compiler.INS.Label;
 import java.io.PrintStream;
 import java.util.*;
 
-import static java.lang.System.err;
-
 
 /**
  * Created by mercy on 17-5-23.
@@ -26,11 +24,14 @@ public class ControlFlowAnalyzer {
     public void buildControlFlow() {
         for (FunctionEntity functionEntity : functionEntities) {
             if (Option.enableInlineFunction && functionEntity.canbeInlined())
-                return;
+                continue;
             buildBasicBlock(functionEntity);
             buildControFlowGraph(functionEntity);
-            Optimize(functionEntity);
-            layoutFunction(functionEntity);
+
+            if (Option.enableControlFlowOptimization) {
+                Optimize(functionEntity);
+                layoutFunction(functionEntity);
+            }
         }
     }
 
@@ -43,26 +44,26 @@ public class ControlFlowAnalyzer {
             if (bb == null && !(ins instanceof Label)) { // add new label
                 Label label = new Label("cfg_added_" + ct++);
                 bb = new BasicBlock(label);
-                bb.addIns(label);
+                bb.ins().add(label);
             }
 
             if (ins instanceof Label) {
                 if (bb != null) {
-                    bb.addJumpTo((Label) ins);
+                    bb.jumpTo().add((Label) ins);
                     bb.ins().add(new Jmp((Label) ins));
                     bbs.add(bb);
                 }
                 bb = new BasicBlock((Label) ins);
-                bb.addIns(ins);
+                bb.ins().add(ins);
             } else {
-                bb.addIns(ins);
+                bb.ins().add(ins);
                 if (ins instanceof Jmp) {
-                    bb.addJumpTo(((Jmp) ins).dest());
+                    bb.jumpTo().add(((Jmp) ins).dest());
                     bbs.add(bb);
                     bb = null;
                 } else if (ins instanceof CJump) {
-                    bb.addJumpTo(((CJump) ins).trueLabel());
-                    bb.addJumpTo(((CJump) ins).falseLabel());
+                    bb.jumpTo().add(((CJump) ins).trueLabel());
+                    bb.jumpTo().add(((CJump) ins).falseLabel());
                     bbs.add(bb);
                     bb = null;
                 }
@@ -70,7 +71,7 @@ public class ControlFlowAnalyzer {
         }
 
         if (bb != null) { // handle the case that a function ends without "return"
-            bb.addJumpTo(entity.endLabelINS());
+            bb.jumpTo().add(entity.endLabelINS());
             bbs.add(bb);
         }
 
@@ -79,8 +80,8 @@ public class ControlFlowAnalyzer {
             for (Label label : basicBlock.jumpTo()) {
                 if (label == entity.endLabelINS())
                     continue;
-                basicBlock.addSuccessor(label.basicBlock());
-                label.basicBlock().addPredecessor(basicBlock);
+                basicBlock.successor().add(label.basicBlock());
+                label.basicBlock().predecessor().add(basicBlock);
             }
         }
 
@@ -133,7 +134,7 @@ public class ControlFlowAnalyzer {
                     if (next.successor().size() != 0) {
                         modified = true;
                         for (BasicBlock next_next : next.successor()) {
-                            err.println("merge " + now.label() + " <- " + next.label());
+                            //err.println("merge " + now.label() + " <- " + next.label());
                             next_next.predecessor().remove(next);
                             next_next.predecessor().add(now);
                         }

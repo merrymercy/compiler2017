@@ -141,8 +141,11 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 if (Option.printRemoveInfo)
                     System.err.println("remove init " + node.location());
             }
-            else
-                visit(new AssignNode(new VariableNode(node.entity(), node.location()), init));
+            else {
+                ExprStmtNode assign = new ExprStmtNode(node.location(),
+                        new AssignNode(new VariableNode(node.entity(), node.location()), init));
+                visit(assign);
+            }
         }
         return null;
     }
@@ -351,13 +354,17 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             tmpTop = 0;
             maxDepth = 0;
         }
+
+        if (node == null)  // use for fresh tmpTop;
+            return null;
+
         exprDepth++;
         if (maxDepth < exprDepth)
             maxDepth = exprDepth;
         Expr expr = node.accept(this);
         exprDepth--;
 
-        if (exprDepth == 0) {
+        if (exprDepth == 1 && expr != null) {
             Expr replaced = CommonExpressionElimination(expr);
             if (replaced != null)
                 return replaced;
@@ -463,6 +470,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Void visit(ReturnNode node) {
+        visitExpr(null);
+        exprDepth++;  // need return value here
+
         if (inlineMode > 0) {
             if (node.expr() != null && inlineReturnVar.peek() != inlineNoUse)
                 addAssign(inlineReturnVar.peek(), visitExpr(node.expr()));
@@ -471,12 +481,14 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             stmts.add(new Return(node.expr() == null ? null : visitExpr(node.expr())));
             stmts.add(new Jump(currentFunction.endLabelIR()));
         }
+
+        exprDepth--;
         return null;
     }
 
     @Override
     public Void visit(ExprStmtNode node) {
-        node.expr().accept(this);
+        visitExpr(node.expr());
         return null;
     }
 
@@ -486,7 +498,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         Expr lhs = visitExpr(node.lhs());
         Expr rhs;
 
-        if (exprDepth == 0 && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
+        if (!needReturn() && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
                 System.err.println("remove assign " + node.location());
             return null;
@@ -508,8 +520,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(BinaryOpNode node) {
         Expr lhs = visitExpr(node.left()), rhs = visitExpr(node.right());
 
-        if (exprDepth == 0)
+        if (!needReturn()) {
             return null;
+        }
 
         // simple constant folding for integer
         if (lhs instanceof IntConst && rhs instanceof IntConst) {
@@ -629,7 +642,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         addLabel(goon, "goon");
         addAssign(tmp, visitExpr(node.right()));
         addLabel(end, "end");
-        return exprDepth == 0 ? null : tmp;
+        return needReturn() ? tmp : null;
     }
 
     @Override
@@ -643,7 +656,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         addLabel(goon, "goon");
         addAssign(tmp, visitExpr(node.right()));
         addLabel(end, "end");
-        return exprDepth == 0 ? null : tmp;
+        return needReturn() ? tmp : null;
     }
 
     private void expandPrint(ExprNode arg, boolean newline, boolean last) {
@@ -725,17 +738,15 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         // make call
         if (Option.enableInlineFunction && entity.canbeInlined()) {
-            if (exprDepth == 0) {
-                inlineFunction(entity, inlineNoUse, args);
-            } else {
+            if (needReturn()) {
                 Var tmp = newIntTemp();
                 inlineFunction(entity, tmp, args);
                 return tmp;
+            } else {
+                inlineFunction(entity, inlineNoUse, args);
             }
         } else {
-            if (exprDepth == 0) {
-                stmts.add(new Call(entity, args));
-            } else {
+            if (needReturn()) {
                 if (notuseTmp) {
                     return new Call(entity, args);
                 } else {
@@ -743,6 +754,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                     addAssign(tmp, new Call(entity, args));
                     return tmp;
                 }
+            } else {
+                stmts.add(new Call(entity, args));
             }
         }
         return null;
@@ -892,14 +905,14 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             if (node.exprs().size() == node.total() && deepType instanceof ClassType)
                 constructor = ((ClassType)deepType).entity().constructor();
             expandCreator(node.exprs(), pointer, 0, baseType, constructor);
-            return exprDepth == 0 ? null : pointer;
+            return needReturn() ? pointer : null;
         } else {
             ClassEntity entity = ((ClassType) node.type()).entity();
             Var tmp = newIntTemp();
             addAssign(tmp, new Call(mallocFunc, new LinkedList<Expr>(){{ add(new IntConst(entity.size())); }}));
             if (entity.constructor() != null)
                 stmts.add(new Call(entity.constructor(), new LinkedList<Expr>(){{ add(tmp); }}));
-            return exprDepth == 0 ? null : tmp;
+            return needReturn() ? tmp : null;
         }
     }
 
@@ -932,20 +945,15 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 if (true || node.expr() instanceof VariableNode) { // cont(++i); -> i = i + 1; cont(i);
                     Expr expr = visitExpr(node.expr());
                     addAssign(expr, new Binary(expr, op, constOne));
-                    return exprDepth == 0 ? null : expr;
+                    return needReturn() ? expr : null;
                 }
-                //} else {                                   // cont(++i) -> p = &i; *p = *p + 1; cont(*p);
-                //    Expr p = getAddress(visitExpr(node.expr()));
-                //    addAssign(new Mem(p), new Binary(new Mem(p), op, constOne));
-                //    return exprDepth == 0 ? null : new Mem(p);
-                //}
             }
             case SUF_INC:
             case SUF_DEC: {
                 Binary.BinaryOp op = (node.operator() == UnaryOpNode.UnaryOp.SUF_INC ? ADD : SUB);
                 Expr expr = visitExpr(node.expr());
                 if (true || node.expr() instanceof VariableNode) { // cont(i++); -> v = i; i = i + 1; cont(v)
-                    if (exprDepth != 0) {
+                    if (needReturn()) {
                         Var tmp = newIntTemp();
                         addAssign(tmp, expr);
                         addAssign(expr, new Binary(expr, op, constOne));
@@ -955,22 +963,14 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                         return null;
                     }
                 }
-                //} else {                                   // cont(i++) -> p = &i; t = *p; *p = t + 1; cont(t);
-                //    Expr p = getAddress(expr);
-                //    if (exprDepth != 0) {
-                //        Var tmp = newIntTemp();
-                //        addAssign(tmp, new Mem(p));
-                //        addAssign(expr, new Binary(tmp, op, constOne));
-                //        return tmp;
-                //    } else {
-                //        addAssign(expr, new Binary(new Mem(p), op, constOne));
-                //        return null;
-                //    }
-                //}
             }
             default:
                 throw new InternalError(node.location(), "invalid operator " + node.operator());
         }
+    }
+
+    private boolean needReturn() {
+        return exprDepth > 1;
     }
 
     @Override
@@ -982,7 +982,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(SuffixOpNode node) {
         return visit((UnaryOpNode)node);
     }
-
     /*
      * private utility
      */
@@ -1032,12 +1031,18 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                     addCJump(node.right(), trueLabel, falseLabel);
                     break;
                 default:
+                    visitExpr(null); // refresh tmpStack
+                    exprDepth++;
                     stmts.add(new CJump(visitExpr(cond), trueLabel, falseLabel));
+                    exprDepth--;
             }
         } else if (cond instanceof UnaryOpNode) {
             addCJump(((UnaryOpNode) cond).expr(), falseLabel, trueLabel);
         } else {
+            visitExpr(null); // refresh tmpStack
+            exprDepth++;
             stmts.add(new CJump(visitExpr(cond), trueLabel, falseLabel));
+            exprDepth--;
         }
     }
 
