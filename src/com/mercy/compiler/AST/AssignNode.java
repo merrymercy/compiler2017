@@ -24,6 +24,14 @@ public class AssignNode extends ExprNode {
         return rhs;
     }
 
+    public void setLhs(ExprNode lhs) {
+        this.lhs = lhs;
+    }
+
+    public void setRhs(ExprNode rhs) {
+        this.rhs = rhs;
+    }
+
     @Override
     public Type type() {
         return lhs.type();

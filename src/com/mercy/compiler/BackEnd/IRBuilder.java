@@ -14,6 +14,7 @@ import java.util.*;
 import static com.mercy.compiler.IR.Binary.BinaryOp.*;
 import static com.mercy.compiler.IR.Unary.UnaryOp.*;
 import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
+import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-3-30.
@@ -139,7 +140,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (init != null) {
             if (Option.enableOutputIrrelevantElimination && node.entity().outputIrrelevant()) {
                 if (Option.printRemoveInfo)
-                    System.err.println("remove init " + node.location());
+                    err.println("remove init " + node.location());
             }
             else {
                 ExprStmtNode assign = new ExprStmtNode(node.location(),
@@ -221,15 +222,21 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         String str;
         Var var; // assigned temp var
         boolean replaced;
+        ExprTuple tuple;
 
         CommonExprInfo(Expr expr) {
             this.expr = expr;
         }
 
-        CommonExprInfo(Expr expr, String str) {
+        CommonExprInfo(Expr expr,  String str) {
             this.expr = expr;
             this.str = str;
             this.ref = 1;
+        }
+
+        @Override
+        public int hashCode() {
+            return tuple.hashCode();
         }
 
         @Override
@@ -238,8 +245,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
     }
 
-    Map<ExprTuple, CommonExprInfo> commontExprMap;
-
+    Map<ExprTuple, CommonExprInfo> commonExprMap = new HashMap<>();
     private Expr CommonExpressionElimination(Expr expr) {
         if (!Option.enableCommonExpressionElimination)
             return null;
@@ -250,11 +256,11 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             return null;
         }
 
-        /*for (Map.Entry<ExprTuple, CommonExprInfo> entry : commontExprMap.entrySet()) {
+        /*for (Map.Entry<ExprTuple, CommonExprInfo> entry : commonExprMap.entrySet()) {
             System.err.println(entry.getKey().hashCode() + "   " + entry.getValue() + "  " + entry.getValue().ref + " " + entry.getValue().depth);
         }*/
 
-        for (CommonExprInfo info : commontExprMap.values()) {
+        for (CommonExprInfo info : commonExprMap.values()) {
             info.replaced = (info.depth >= 2 && info.ref >= 2);
         }
 
@@ -268,33 +274,37 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             Pair<Boolean, CommonExprInfo> right = calcSubTree(((Binary) expr).right());
 
             if (left.first && right.first) {
-                ExprTuple tuple = new ExprTuple(((Binary) expr).operator().getClass().hashCode(), left.second, right.second);
-                ret = commontExprMap.get(tuple);
+                ExprTuple tuple = new ExprTuple(((Binary) expr).operator().hashCode(), left.second, right.second);
+                ret = commonExprMap.get(tuple);
                 if (ret == null) {
                     ret = new CommonExprInfo(expr, left.second + " " + ((Binary) expr).operator().toString() + " " + right.second);
+                    ret.tuple = tuple;
                     ret.depth = (left.second.depth > right.second.depth ? left.second.depth : right.second.depth) + 1;
-                    commontExprMap.put(tuple, ret);
+                    commonExprMap.put(tuple, ret);
                 } else {
                     ret.ref++;
                 }
             }
+
         } else if (expr instanceof Var) {
             ExprTuple tuple = new ExprTuple(((Var) expr).entity().hashCode(), null, null);
-            ret = commontExprMap.get(tuple);
+            ret = commonExprMap.get(tuple);
             if (ret == null) {
                 ret = new CommonExprInfo(expr, ((Var) expr).entity().name());
+                ret.tuple = tuple;
                 ret.depth = 0;
-                commontExprMap.put(tuple, ret);
+                commonExprMap.put(tuple, ret);
             } else {
                 ret.ref++;
             }
         } else if (expr instanceof IntConst) {
             ExprTuple tuple = new ExprTuple(((IntConst) expr).value(), null, null);
-            ret = commontExprMap.get(tuple);
+            ret = commonExprMap.get(tuple);
             if (ret == null) {
                 ret = new CommonExprInfo(expr, Integer.toString(((IntConst) expr).value()));
+                ret.tuple = tuple;
                 ret.depth = 0;
-                commontExprMap.put(tuple, ret);
+                commonExprMap.put(tuple, ret);
             } else {
                 ret.ref++;
             }
@@ -303,11 +313,12 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
             if (base.first) {
                 ExprTuple tuple = new ExprTuple(expr.getClass().hashCode(), base.second, null);
-                ret = commontExprMap.get(tuple);
+                ret = commonExprMap.get(tuple);
                 if (ret == null) {
                     ret = new CommonExprInfo(expr, "mem " + base.second);
+                    ret.tuple = tuple;
                     ret.depth = base.second.depth + 1;
-                    commontExprMap.put(tuple, ret);
+                    commonExprMap.put(tuple, ret);
                 } else {
                     ret.ref++;
                 }
@@ -350,7 +361,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     int maxDepth = 0;
     public Expr visitExpr(ExprNode node) {
         if (exprDepth == 0) {
-            commontExprMap = new HashMap<>();
+            commonExprMap = new HashMap<>();
             tmpTop = 0;
             maxDepth = 0;
         }
@@ -406,6 +417,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     Stack<Label> endLabelStack  = new Stack<>();
 
     private void visitLoop(ExprNode init, ExprNode cond, ExprNode incr, StmtNode body) {
+        clearAssignTable();
+
         if (init != null) {
             visitExpr(init);
         }
@@ -449,7 +462,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Void visit(ForNode node) {
         if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
-                System.err.println("remove for " + node.location());
+                err.println("remove for " + node.location());
             return null;
         }
         visitLoop(node.init(), node.cond(), node.incr(), node.body());
@@ -458,18 +471,24 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Void visit(ContinueNode node) {
+        clearAssignTable();
+
         stmts.add(new Jump(testLabelStack.peek()));
         return null;
     }
 
     @Override
     public Void visit(BreakNode node) {
+        clearAssignTable();
+
         stmts.add(new Jump(endLabelStack.peek()));
         return null;
     }
 
     @Override
     public Void visit(ReturnNode node) {
+        clearAssignTable();
+
         visitExpr(null);
         exprDepth++;  // need return value here
 
@@ -492,27 +511,90 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         return null;
     }
 
+    public Pair<Boolean, Integer> ExprHashing(ExprNode node) {
+        if (node instanceof BinaryOpNode || node instanceof LogicalAndNode || node instanceof LogicalOrNode) {
+            Pair<Boolean, Integer> left = ExprHashing(((BinaryOpNode) node).left());
+            Pair<Boolean, Integer> right = ExprHashing(((BinaryOpNode) node).right());
+            if (left.first && right.first) {
+                int hash = ((BinaryOpNode) node).operator().hashCode();  // DANGEROUS
+                hash += left.second;
+                hash += right.second ^ 0x5D;
+                return new Pair<>(true, hash);
+            } else {
+                return new Pair<>(false, 0);
+            }
+        } else if (node instanceof VariableNode) {
+            return new Pair<>(true, ((VariableNode) node).entity().hashCode());
+        } else if (node instanceof IntegerLiteralNode) {
+            return new Pair<>(true, (int)((IntegerLiteralNode) node).value());
+        } else{
+            return new Pair<>(false, 0);
+        }
+    }
+    public Set<Entity> getDependency(ExprNode node) {
+        Set<Entity> ret = new HashSet<>();
+        if (node instanceof BinaryOpNode || node instanceof LogicalAndNode || node instanceof LogicalOrNode) {
+            ret.addAll(getDependency(((BinaryOpNode)node).left()));
+            ret.addAll(getDependency(((BinaryOpNode)node).right()));
+        } else if (node instanceof VariableNode) {
+            ret.add(((VariableNode) node).entity());
+        }
+        return ret;
+    }
+
+    Map<Integer, Entity> assignTable = new HashMap<>();
+    Set<Entity> inDependency = new HashSet<>();
+    void clearAssignTable() {
+        err.println("clean");
+        assignTable = new HashMap<>();
+        inDependency = new HashSet<>();
+    }
+
     private boolean notuseTmp = false;
     @Override
     public Expr visit(AssignNode node) {
         Expr lhs = visitExpr(node.lhs());
-        Expr rhs;
+        Expr rhs = null;
 
         if (!needReturn() && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
-                System.err.println("remove assign " + node.location());
+                err.println("remove assign " + node.location());
             return null;
         }
 
-        if (node.rhs() instanceof FuncallNode) {
-            notuseTmp = true;
-            rhs = visitExpr(node.rhs());
-            notuseTmp = false;
-        } else {
-            rhs = visitExpr(node.rhs());
-        }
-        addAssign(lhs, rhs);
+        // common expr elimination
+        if (lhs instanceof  Var) {
+            Entity entity = ((Var) lhs).entity();
 
+            Pair<Boolean, Integer> ret = ExprHashing(node.rhs());
+            if (ret.first && !(node.rhs() instanceof IntegerLiteralNode)) {
+                Entity same = assignTable.get(new Integer(ret.second));
+                if (same == null) {
+                    err.println("add to table " + entity.name() + " = " + ret.second);
+                    for (Entity dep : getDependency(node.rhs())) {
+                        inDependency.add(dep);
+                    }
+                    assignTable.put(ret.second, entity);
+                } else {
+                    err.println(entity.name() + " = " + same.name());
+                    //(new VariableNode(same, node.location()));
+                    rhs = new Var(same);
+                }
+            }
+        }
+
+        // cannot find common expr, build normally
+        if (rhs == null) {
+            if (node.rhs() instanceof FuncallNode) {
+                notuseTmp = true;
+                rhs = visitExpr(node.rhs());
+                notuseTmp = false;
+            } else {
+                rhs = visitExpr(node.rhs());
+            }
+        }
+
+        addAssign(lhs, rhs);
         return lhs;
     }
 
@@ -718,6 +800,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Expr visit(FuncallNode node) {
+        clearAssignTable();
+
         FunctionEntity entity = node.functionType().entity();
 
         if (Option.enablePrintExpand) {
@@ -895,6 +979,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Expr visit(CreatorNode node) {
+        clearAssignTable();
+
         currentFunction.addCall(mallocFunc);
         if (node.type() instanceof ArrayType) {
             Type baseType = ((ArrayType) node.type()).baseType();
@@ -1004,7 +1090,13 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     /*
      * utility for generating IR
      */
+
     private void addAssign(Expr lhs, Expr rhs) {
+        if (lhs instanceof  Var) {
+            if (inDependency.contains(((Var) lhs).entity())) {
+                clearAssignTable();
+            }
+        }
         stmts.add(new Assign(getAddress(lhs), rhs));
     }
 

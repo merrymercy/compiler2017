@@ -112,22 +112,23 @@ public class Allocator {
         sorted = new LinkedList<>();
 
         // print Def and Use
-        for (Instruction ins : entity.ins()) {
-            err.printf("%-20s def:", ins.toString());
-            for (Reference reference : ins.def()) {
-                err.print(" " + reference);
-            }
-            err.print("       use: ");
-            for (Reference reference : ins.use()) {
-                err.print(" " + reference);
+        if (Option.printUseDefInfo) {
+            for (Instruction ins : entity.ins()) {
+                err.printf("%-20s def:", ins.toString());
+                for (Reference reference : ins.def()) {
+                    err.print(" " + reference);
+                }
+                err.print("       use: ");
+                for (Reference reference : ins.use()) {
+                    err.print(" " + reference);
+                }
+                err.println();
             }
             err.println();
         }
-        err.println();
 
         /***** solve dataflow equation *****/
         // in block
-        err.println(entity.name());
         for (BasicBlock basicBlock : entity.bbs()) {
             Set<Reference> def = basicBlock.def();
             Set<Reference> use = basicBlock.use();
@@ -209,19 +210,21 @@ public class Allocator {
             }
         }
 
-        // print Liveness Info
-        for (Instruction ins : entity.ins()) {
-            err.printf("%-20s in:", ins.toString());
-            for (Reference reference : ins.in()) {
-                err.print("  " + reference);
-            }
-            err.print("  out: ");
-            for (Reference reference : ins.out()) {
-                err.print("  " + reference);
+        if (Option.printUseDefInfo) {
+            // print Liveness Info
+            for (Instruction ins : entity.ins()) {
+                err.printf("%-20s in:", ins.toString());
+                for (Reference reference : ins.in()) {
+                    err.print("  " + reference);
+                }
+                err.print("  out: ");
+                for (Reference reference : ins.out()) {
+                    err.print("  " + reference);
+                }
+                err.println();
             }
             err.println();
         }
-        err.println();
     }
 
     private void makeWorklist() {
