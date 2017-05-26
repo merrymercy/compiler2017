@@ -551,12 +551,6 @@ public class Allocator {
     private void selectSpill() {
         // SPILL HEURISTIC HERE
         Reference ref = spillWorklist.iterator().next();
-        for (Reference re : spillWorklist) {
-            if (re.name().equals("d")) {
-                ref = re;
-                break;
-            }
-        }
         move(ref, spillWorklist, simplifyWorklist);
         freezeMoves(ref);
     }
@@ -583,8 +577,6 @@ public class Allocator {
         for (Edge edge : simplifiedEdge) {
             addEdge(getAlias(edge.u), getAlias(edge.v));
         }
-        err.printf("b:%d a:%d s:%d", before, edgeSet.size(), simplifiedEdge.size());
-        err.println(simplifiedEdge);
 
         // start assign
         while(!selectStack.empty()) {
@@ -621,7 +613,7 @@ public class Allocator {
         }
 
         err.println("=== Assign Result ===");
-        err.print("colored :");
+       /* err.print("colored :");
         for (Reference ref : coloredNodes) {
             err.print("  " + ref.name() + "(" + ref.color.name() + ")");
         }
@@ -632,7 +624,7 @@ public class Allocator {
         err.print("\nspilled :");
         for (Reference ref : spilledNodes) {
             err.print("  " + ref.name());
-        }
+        }*/
         err.println();
     }
 
