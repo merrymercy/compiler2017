@@ -9,6 +9,7 @@ import com.mercy.compiler.INS.Move;
 import com.mercy.compiler.INS.Operand.Address;
 import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.INS.Operand.Register;
+import com.mercy.compiler.Utility.InternalError;
 
 import java.util.*;
 
@@ -535,6 +536,11 @@ public class Allocator {
 
         for (Reference node : coalescedNodes) {
             node.color = getAlias(node).color;
+            if (node.color == null) {
+                err.println("TMD");
+                err.flush();
+                throw new InternalError(entity.name());
+            }
         }
 
         err.println("=== Assign Result ===");
