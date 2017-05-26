@@ -9,6 +9,7 @@ import com.mercy.compiler.FrontEnd.ParserErrorListener;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Type.Type;
+import com.mercy.compiler.Utility.InternalError;
 import com.mercy.compiler.Utility.LibFunction;
 import com.mercy.compiler.Utility.SemanticError;
 import org.antlr.v4.runtime.ANTLRInputStream;

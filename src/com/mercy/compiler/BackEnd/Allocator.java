@@ -19,11 +19,14 @@ import static java.lang.System.err;
  * Created by mercy on 17-5-23.
  */
 public class Allocator {
-    List<FunctionEntity> functionEntities;
-    RegisterConfig regConfig;
-    Set<Register> colors = new HashSet<>();
+    private List<FunctionEntity> functionEntities;
+    private List<Register> registers;
+    private List<Register> paraRegister;
+    private RegisterConfig regConfig;
 
-    Register rbp;
+
+    private Register rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp;
+    private Set<Register> colors = new HashSet<>();
 
     public Allocator (InstructionEmitter emitter, RegisterConfig regConfig) {
         functionEntities = emitter.functionEntities();
@@ -31,9 +34,16 @@ public class Allocator {
 
         // load registers
         rbp = regConfig.rbp();
+        precolored = new LinkedHashSet<>();
+        registers = regConfig.registers();
+        paraRegister = regConfig.paraRegister();
+
+        rax = registers.get(0); rbx = registers.get(1);
+        rcx = registers.get(2); rdx = registers.get(3);
+        rsi = registers.get(4); rdi = registers.get(5);
+        rbp = registers.get(6); rsp = registers.get(7);
 
         // init colors
-
         colors.add(regConfig.registers().get(10));
         colors.add(regConfig.registers().get(11));
 
@@ -43,6 +53,15 @@ public class Allocator {
         colors.add(regConfig.registers().get(14));
         colors.add(regConfig.registers().get(15));
         K = colors.size();
+    }
+
+    public void loadPrecolord(FunctionEntity entity) {
+        for (BasicBlock basicBlock : entity.bbs()) {
+            for (Instruction ins : basicBlock.ins()) {
+
+            }
+        }
+
     }
 
     public void allocate() {
@@ -82,7 +101,6 @@ public class Allocator {
 
         // node set (disjoint)
         simplifyWorklist = new LinkedHashSet<>();
-        precolred        = new LinkedHashSet<>();
         initial          = new LinkedHashSet<>();
         freezeWorklist   = new LinkedHashSet<>();
         spillWorklist    = new LinkedHashSet<>();
@@ -125,7 +143,7 @@ public class Allocator {
     int localOffset;
 
     // node set (disjoint)
-    Set<Reference> precolred;
+    Set<Reference> precolored;
     Set<Reference> initial;
     Set<Reference> simplifyWorklist;
     Set<Reference> freezeWorklist;
@@ -253,11 +271,11 @@ public class Allocator {
     private void build(FunctionEntity entity) {
         // init edge and degree
         edgeSet.clear();
-        initial.removeAll(precolred);
+        initial.removeAll(precolored);
         for (Reference ref : initial) {
             ref.reset();
         }
-        for (Reference ref : precolred) {
+        for (Reference ref : precolored) {
             ref.reset();
         }
 
@@ -381,7 +399,7 @@ public class Allocator {
     }
 
     private void addWorkList(Reference ref) {
-        if (!precolred.contains(ref) && !isMoveRelated(ref) && ref.degree < K) {
+        if (!precolored.contains(ref) && !isMoveRelated(ref) && ref.degree < K) {
             freezeWorklist.remove(ref);
             simplifyWorklist.add(ref);
         }
@@ -389,7 +407,7 @@ public class Allocator {
 
     private boolean OK(Reference u, Reference v) {
         for (Reference t : v.adjList) {
-            if (!(t.degree < K || precolred.contains(t) || edgeSet.contains(getEdge(t, u))))
+            if (!(t.degree < K || precolored.contains(t) || edgeSet.contains(getEdge(t, u))))
                 return false;
         }
         return true;
@@ -441,7 +459,7 @@ public class Allocator {
         Reference y = getAlias((Reference) move.dest());
         Reference u, v;
 
-        if (precolred.contains(y)) {
+        if (precolored.contains(y)) {
             u = y; v = x;
         } else {
             u = x; v = y;
@@ -451,12 +469,12 @@ public class Allocator {
         if (u == v) {
             coalescedMoves.add(move);
             addWorkList(u);
-        } else if (precolred.contains(v) || edgeSet.contains(getEdge(u, v))) {
+        } else if (precolored.contains(v) || edgeSet.contains(getEdge(u, v))) {
             constrainedMoves.add(move);
             addWorkList(u);
             addWorkList(v);
-        } else if (precolred.contains(u) && OK(u, v) ||
-                !precolred.contains(u) && conservative(u, v)) {
+        } else if (precolored.contains(u) && OK(u, v) ||
+                !precolored.contains(u) && conservative(u, v)) {
             coalescedMoves.add(move);
             combine(u,v);
             addWorkList(u);
@@ -517,7 +535,7 @@ public class Allocator {
             }
 
             for (Reference w : n.adjList) {
-                if (coloredNodes.contains(w) || precolred.contains(w)) {
+                if (coloredNodes.contains(w) || precolored.contains(w)) {
                     okColors.remove(getAlias(w).color);
                 }
             }
