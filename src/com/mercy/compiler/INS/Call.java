@@ -5,8 +5,10 @@ import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
 
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by mercy on 17-4-25.
@@ -15,6 +17,8 @@ public class Call extends Instruction {
     FunctionEntity entity;
     List<Operand> operands;
     Operand ret;
+    Set<Reference> callorsave;
+    Set<Reference> usedParameterRegister;
 
     public Call(FunctionEntity entity, List<Operand> operands) {
         this.entity = entity;
@@ -38,6 +42,22 @@ public class Call extends Instruction {
         this.ret = ret;
     }
 
+    public Set<Reference> callorsave() {
+        return callorsave;
+    }
+
+    public void setCallorsave(Set<Reference> callorsave) {
+        this.callorsave = callorsave;
+    }
+
+    public Set<Reference> usedParameterRegister() {
+        return usedParameterRegister;
+    }
+
+    public void setUsedParameterRegister(Set<Reference> usedParameterRegister) {
+        this.usedParameterRegister = usedParameterRegister;
+    }
+
     @Override
     public void replaceUse(Reference from, Reference to) {
         List<Operand> newOperands = new LinkedList<>();
@@ -45,6 +65,12 @@ public class Call extends Instruction {
             newOperands.add(operand.replace(from, to));
         }
         operands = newOperands;
+
+        Set<Reference> newParaReg = new HashSet<>();
+        for (Reference reference : usedParameterRegister) {
+            newParaReg.add((Reference) reference.replace(from, to));
+        }
+        usedParameterRegister = newParaReg;
     }
 
     @Override
@@ -57,8 +83,13 @@ public class Call extends Instruction {
     public void calcDefAndUse() {
         if (ret != null)
             def.addAll(ret.getAllRef());
+        if (callorsave != null)
+            def.addAll(callorsave);
         for (Operand operand : operands) {
             use.addAll(operand.getAllRef());
+        }
+        for (Reference parareg : usedParameterRegister) {
+            use.addAll(parareg.getAllRef());
         }
         allref.addAll(use);
         allref.addAll(def);

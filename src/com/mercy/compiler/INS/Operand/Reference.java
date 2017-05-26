@@ -39,9 +39,13 @@ public class Reference extends Operand {
         moveList = new HashSet<>();
         adjList = new HashSet<>();
         originalAdjList = new HashSet<>();
-        color = null;
+        if (!isPrecolored) {
+            color = null;
+            degree = 0;
+        } else {
+            degree = 999999;
+        }
         alias = null;
-        degree = 0;
         isSpilled = false;
     }
 
@@ -52,6 +56,7 @@ public class Reference extends Operand {
 
     public Reference(Register reg) {
         setRegister(reg);
+        name = reg.name();
     }
 
     public Reference(int offset, Register reg) {
@@ -105,8 +110,6 @@ public class Reference extends Operand {
     public boolean isUnknown() {
         return type == UNKNOWN;
     }
-
-
 
     public void addRefTime() {
         refTimes++;

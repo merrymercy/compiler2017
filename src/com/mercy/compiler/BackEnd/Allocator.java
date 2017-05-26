@@ -4,9 +4,7 @@ import com.mercy.Option;
 import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.Entity.ParameterEntity;
 import com.mercy.compiler.INS.*;
-import com.mercy.compiler.INS.Operand.Address;
-import com.mercy.compiler.INS.Operand.Reference;
-import com.mercy.compiler.INS.Operand.Register;
+import com.mercy.compiler.INS.Operand.*;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.util.*;
@@ -19,11 +17,13 @@ import static java.lang.System.err;
 public class Allocator {
     private List<FunctionEntity> functionEntities;
     private List<Register> registers;
-    private List<Register> paraRegister;
+    private List<Reference> paraRegisterRef;
+    private Set<Reference> callerSaveRegRef;
     private RegisterConfig regConfig;
 
-
     private Register rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp;
+    private Reference rrax, rrbx, rrcx, rrdx, rrsi, rrdi, rrsp, rrbp;
+    private Reference rr10, rr11;
     private Set<Register> colors = new HashSet<>();
 
     public Allocator (InstructionEmitter emitter, RegisterConfig regConfig) {
@@ -32,19 +32,42 @@ public class Allocator {
 
         // load registers
         rbp = regConfig.rbp();
-        precolored = new LinkedHashSet<>();
         registers = regConfig.registers();
-        paraRegister = regConfig.paraRegister();
-
         rax = registers.get(0); rbx = registers.get(1);
         rcx = registers.get(2); rdx = registers.get(3);
         rsi = registers.get(4); rdi = registers.get(5);
         rbp = registers.get(6); rsp = registers.get(7);
 
+
+        rr10 = new Reference(registers.get(10));
+        rr11 = new Reference(registers.get(11));
+
+        paraRegisterRef = new LinkedList<>();
+        for (Register register : regConfig.paraRegister()) {
+            paraRegisterRef.add(new Reference(register));
+        }
+        rrdx = paraRegisterRef.get(2);
+        rrcx = paraRegisterRef.get(3);
+
+        callerSaveRegRef = new HashSet<>();
+        callerSaveRegRef.addAll(paraRegisterRef);
+        callerSaveRegRef.add(rr10);
+        callerSaveRegRef.add(rr11);
+
+        // set precolored
+        precolored = new LinkedHashSet<>();
+        precolored.addAll(paraRegisterRef);
+        precolored.add(rr10);
+        precolored.add(rr11);
+        for (Reference ref : precolored) {
+            ref.isPrecolored = true;
+            ref.color = ref.reg();
+        }
+
         // init colors
+        colors.addAll(regConfig.paraRegister());
         colors.add(regConfig.registers().get(10));
         colors.add(regConfig.registers().get(11));
-
         colors.add(regConfig.registers().get(1));
         colors.add(regConfig.registers().get(12));
         colors.add(regConfig.registers().get(13));
@@ -55,15 +78,66 @@ public class Allocator {
 
     public void loadPrecolord(FunctionEntity entity) {
         for (BasicBlock basicBlock : entity.bbs()) {
-            for (Instruction ins : basicBlock.ins()) {
-                if (ins instanceof Call) {
+            List<Instruction> newIns = new LinkedList<>();
+            for (Instruction raw : basicBlock.ins()) {
+                if (raw instanceof Call) {
+                    Set<Reference> paraRegUsed = new HashSet<>();
+                    Call ins = (Call) raw;
+                    int i = 0, pushCt = 0;
+                    for (Operand operand : ins.operands()) {
+                        if (i < paraRegisterRef.size()) {
+                            paraRegUsed.add(paraRegisterRef.get(i));
+                            newIns.add(new Move(paraRegisterRef.get(i), operand));
+                        } else {
+                            newIns.add(new Move(rax, operand));
+                            newIns.add(new Push(rax));
+                            pushCt++;
+                        }
+                        i++;
+                    }
+                    Call newCall = new Call(ins.entity(), new LinkedList<>());
+                    newCall.setCallorsave(callerSaveRegRef);
+                    newCall.setUsedParameterRegister(paraRegUsed);
+                    newIns.add(newCall);
+                    if (pushCt > 0) {
+                        newIns.add(new Add(rsp, new Immediate(pushCt * Option.REG_SIZE)));
+                    }
 
-                } else if (ins instanceof Return) {
-
-                } else if (ins instanceof Label) {
-
+                    if (ins.ret() != null) {
+                        newIns.add(new Move(ins.ret(), rax));
+                    }
+                } else if (raw instanceof Div || raw instanceof Mod) {
+                    newIns.add(raw);
+                   // newIns.add(new Move(rrax, rax));
+                    newIns.add(new Move(rrdx, rdx));
+                } else if (raw instanceof Return) {
+                    if (((Return) raw).ret() != null)
+                        newIns.add(new Move(rax, ((Return) raw).ret()));
+                    newIns.add(new Return(null));
+                } else if (raw instanceof Label) {
+                    if (raw == entity.beginLabelINS()) {
+                        int i = 0;
+                        for (ParameterEntity par : entity.params()) {   // load parameters
+                            if (i < paraRegisterRef.size()) {
+                                newIns.add(new Move(par.reference(), paraRegisterRef.get(i)));
+                            } else {
+                                newIns.add(new Move(par.reference(), par.source()));
+                            }
+                            i++;
+                        }
+                    }
+                    newIns.add(raw);
+                } else {
+                    newIns.add(raw);
+                    if (raw instanceof CJump || raw instanceof Cmp || raw instanceof Lea
+                            || raw instanceof Mod || raw instanceof  Div || raw instanceof Move
+                            || raw instanceof Bin || raw instanceof Sal || raw instanceof Sar) {
+                        newIns.add(new Move(rrcx, rcx));
+                        newIns.add(new Move(rrdx, rdx));
+                    }
                 }
             }
+            basicBlock.setIns(newIns);
         }
 
     }
@@ -73,6 +147,7 @@ public class Allocator {
             if (Option.enableInlineFunction && functionEntity.canbeInlined())
                 continue;
             init(functionEntity);
+            loadPrecolord(functionEntity);
             allocateFunction(functionEntity);
 
             // set register
@@ -129,13 +204,6 @@ public class Allocator {
         ListIterator li = entity.bbs().listIterator(entity.bbs().size());
         while (li.hasPrevious()) {
             BasicBlock pre = (BasicBlock) li.previous();
-            if (pre.label() == entity.beginLabelINS()) {
-                Set<Reference> bringin = new HashSet<>();
-                for (ParameterEntity par : entity.params()) {   // load parameters
-                    bringin.add(par.reference());
-                }
-                pre.label().setBringIn(bringin);
-            }
             if (!visited.contains(pre))
                 dfsSort(pre);
         }
@@ -349,7 +417,7 @@ public class Allocator {
         }
 
         if (Option.printUseDefInfo) {
-            err.println("====== EDGE ======");
+           /* err.println("====== EDGE ======");
             for (Reference u : initial) {
                 err.printf("%-10s:", u.name());
                 for (Reference v : u.adjList) {
@@ -357,7 +425,7 @@ public class Allocator {
                 }
                 err.println();
             }
-            err.println();
+            err.println();*/
         }
 
     }
@@ -386,9 +454,6 @@ public class Allocator {
             simplifiedEdge.add(new Edge(adj, ref));
             simplifiedEdge.add(new Edge(ref, adj));
             deleteEdge(ref, adj);
-            if (ref.name().equals("spill_add_0") || adj.name().equals("spill_add_0"))
-                err.flush();
-
         }
     }
 
@@ -465,6 +530,9 @@ public class Allocator {
             move(v, spillWorklist, coalescedNodes);
         }
 
+        if (u.name().equals("ref_0"))
+            err.flush();
+
         v.alias = u;
         u.moveList.addAll(v.moveList);
         enableMoves(v);
@@ -472,9 +540,6 @@ public class Allocator {
         Set<Reference> backup = new HashSet<>(v.adjList);
 
         for (Reference t : backup) {
-            if (t.name().equals("spill_add_0") || v.name().equals("spill_add_0"))
-                err.flush();
-
             deleteEdge(t, v);
             addEdge(u, t);
             if (t.degree >= K && freezeWorklist.contains(t)) {
@@ -498,6 +563,8 @@ public class Allocator {
             u = x; v = y;
         }
 
+
+
         worklistMoves.remove(move);
         if (u == v) {
             coalescedMoves.add(move);
@@ -508,6 +575,10 @@ public class Allocator {
             addWorkList(v);
         } else if (precolored.contains(u) && OK(u, v) ||
                 !precolored.contains(u) && conservative(u, v)) {
+            if (u.name().equals("ref_0")) {
+                conservative(u, v);
+            }
+
             coalescedMoves.add(move);
             combine(u,v);
             addWorkList(u);
@@ -551,12 +622,25 @@ public class Allocator {
     private void selectSpill() {
         // SPILL HEURISTIC HERE
         Reference ref = spillWorklist.iterator().next();
+
+        if (Option.testLevel >= Option.TEST_LEVEL_STRICT) {
+            for (Reference re : spillWorklist) {
+                if (re.name().equals("ref_0")) {
+                    ref = re;
+                    break;
+                }
+            }
+        }
+
         move(ref, spillWorklist, simplifyWorklist);
         freezeMoves(ref);
     }
 
 
     private void move(Reference ref, Set<Reference> from, Set<Reference> to) {
+        if (ref.name().equals("ref_0") && to == spilledNodes)
+            err.flush();
+
         if (from.contains(ref)) {
             if (!to.contains(ref)) {
                 from.remove(ref);
@@ -612,20 +696,22 @@ public class Allocator {
             }
         }
 
-        err.println("=== Assign Result ===");
-       /* err.print("colored :");
-        for (Reference ref : coloredNodes) {
-            err.print("  " + ref.name() + "(" + ref.color.name() + ")");
+        if (Option.printUseDefInfo) {
+            err.println("=== Assign Result ===");
+            err.print("colored :");
+            for (Reference ref : coloredNodes) {
+                err.print("  " + ref.name() + "(" + ref.color.name() + ")");
+            }
+            err.print("\ncoalesced :");
+            for (Reference ref : coalescedNodes) {
+                err.print("  " + ref.name() + "(" + getAlias(ref).name() + ")");
+            }
+            err.print("\nspilled :");
+            for (Reference ref : spilledNodes) {
+                err.print("  " + ref.name());
+            }
+            err.println();
         }
-        err.print("\ncoalesced :");
-        for (Reference ref : coalescedNodes) {
-            err.print("  " + ref.name() + "(" + getAlias(ref).name() + ")");
-        }
-        err.print("\nspilled :");
-        for (Reference ref : spilledNodes) {
-            err.print("  " + ref.name());
-        }*/
-        err.println();
     }
 
     int spilledCounter = 0;
@@ -713,11 +799,11 @@ public class Allocator {
 
 
         err.println("===== REWRITE =====");
-        /*for (BasicBlock basicBlock : entity.bbs()) {
+        for (BasicBlock basicBlock : entity.bbs()) {
             for (Instruction ins : basicBlock.ins()) {
                 err.println(ins);
             }
-        }*/
+        }
 
         // restart
         selectStack.clear();
@@ -760,6 +846,7 @@ public class Allocator {
     private void deleteEdge(Reference u, Reference v) {
         Edge edge = getEdge(u, v);
         Edge edge2 = getEdge(v, u);
+
         if (!edgeSet.contains(edge) || !edgeSet.contains(edge2)) {
             throw new InternalError("delete edge error");
         }

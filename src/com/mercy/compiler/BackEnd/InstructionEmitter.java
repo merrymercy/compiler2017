@@ -75,6 +75,8 @@ public class InstructionEmitter {
         // set reference for params and local variable
         for (ParameterEntity parameterEntity : entity.params()) {
             parameterEntity.setReference(new Reference(parameterEntity));
+            parameterEntity.setSource(new Reference(parameterEntity.name() + "_src", GLOBAL));
+            // set to global, i.e. don't allocate register for this
         }
         for (VariableEntity variableEntity : entity.allLocalVariables()) {
             variableEntity.setReference(new Reference(variableEntity));

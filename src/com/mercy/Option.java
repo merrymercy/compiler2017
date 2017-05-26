@@ -13,24 +13,30 @@ public class Option {
     public static String inFile = "testcase/test.c";
     public static String outFile = "out.asm";
 
+    public static final int TEST_LEVEL_DEVELOP = 0;
+    public static final int TEST_LEVEL_EASY    = 1;
+    public static final int TEST_LEVEL_FULL    = 2;
+    public static final int TEST_LEVEL_STRICT  = 3;
+
     // DEBUG
+    public static int testLevel = TEST_LEVEL_DEVELOP;
     public static boolean printRemoveInfo = false;
     public static boolean printInlineInfo = false;
     public static boolean printInsturction = false;
     public static boolean printBasicBlocks = false;
 
     public static boolean printNaiveAllocatorInfo = false;
-    public static boolean printUseDefInfo = false;
+    public static boolean printUseDefInfo = true;
 
     // OPTIMIZATION
     public static boolean enableRegisterAllocation = true;
 
-    public static boolean enableInstructionSelection        = true;
-    public static boolean enableInlineFunction              = true;
-    public static boolean enableCommonExpressionElimination = true;
+    public static boolean enableInstructionSelection        = false;
+    public static boolean enableInlineFunction              = false;
+    public static boolean enableCommonExpressionElimination = false;
 
-    public static boolean enableControlFlowOptimization     = true;
-    public static boolean enableOutputIrrelevantElimination = true;
+    public static boolean enableControlFlowOptimization     = false;
+    public static boolean enableOutputIrrelevantElimination = false;
 
     // STEADY
     public static boolean enablePrintExpand = true;

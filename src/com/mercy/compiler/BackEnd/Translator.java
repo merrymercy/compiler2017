@@ -135,19 +135,19 @@ public class Translator {
                 par.setReference(ref);
             }
             if (i < paraRegister.size()) {
-                par.setSource(new Reference(paraRegister.get(i)));
+                par.source().setRegister(paraRegister.get(i));
+//                par.setSource(new Reference(paraRegister.get(i)));
                 if (ref.alias != null)
                     ref = ref.alias;
                 if (ref.isUnknown()) {
                     err.println("unsed parameter " + ref.name());
-                    //throw new InternalError("Unallocated parameter");
                 }
             } else {
-                par.setSource(new Reference(sourceBase, rbp()));
+                par.source().setOffset(sourceBase, rbp());
+//                par.setSource(new Reference(sourceBase, rbp()));
                 sourceBase += par.type().size();
                 if (ref.isUnknown()) {
                     err.println("unsed parameter " + ref.name());
-                    //throw new InternalError("Unallocated parameter");
                 }
             }
         }
@@ -185,14 +185,6 @@ public class Translator {
             add("mov", rbp(), rsp());
         if (entity.calls().size() != 0)   // leaf function optimization
             add("sub", rsp(), new Immediate(entity.frameSize()));
-
-        // store parameters
-        List<ParameterEntity> params = entity.params();
-        for (ParameterEntity param : params) {
-            if (!param.reference().isUnknown() && !param.reference().equals(param.source())) {  // copy when source and ref are different
-                visit(new Move(param.reference(), param.source()));
-            }
-        }
         add("");
 
         // insert prologue
@@ -236,7 +228,10 @@ public class Translator {
     }
     private int addMove(Register reg, Operand operand) {
         if (operand.isDirect()) {
-            add("mov", reg, operand);
+            if (reg == operand)
+                ;
+            else
+                add("mov", reg, operand);
         } else {
             if (((Address) operand).base().isRegister()) {
                 add("mov", reg, operand);
@@ -466,13 +461,13 @@ public class Translator {
         List<Operand> operands = ins.operands();
 
         // save callor-save register
-        List<Register> callorSaved = new LinkedList<>();
+       /* List<Register> callorSaved = new LinkedList<>();
         for (Reference ref : ins.live()) {
             if (ref.isRegister() && !ref.reg().isCalleeSave()) {
                 add("push", ref.reg());
                 callorSaved.add(ref.reg());
             }
-        }
+        }*/
 
         for (int i = operands.size() - 1; i >= 0; i--) {
             if (i < paraRegister.size()) {
@@ -495,12 +490,13 @@ public class Translator {
             add("add", rsp(), new Immediate(
                     (operands.size() - paraRegister.size()) * VIRTUAL_STACK_REG_SIZE));
 
+
         // restore callor-save register
-        ListIterator li = callorSaved.listIterator(callorSaved.size());
+       /* ListIterator li = callorSaved.listIterator(callorSaved.size());
         while (li.hasPrevious()) {
             Register reg = (Register) li.previous();
             add("pop", reg);
-        }
+        }*/
 
         if (ins.ret() != null)
             add("mov", ins.ret(), rax());
@@ -574,6 +570,19 @@ public class Translator {
     public void visit(Label ins) {
         addLabel(ins.name());
     }
+
+    public void visit(Push ins) {
+        if (!ins.operand().isRegister())
+            throw new InternalError("push " + ins.operand() + " is not register");
+        add("push", ins.operand());
+    }
+
+    public void visit(Pop ins) {
+        if (!ins.operand().isRegister())
+            throw new InternalError("pop " + ins.operand() + " is not register");
+        add("pop", ins.operand());
+    }
+
 
     public void visit(Comment ins) {
         add(";" + ins);
