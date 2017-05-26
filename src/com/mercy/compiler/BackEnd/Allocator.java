@@ -719,11 +719,11 @@ public class Allocator {
 
 
         err.println("===== REWRITE =====");
-        for (BasicBlock basicBlock : entity.bbs()) {
+        /*for (BasicBlock basicBlock : entity.bbs()) {
             for (Instruction ins : basicBlock.ins()) {
                 err.println(ins);
             }
-        }
+        }*/
 
         // restart
         selectStack.clear();
