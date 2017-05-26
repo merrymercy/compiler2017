@@ -3,9 +3,7 @@ package com.mercy.compiler.BackEnd;
 import com.mercy.Option;
 import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.Entity.ParameterEntity;
-import com.mercy.compiler.INS.Instruction;
-import com.mercy.compiler.INS.Label;
-import com.mercy.compiler.INS.Move;
+import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.Operand.Address;
 import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.INS.Operand.Register;
@@ -58,7 +56,13 @@ public class Allocator {
     public void loadPrecolord(FunctionEntity entity) {
         for (BasicBlock basicBlock : entity.bbs()) {
             for (Instruction ins : basicBlock.ins()) {
+                if (ins instanceof Call) {
 
+                } else if (ins instanceof Return) {
+
+                } else if (ins instanceof Label) {
+
+                }
             }
         }
 
@@ -97,7 +101,10 @@ public class Allocator {
 
     private void init(FunctionEntity entity) {
         // global
+        edgeEdgeHashMap  = new HashMap<>();
         edgeSet          = new LinkedHashSet<>();
+        simplifiedEdge   = new LinkedHashSet<>();
+        visited          = new HashSet<>();
 
         // node set (disjoint)
         simplifyWorklist = new LinkedHashSet<>();
@@ -139,6 +146,7 @@ public class Allocator {
 
     // aha
     Set<Edge> edgeSet;
+    Set<Edge> simplifiedEdge;
     int K;
     int localOffset;
 
@@ -191,7 +199,7 @@ public class Allocator {
     }
 
     List<BasicBlock> sorted;
-    Set<BasicBlock> visited = new HashSet<>();
+    Set<BasicBlock> visited;
     private void dfsSort(BasicBlock bb) {
         sorted.add(bb);
         visited.add(bb);
@@ -203,21 +211,23 @@ public class Allocator {
     }
     private void livenessAnalysis(FunctionEntity entity) {
         // print Def and Use
-        /*if (Option.printUseDefInfo) {
+        if (Option.printUseDefInfo) {
             err.println("====== USE & DEF ======");
-            for (Instruction ins : entity.ins()) {
-                err.printf("%-20s def:", ins.toString());
-                for (Reference reference : ins.def()) {
-                    err.print(" " + reference);
-                }
-                err.print("       use: ");
-                for (Reference reference : ins.use()) {
-                    err.print(" " + reference);
+            for (BasicBlock basicBlock : entity.bbs()) {
+                for (Instruction ins : basicBlock.ins()) {
+                    err.printf("%-20s def:", ins.toString());
+                    for (Reference reference : ins.def()) {
+                        err.print(" " + reference);
+                    }
+                    err.print("       use: ");
+                    for (Reference reference : ins.use()) {
+                        err.print(" " + reference);
+                    }
+                    err.println();
                 }
                 err.println();
             }
-            err.println();
-        }*/
+        }
 
         /***** solve dataflow equation *****/
         // in block
@@ -270,6 +280,7 @@ public class Allocator {
     Set<Reference> tmp;
     private void build(FunctionEntity entity) {
         // init edge and degree
+        simplifiedEdge.clear();
         edgeSet.clear();
         initial.removeAll(precolored);
         for (Reference ref : initial) {
@@ -313,21 +324,28 @@ public class Allocator {
             }
         }
 
+        for (Reference ref : initial) {
+            ref.originalAdjList.addAll(ref.adjList);
+        }
+
         if (Option.printUseDefInfo) {
             // print Liveness Info
-            /*err.println("====== IN & OUT ======");
-            for (Instruction ins : entity.ins()) {
-                err.printf("%-20s in:", ins.toString());
-                for (Reference reference : ins.in()) {
-                    err.print("  " + reference);
-                }
-                err.print("  out: ");
-                for (Reference reference : ins.out()) {
-                    err.print("  " + reference);
+            err.println("====== IN & OUT ======");
+            for (BasicBlock basicBlock : entity.bbs()) {
+                for (Instruction ins : basicBlock.ins()) {
+                    err.printf("%-20s in:", ins.toString());
+                    for (Reference reference : ins.in()) {
+                        err.print("  " + reference);
+                    }
+                    err.print("  out: ");
+                    for (Reference reference : ins.out()) {
+                        err.print("  " + reference);
+                    }
+                    err.println();
                 }
                 err.println();
             }
-            err.println();*/
+
         }
 
         err.println("====== EDGE ======");
@@ -356,12 +374,19 @@ public class Allocator {
 
     private void simplify() {
         Reference ref = simplifyWorklist.iterator().next();
-        simplifyWorklist.remove(ref);
-        selectWorklist.add(ref);
+
+        move(ref, simplifyWorklist, selectWorklist);
         selectStack.push(ref);
-        for (Reference adj : ref.adjList) {
-            if (!selectWorklist.contains(adj))
-                decreaseDegree(adj);
+
+        Set<Reference> backup = new HashSet<>(ref.adjList);
+
+        for (Reference adj : backup) {
+            simplifiedEdge.add(new Edge(adj, ref));
+            simplifiedEdge.add(new Edge(ref, adj));
+            deleteEdge(ref, adj);
+            if (ref.name().equals("spill_add_0") || adj.name().equals("spill_add_0"))
+                err.flush();
+
         }
     }
 
@@ -370,13 +395,13 @@ public class Allocator {
         if (d == K) {
             enableMoves(ref);
             ref.adjList.forEach(this::enableMoves);
-            spillWorklist.remove(ref);
-            if (isMoveRelated(ref)) {
-                freezeWorklist.add(ref);
-            } else {
-                if (ref.type() == Reference.Type.GLOBAL)
-                    err.print("NIMA");
-                simplifyWorklist.add(ref);
+
+            if (spillWorklist.contains(ref)) {
+                if (isMoveRelated(ref)) {
+                    move(ref, spillWorklist, freezeWorklist);
+                } else {
+                    move(ref, spillWorklist, simplifyWorklist);
+                }
             }
         }
     }
@@ -395,13 +420,6 @@ public class Allocator {
                 activeMoves.remove(move);
                 worklistMoves.add(move);
             }
-        }
-    }
-
-    private void addWorkList(Reference ref) {
-        if (!precolored.contains(ref) && !isMoveRelated(ref) && ref.degree < K) {
-            freezeWorklist.remove(ref);
-            simplifyWorklist.add(ref);
         }
     }
 
@@ -432,24 +450,37 @@ public class Allocator {
         }
     }
 
+    private void addWorkList(Reference ref) {
+        if (!precolored.contains(ref) && !isMoveRelated(ref) && ref.degree < K) {
+            move(ref, freezeWorklist, simplifyWorklist);
+        }
+    }
+
     private void combine(Reference u, Reference v) {
         if (freezeWorklist.contains(v)) {
-            freezeWorklist.remove(v);
+            move(v, freezeWorklist, coalescedNodes);
         } else {
-            spillWorklist.remove(v);
+            move(v, spillWorklist, coalescedNodes);
         }
 
-        coalescedNodes.add(v);
         v.alias = u;
         u.moveList.addAll(v.moveList);
         enableMoves(v);
-        for (Reference t : v.adjList) {
-            addEdge(t, u);
-            decreaseDegree(t);
+
+        Set<Reference> backup = new HashSet<>(v.adjList);
+
+        for (Reference t : backup) {
+            if (t.name().equals("spill_add_0") || v.name().equals("spill_add_0"))
+                err.flush();
+
+            deleteEdge(t, v);
+            addEdge(u, t);
+            if (t.degree >= K && freezeWorklist.contains(t)) {
+                move(t, freezeWorklist, spillWorklist);
+            }
         }
         if (u.degree >= K && freezeWorklist.contains(u)) {
-            freezeWorklist.remove(u);
-            spillWorklist.add(u);
+            move(u, freezeWorklist, spillWorklist);
         }
     }
 
@@ -486,8 +517,7 @@ public class Allocator {
 
     private void freeze() {
         Reference u = freezeWorklist.iterator().next();
-        freezeWorklist.remove(u);
-        simplifyWorklist.add(u);
+        move(u, freezeWorklist, simplifyWorklist);
         freezeMoves(u);
     }
 
@@ -510,8 +540,7 @@ public class Allocator {
                     }
                 }
                 if (isEmpty && freezeWorklist.contains(v)) {
-                    freezeWorklist.remove(v);
-                    simplifyWorklist.add(v);
+                    move(v, freezeWorklist, simplifyWorklist);
                 }
             }
         }
@@ -520,13 +549,42 @@ public class Allocator {
     private void selectSpill() {
         // SPILL HEURISTIC HERE
         Reference ref = spillWorklist.iterator().next();
-        spillWorklist.remove(ref);
-        simplifyWorklist.add(ref);
+        for (Reference re : spillWorklist) {
+            if (re.name().equals("d")) {
+                ref = re;
+                break;
+            }
+        }
+        move(ref, spillWorklist, simplifyWorklist);
         freezeMoves(ref);
+    }
+
+
+    private void move(Reference ref, Set<Reference> from, Set<Reference> to) {
+        if (from.contains(ref)) {
+            if (!to.contains(ref)) {
+                from.remove(ref);
+                to.add(ref);
+            } else {
+                throw new InternalError("already exist move " + ref.name() + " from " + from + " to " + to);
+            }
+        } else {
+            throw new InternalError("empty move " + ref.name() + " from " + from + " to " + to);
+        }
     }
 
     Set<Register> okColors = new HashSet<>();
     private void assignColors(FunctionEntity entity) {
+        // restore simplified edges
+
+        int before = edgeSet.size();
+        for (Edge edge : simplifiedEdge) {
+            addEdge(getAlias(edge.u), getAlias(edge.v));
+        }
+        err.printf("b:%d a:%d s:%d", before, edgeSet.size(), simplifiedEdge.size());
+        err.println(simplifiedEdge);
+
+        // start assign
         while(!selectStack.empty()) {
             Reference n = selectStack.pop();
             okColors.clear();
@@ -535,29 +593,28 @@ public class Allocator {
             }
 
             for (Reference w : n.adjList) {
+                w = getAlias(w);
                 if (coloredNodes.contains(w) || precolored.contains(w)) {
-                    okColors.remove(getAlias(w).color);
+                    okColors.remove(w.color);
                 }
             }
 
             if (okColors.isEmpty()) {
                 err.println("spill " + n.name());
-                spilledNodes.add(n);
+                move(n, selectWorklist, spilledNodes);
                 n.color = null;
             } else {
                 Register color = okColors.iterator().next();
                 err.println("assign " + n.name() + " -> " + color.name());
-                coloredNodes.add(n);
+                move(n, selectWorklist, coloredNodes);
                 n.color = color;
             }
         }
 
         for (Reference node : coalescedNodes) {
             node.color = getAlias(node).color;
-            if (node.color == null) {
-                err.println("TMD");
-                err.flush();
-                throw new InternalError(entity.name());
+            if (coloredNodes.contains(node)) {
+                throw new InternalError("double contain " + node.name());
             }
         }
 
@@ -690,6 +747,11 @@ public class Allocator {
         }
 
         @Override
+        public String toString() {
+            return "(" + u + "," + v + ")";
+        }
+
+        @Override
         public int hashCode() {
             return u.hashCode() + v.hashCode();
         }
@@ -699,6 +761,27 @@ public class Allocator {
             Edge edge = (Edge)o;
             return u == edge.u && v == edge.v;
         }
+    }
+
+    private void deleteEdge(Reference u, Reference v) {
+        Edge edge = getEdge(u, v);
+        Edge edge2 = getEdge(v, u);
+        if (!edgeSet.contains(edge) || !edgeSet.contains(edge2)) {
+            throw new InternalError("delete edge error");
+        }
+
+        edgeSet.remove(edge);
+        edgeSet.remove(edge2);
+
+        if (!edgeEdgeHashMap.containsKey(edge) || !edgeEdgeHashMap.containsKey(edge2)) {
+            edgeEdgeHashMap.remove(edge);
+            edgeEdgeHashMap.remove(edge2);
+        }
+
+        u.adjList.remove(v);
+        v.adjList.remove(u);
+        decreaseDegree(u);
+        decreaseDegree(v);
     }
 
     private void addEdge(Reference u, Reference v) {
@@ -720,7 +803,7 @@ public class Allocator {
         }
     }
 
-    HashMap<Edge, Edge> edgeEdgeHashMap = new HashMap<>();
+    HashMap<Edge, Edge> edgeEdgeHashMap;
     private Edge getEdge(Reference u, Reference v) {
         Edge tempEdge = new Edge(u, v);
         Edge find = edgeEdgeHashMap.get(tempEdge);

@@ -27,6 +27,7 @@ public class Reference extends Operand {
 
     // for allocator, speed
     public Set<Reference> adjList = new HashSet<>();
+    public Set<Reference> originalAdjList = new HashSet<>();
     public int degree;
     public Reference alias;
     public Register color;
@@ -37,6 +38,7 @@ public class Reference extends Operand {
     public void reset() {
         moveList = new HashSet<>();
         adjList = new HashSet<>();
+        originalAdjList = new HashSet<>();
         color = null;
         alias = null;
         degree = 0;
@@ -129,6 +131,10 @@ public class Reference extends Operand {
                 case REG: return reg == other.reg;
                 case OFFSET:
                     return reg == other.reg && offset == other.offset;
+                case GLOBAL:
+                    return name == other.name();
+                case UNKNOWN:
+                    return this == other;
                 default:
                     throw new InternalError("Unhandled case in Reference.equals()");
             }
