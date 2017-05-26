@@ -5,6 +5,7 @@ import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -13,7 +14,7 @@ import java.util.List;
 public class Call extends Instruction {
     FunctionEntity entity;
     List<Operand> operands;
-    Reference ret;
+    Operand ret;
 
     public Call(FunctionEntity entity, List<Operand> operands) {
         this.entity = entity;
@@ -29,7 +30,7 @@ public class Call extends Instruction {
         return operands;
     }
 
-    public Reference ret() {
+    public Operand ret() {
         return ret;
     }
 
@@ -38,12 +39,29 @@ public class Call extends Instruction {
     }
 
     @Override
+    public void replaceUse(Reference from, Reference to) {
+        List<Operand> newOperands = new LinkedList<>();
+        for (Operand operand : operands) {
+            newOperands.add(operand.replace(from, to));
+        }
+        operands = newOperands;
+    }
+
+    @Override
+    public void replaceDef(Reference from, Reference to) {
+        if (ret != null)
+            ret = ret.replace(from, to);
+    }
+
+    @Override
     public void calcDefAndUse() {
         if (ret != null)
-            def.add(ret);
+            def.addAll(ret.getAllRef());
         for (Operand operand : operands) {
             use.addAll(operand.getAllRef());
         }
+        allref.addAll(use);
+        allref.addAll(def);
     }
 
     @Override

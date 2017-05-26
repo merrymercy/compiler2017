@@ -39,9 +39,18 @@ public class Address extends Operand {
         return ret;
     }
 
+    @Override
+    public Address replace(Operand from, Operand to) {
+        if (base != null)
+            base = base.replace(from, to);
+        if (index != null)
+            index = index.replace(from, to);
+        return this;
+    }
+
     /*
-     * getter and setter
-     */
+         * getter and setter
+         */
     public Operand base() {
         return base;
     }

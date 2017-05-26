@@ -10,7 +10,6 @@ import com.mercy.compiler.INS.Operand.Reference;
 abstract public class Bin extends Instruction {
     protected Operand left, right;
 
-
     public Bin(Operand left, Operand right) {
         this.left = left;
         this.right = right;
@@ -24,13 +23,34 @@ abstract public class Bin extends Instruction {
         return right;
     }
 
+
+    @Override
+    public void replaceUse(Reference from, Reference to) {
+        right = right.replace(from, to);
+        if (left != from)
+            left = left.replace(from, to);
+    }
+
+    @Override
+    public void replaceDef(Reference from, Reference to) {
+        left = left.replace(from, to);
+    }
+
+    @Override
+    public void replaceAll(Reference from, Reference to) {
+        left = left.replace(from, to);
+        right = right.replace(from, to);
+    }
+
     @Override
     public void calcDefAndUse() {
         if (left instanceof  Reference) {
-            def.add((Reference) left);
+            def.addAll(left.getAllRef());
         }
         use.addAll(left.getAllRef());
         use.addAll(right.getAllRef());
+        allref.addAll(use);
+        allref.addAll(def);
     }
 
     abstract public String name();

@@ -545,7 +545,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     Map<Integer, Entity> assignTable = new HashMap<>();
     Set<Entity> inDependency = new HashSet<>();
     void clearAssignTable() {
-        err.println("clean");
+        //err.println("clean");
         assignTable = new HashMap<>();
         inDependency = new HashSet<>();
     }
@@ -563,21 +563,20 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
 
         // common expr elimination
-        if (lhs instanceof  Var) {
+        if (Option.enableCommonExpressionElimination && lhs instanceof  Var) {
             Entity entity = ((Var) lhs).entity();
 
             Pair<Boolean, Integer> ret = ExprHashing(node.rhs());
             if (ret.first && !(node.rhs() instanceof IntegerLiteralNode)) {
                 Entity same = assignTable.get(new Integer(ret.second));
                 if (same == null) {
-                    err.println("add to table " + entity.name() + " = " + ret.second);
+                    //err.println("add to table " + entity.name() + " = " + ret.second);
                     for (Entity dep : getDependency(node.rhs())) {
                         inDependency.add(dep);
                     }
                     assignTable.put(ret.second, entity);
                 } else {
-                    err.println(entity.name() + " = " + same.name());
-                    //(new VariableNode(same, node.location()));
+                    //err.println(entity.name() + " = " + same.name());
                     rhs = new Var(same);
                 }
             }
@@ -1092,7 +1091,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
      */
 
     private void addAssign(Expr lhs, Expr rhs) {
-        if (lhs instanceof  Var) {
+        if (Option.enableCommonExpressionElimination && lhs instanceof  Var) {
             if (inDependency.contains(((Var) lhs).entity())) {
                 clearAssignTable();
             }

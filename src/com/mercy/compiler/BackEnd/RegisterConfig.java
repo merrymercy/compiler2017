@@ -39,6 +39,37 @@ public class RegisterConfig {
         paraRegister.add(registers.get(9));
     }
 
+    public Register rax() {
+        return rax;
+    }
+
+    public Register rbx() {
+        return rbx;
+    }
+
+    public Register rcx() {
+        return rcx;
+    }
+
+    public Register rdx() {
+        return rdx;
+    }
+
+    public Register rsi() {
+        return rsi;
+    }
+
+    public Register rdi() {
+        return rdi;
+    }
+
+    public Register rsp() {
+        return rsp;
+    }
+
+    public Register rbp() {
+        return rbp;
+    }
 
     public List<Register> registers() {
         return registers;

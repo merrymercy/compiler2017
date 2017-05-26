@@ -26,6 +26,11 @@ public class Immediate extends Operand {
     }
 
     @Override
+    public Operand replace(Operand from, Operand to) {
+        return this;
+    }
+
+    @Override
     public boolean isDirect() {
         return true;
     }

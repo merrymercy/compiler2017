@@ -17,6 +17,7 @@ import java.util.ListIterator;
 
 import static com.mercy.Option.FRAME_ALIGNMENT_SIZE;
 import static com.mercy.Option.REG_SIZE;
+import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-5-4.
@@ -119,7 +120,7 @@ public class Translator {
                 savedRegNum++;
         }
 
-        int savedRegBase, paraBase, lvarBase, stackBase, total;
+        int paraBase, lvarBase, total;
         paraBase = 0;
 
         // locate and set source for para
@@ -128,41 +129,30 @@ public class Translator {
         List<ParameterEntity> params = entity.params();
         for (int i = 0; i < params.size(); i++) {
             ParameterEntity par = params.get(i);
+            Reference ref = par.reference();
+            if (ref.alias != null) {
+                ref = ref.alias;
+                par.setReference(ref);
+            }
             if (i < paraRegister.size()) {
                 par.setSource(new Reference(paraRegister.get(i)));
-                if (par.reference().isUnknown()) {
-                    lvarBase += par.type().size();
-                    par.reference().setOffset(lvarBase, rbp());
+                if (ref.alias != null)
+                    ref = ref.alias;
+                if (ref.isUnknown()) {
+                    err.println("unsed parameter " + ref.name());
+                    //throw new InternalError("Unallocated parameter");
                 }
             } else {
-                par.setSource(new Reference(-sourceBase, rbp()));
+                par.setSource(new Reference(sourceBase, rbp()));
                 sourceBase += par.type().size();
-                if (par.reference().isUnknown()) { // refer to source, to save frame size
-                    par.reference().setOffset(par.source().offset(), par.source().reg());
+                if (ref.isUnknown()) {
+                    err.println("unsed parameter " + ref.name());
+                    //throw new InternalError("Unallocated parameter");
                 }
             }
         }
 
-        // locate local variable
-        stackBase = lvarBase;
-        stackBase += entity.scope().locateLocalVariable(lvarBase, ALIGNMENT);
-        for (VariableEntity var : entity.scope().allLocalVariables()) {
-            if (var.reference().isUnknown()) {
-                var.reference().setOffset(var.offset(), rbp());
-            }
-        }
-
-        // locate tmpStack
-        List<Reference> tmpStack = entity.tmpStack();
-        savedRegBase = stackBase;
-        for (int i = 0; i < tmpStack.size(); i++) {
-            if (tmpStack.get(i).isUnknown()) {
-                savedRegBase += REG_SIZE;
-                tmpStack.get(i).setOffset(savedRegBase, rbp());
-            }
-        }
-
-        total = savedRegBase;
+        total = lvarBase + entity.localVariableOffset();
         total += (FRAME_ALIGNMENT_SIZE - (total + REG_SIZE  + REG_SIZE * savedRegNum) % FRAME_ALIGNMENT_SIZE)
                  % FRAME_ALIGNMENT_SIZE;
         entity.setFrameSize(total);
@@ -174,8 +164,10 @@ public class Translator {
         int startPos = asm.size();
 
         /***** body *****/
-        for (Instruction instruction : entity.INS()) {
-            instruction.accept(this);
+        for (BasicBlock bb : entity.bbs()) {
+            for (Instruction ins : bb.ins()) {
+                ins.accept(this);
+            }
         }
 
         /***** prologue *****/
@@ -197,8 +189,8 @@ public class Translator {
         // store parameters
         List<ParameterEntity> params = entity.params();
         for (ParameterEntity param : params) {
-            if (!param.reference().equals(param.source())) {  // copy when source and ref are different
-                add("mov", param.reference(), param.source());
+            if (!param.reference().isUnknown() && !param.reference().equals(param.source())) {  // copy when source and ref are different
+                visit(new Move(param.reference(), param.source()));
             }
         }
         add("");

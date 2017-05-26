@@ -19,6 +19,7 @@ import com.mercy.compiler.Utility.Triple;
 import java.io.PrintStream;
 import java.util.*;
 
+import static com.mercy.compiler.INS.Operand.Reference.Type.GLOBAL;
 import static com.mercy.compiler.IR.Binary.BinaryOp.ADD;
 import static com.mercy.compiler.IR.Binary.BinaryOp.MUL;
 
@@ -51,7 +52,7 @@ public class InstructionEmitter {
         for (Entity entity : globalScope.entities().values()) {
             //System.out.println(entity.name());
             if (entity instanceof VariableEntity) {
-                entity.setReference(new Reference(entity.name()));
+                entity.setReference(new Reference(entity.name(), GLOBAL));
             } else if (entity instanceof  StringConstantEntity) {
                 ((StringConstantEntity) entity).setAsmName(StringConstantEntity.STRING_CONSTANT_ASM_LABEL_PREFIX + stringCounter++);
             }

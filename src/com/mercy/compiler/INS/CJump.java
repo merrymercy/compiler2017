@@ -2,6 +2,7 @@ package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Operand;
+import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.Utility.InternalError;
 
 /**
@@ -35,6 +36,20 @@ public class CJump extends Instruction {
 
 
     @Override
+    public void replaceUse(Reference from, Reference to) {
+        if (type == Type.BOOL) {
+            cond = cond.replace(from, to);
+        } else {
+            left = left.replace(from, to);
+            right = right.replace(from, to);
+        }
+    }
+
+    @Override
+    public void replaceDef(Reference from, Reference to) {
+    }
+
+    @Override
     public void calcDefAndUse() {
         if (type == Type.BOOL)
             use.addAll(cond.getAllRef());
@@ -42,6 +57,7 @@ public class CJump extends Instruction {
             use.addAll(left.getAllRef());
             use.addAll(right.getAllRef());
         }
+        allref.addAll(use);
     }
 
     // getter

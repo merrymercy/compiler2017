@@ -23,18 +23,43 @@ public class Move extends Instruction {
     }
 
     public boolean isRefMove() {
-        return dest instanceof Reference && src instanceof Reference;
+        if(dest instanceof Reference && src instanceof Reference) {
+            return ((Reference) dest).type() != Reference.Type.GLOBAL &&
+                    ((Reference) src).type() != Reference.Type.GLOBAL;
+        }
+        return false;
     }
+
+    @Override
+    public void replaceUse(Reference from, Reference to) {
+        src = src.replace(from, to);
+        if (dest != from)
+            dest =  dest.replace(from, to);
+    }
+
+    @Override
+    public void replaceDef(Reference from, Reference to) {
+        dest = dest.replace(from, to);
+    }
+
+    @Override
+    public void replaceAll(Reference from, Reference to) {
+        src = src.replace(from, to);
+        dest = dest.replace(from, to);
+    }
+
 
     @Override
     public void calcDefAndUse() {
         if (dest instanceof Reference) {
-            def.add((Reference)dest);
+            def.addAll(dest.getAllRef());
             use.addAll(src.getAllRef());
         } else {
             use.addAll(dest.getAllRef());
             use.addAll(src.getAllRef());
         }
+        allref.addAll(use);
+        allref.addAll(def);
     }
 
     @Override

@@ -10,6 +10,8 @@ import com.mercy.compiler.INS.Label;
 import java.io.PrintStream;
 import java.util.*;
 
+import static java.lang.System.err;
+
 
 /**
  * Created by mercy on 17-5-23.
@@ -27,11 +29,10 @@ public class ControlFlowAnalyzer {
                 continue;
             buildBasicBlock(functionEntity);
             buildControFlowGraph(functionEntity);
-
             if (Option.enableControlFlowOptimization) {
                 Optimize(functionEntity);
-                layoutFunction(functionEntity);
             }
+            layoutFunction(functionEntity);
         }
     }
 
@@ -86,6 +87,7 @@ public class ControlFlowAnalyzer {
         }
 
         entity.setBbs(bbs);
+        entity.setINS(null);
     }
 
     private void buildControFlowGraph(FunctionEntity entity) {
@@ -137,7 +139,12 @@ public class ControlFlowAnalyzer {
                             //err.println("merge " + now.label() + " <- " + next.label());
                             next_next.predecessor().remove(next);
                             next_next.predecessor().add(now);
+                            now.successor().add(next_next);
                         }
+
+                        // remove label and jmp
+                        next.ins().remove(0);
+                        now.ins().remove(now.ins().size()-1);
 
                         now.ins().addAll(next.ins());
                         entity.bbs().remove(next);
@@ -164,11 +171,13 @@ public class ControlFlowAnalyzer {
     }
 
     void layoutFunction(FunctionEntity entity) {
-        List<Instruction> ins = new LinkedList<>();
         List<BasicBlock> bbs = entity.bbs();
         Queue<BasicBlock> queue = new ArrayDeque<>();
 
         queue.addAll(bbs);
+
+        List<BasicBlock> newBBs = new LinkedList<>();
+        List<Instruction> newIns = new LinkedList<>();
 
         while(!queue.isEmpty()) {
             BasicBlock bb = queue.remove();
@@ -187,12 +196,15 @@ public class ControlFlowAnalyzer {
                     }
                 }
                 bb.setLayouted(true);
-                ins.addAll(bb.ins());
+                err.println(bb);
+                newBBs.add(bb);
+                newIns.addAll(bb.ins());
                 bb = next;
             }
         }
 
-        entity.setINS(ins);
+        entity.setBbs(newBBs);
+        entity.setINS(newIns);
     }
 
     /********** DEBUG TOOL **********/

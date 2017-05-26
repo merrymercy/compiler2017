@@ -1,7 +1,6 @@
 package com.mercy.compiler.INS.Operand;
 
-import com.mercy.compiler.Utility.InternalError;
-
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -36,8 +35,14 @@ public class Register extends Operand {
     }
 
     @Override
+    public Operand replace(Operand from, Operand to) {
+        return this;
+    }
+
+    @Override
     public Set<Reference> getAllRef() {
-        throw new InternalError("Invalid getAllRef of Register");
+        return new HashSet<>();
+        //throw new InternalError("Invalid getAllRef of Register");
         //return null;
     }
 

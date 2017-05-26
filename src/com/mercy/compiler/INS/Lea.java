@@ -2,13 +2,14 @@ package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Address;
+import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
 
 /**
  * Created by mercy on 17-4-25.
  */
 public class Lea extends Instruction {
-    Reference dest;
+    Operand dest;
     Address addr;
 
     public Lea (Reference dest, Address addr) {
@@ -16,7 +17,7 @@ public class Lea extends Instruction {
         this.addr = addr;
     }
 
-    public Reference dest() {
+    public Operand dest() {
         return dest;
     }
 
@@ -25,9 +26,32 @@ public class Lea extends Instruction {
     }
 
     @Override
+    public void replaceUse(Reference from, Reference to) {
+        addr = addr.replace(from, to);
+        if (dest != from)
+            dest =  dest.replace(from, to);
+    }
+
+    @Override
+    public void replaceDef(Reference from, Reference to) {
+        dest = dest.replace(from, to);
+    }
+
+    @Override
+    public void replaceAll(Reference from, Reference to) {
+        addr = addr.replace(from, to);
+        dest = dest.replace(from, to);
+    }
+
+
+
+    @Override
     public void calcDefAndUse() {
-        def.add(dest);
+        if (dest instanceof Reference)
+            def.addAll(dest.getAllRef());
         use.addAll(addr.getAllRef());
+        allref.addAll(use);
+        allref.addAll(def);
     }
 
     @Override

@@ -34,6 +34,7 @@ public class FunctionEntity extends Entity {
     private List<BasicBlock> bbs;
     private List<Reference> tmpStack;
     private int frameSize;
+    private int localVariableOffset;
 
     private List<Register> regUsed = new LinkedList<>();
     private Set<Reference> allReference = new HashSet<>();
@@ -220,6 +221,14 @@ public class FunctionEntity extends Entity {
 
     public void setAllReference(Set<Reference> allReference) {
         this.allReference = allReference;
+    }
+
+    public int localVariableOffset() {
+        return localVariableOffset;
+    }
+
+    public void setLocalVariableOffset(int localVariableOffset) {
+        this.localVariableOffset = localVariableOffset;
     }
 
     @Override

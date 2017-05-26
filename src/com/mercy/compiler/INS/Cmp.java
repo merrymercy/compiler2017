@@ -2,6 +2,7 @@ package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Operand;
+import com.mercy.compiler.INS.Operand.Reference;
 
 /**
  * Created by mercy on 17-4-25.
@@ -27,14 +28,38 @@ public class Cmp extends Instruction {
         return right;
     }
 
+    @Override
+    public void replaceUse(Reference from, Reference to) {
+        right = right.replace(from, to);
+        if (left != from)
+            left = left.replace(from, to);
+    }
+
+    @Override
+    public void replaceDef(Reference from, Reference to) {
+        left = left.replace(from, to);
+    }
+
+    @Override
+    public void replaceAll(Reference from, Reference to) {
+        left = left.replace(from, to);
+        right = right.replace(from, to);
+    }
+
+
     public Operator operator() {
         return operator;
     }
 
     @Override
     public void calcDefAndUse() {
-        use.addAll(left().getAllRef());
-        use.addAll(right().getAllRef());
+        if (left instanceof  Reference) {
+            def.addAll(left.getAllRef());
+        }
+        use.addAll(left.getAllRef());
+        use.addAll(right.getAllRef());
+        allref.addAll(use);
+        allref.addAll(def);
     }
 
     @Override

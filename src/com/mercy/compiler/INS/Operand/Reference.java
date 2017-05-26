@@ -15,7 +15,7 @@ import static com.mercy.compiler.INS.Operand.Reference.Type.*;
  */
 public class Reference extends Operand {
     public enum Type {
-        GLOBAL, OFFSET, REG, UNKNOWN
+        GLOBAL, OFFSET, REG, UNKNOWN, UNUSED
     }
 
     Type type;
@@ -32,12 +32,20 @@ public class Reference extends Operand {
     public Register color;
     public Set<Move> moveList = new HashSet<>();
     public boolean isPrecolored;
+    public boolean isSpilled;
 
+    public void reset() {
+        moveList = new HashSet<>();
+        adjList = new HashSet<>();
+        color = null;
+        alias = null;
+        degree = 0;
+        isSpilled = false;
+    }
 
-
-    public Reference(String name) {
+    public Reference(String name, Type type) {
         this.name = name;
-        this.type = GLOBAL;
+        this.type = type;
     }
 
     public Reference(Register reg) {
@@ -96,12 +104,19 @@ public class Reference extends Operand {
         return type == UNKNOWN;
     }
 
+
+
     public void addRefTime() {
         refTimes++;
     }
 
     public int refTimes() {
         return refTimes;
+    }
+
+    @Override
+    public Operand replace(Operand from, Operand to) {
+        return this == from ? to : this;
     }
 
     @Override
@@ -124,7 +139,8 @@ public class Reference extends Operand {
     @Override
     public Set<Reference> getAllRef() {
         Set<Reference> ret = new HashSet<>();
-        ret.add(this);
+        if (this.type != GLOBAL)
+            ret.add(this);
         return ret;
     }
 
@@ -142,8 +158,9 @@ public class Reference extends Operand {
     public String toNASM() {
         switch (type) {
             case GLOBAL: return "qword " + "[" + GLOBAL_PREFIX + name + "]";
-            case OFFSET: return "qword " + "[" + reg.name() + "-" + offset + "]";
+            case OFFSET: return "qword " + "[" + reg.name() + "+" + offset + "]";
             case REG:    return reg.name();
+            case UNUSED:
             case UNKNOWN:
             default:
                 throw new InternalError("Unallocated reference " + this);

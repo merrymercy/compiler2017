@@ -90,4 +90,13 @@ public class BasicBlock {
     public void setDef(Set<Reference> def) {
         this.def = def;
     }
+
+    public void setIns(List<Instruction> ins) {
+        this.ins = ins;
+    }
+
+    @Override
+    public String toString() {
+        return label().toString();
+    }
 }

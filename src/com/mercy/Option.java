@@ -14,13 +14,13 @@ public class Option {
     public static String outFile = "out.asm";
 
     // DEBUG
-    public static boolean printInsturction = false;
-    public static boolean printBasicBlocks = false;
     public static boolean printRemoveInfo = false;
     public static boolean printInlineInfo = false;
+    public static boolean printInsturction = false;
+    public static boolean printBasicBlocks = true;
 
-    public static boolean printNaiveAllocatorInfo = true;
-    public static boolean printUseDefInfo = false;
+    public static boolean printNaiveAllocatorInfo = false;
+    public static boolean printUseDefInfo = true;
 
     // OPTIMIZATION
     public static boolean enableRegisterAllocation = true;

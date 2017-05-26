@@ -12,6 +12,8 @@ abstract public class Operand {
 
     abstract public Set<Reference> getAllRef();
 
+    abstract public Operand replace(Operand from, Operand to);
+
     public boolean isRegister() {
         return false;
     }

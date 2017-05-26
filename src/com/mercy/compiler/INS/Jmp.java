@@ -1,6 +1,7 @@
 package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
+import com.mercy.compiler.INS.Operand.Reference;
 
 /**
  * Created by mercy on 17-4-25.
@@ -14,6 +15,20 @@ public class Jmp extends Instruction {
     public Label dest() {
         return dest;
     }
+
+    @Override
+    public void replaceUse(Reference from, Reference to) {
+    }
+
+    @Override
+    public void replaceDef(Reference from, Reference to) {
+
+    }
+
+    @Override
+    public void replaceAll(Reference from, Reference to) {
+    }
+
 
     @Override
     public void calcDefAndUse() {

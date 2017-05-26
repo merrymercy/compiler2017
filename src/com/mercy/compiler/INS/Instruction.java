@@ -20,8 +20,15 @@ abstract public class Instruction {
 
     protected Set<Reference> use;
     protected Set<Reference> def;
+    protected Set<Reference> allref;
     protected Set<Reference> live;
 
+    abstract public void replaceUse(Reference from, Reference to);
+    abstract public void replaceDef(Reference from, Reference to);
+    public void replaceAll(Reference from, Reference to) {
+        this.replaceUse(from, to);
+        this.replaceDef(from, to);
+    }
 
     /*
      * getter and setter
@@ -61,6 +68,15 @@ abstract public class Instruction {
     public void initDefAndUse() {
         use = new HashSet<>();
         def = new HashSet<>();
+        allref = new HashSet<>();
+    }
+
+    public Set<Reference> allref() {
+        if (allref == null) {
+            initDefAndUse();
+            this.calcDefAndUse();
+        }
+        return allref;
     }
 
     abstract public void calcDefAndUse();
@@ -76,8 +92,18 @@ abstract public class Instruction {
     public Set<Reference> live() {
         if (live == null) {
             live = new HashSet<>();
-            live.addAll(in);
-            live.addAll(out);
+            for (Reference ref : in) {
+                if (ref.alias != null)
+                    live.add(ref.alias);
+                else
+                    live.add(ref);
+            }
+            for (Reference ref : out) {
+                if (ref.alias != null)
+                    live.add(ref.alias);
+                else
+                    live.add(ref);
+            }
         }
         return live;
     }

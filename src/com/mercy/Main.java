@@ -131,11 +131,11 @@ public class Main {
         RegisterConfig registerConfig = new RegisterConfig();
 
         if (Option.enableRegisterAllocation) {
-            Allocator allocator = new Allocator(emitter);
+            Allocator allocator = new Allocator(emitter, registerConfig);
             allocator.allocate();
         }
-        NaiveAllocator allocator = new NaiveAllocator(emitter, registerConfig);
-        allocator.allocate();
+        /*NaiveAllocator allocator = new NaiveAllocator(emitter, registerConfig);
+        allocator.allocate();*/
 
         // translate to x86 nasm
         Translator translator = new Translator(emitter, registerConfig);
