@@ -26,16 +26,16 @@ public class Option {
     public static boolean printBasicBlocks = false;
 
     public static boolean printNaiveAllocatorInfo = false;
-    public static boolean printUseDefInfo = true;
+    public static boolean printUseDefInfo = false;
 
     // OPTIMIZATION
     public static boolean enableRegisterAllocation = true;
 
-    public static boolean enableInstructionSelection        = false;
-    public static boolean enableInlineFunction              = false;
-    public static boolean enableCommonExpressionElimination = false;
+    public static boolean enableInstructionSelection        = true;
+    public static boolean enableInlineFunction              = true;
+    public static boolean enableCommonExpressionElimination = true;
 
-    public static boolean enableControlFlowOptimization     = false;
+    public static boolean enableControlFlowOptimization     = true;
     public static boolean enableOutputIrrelevantElimination = false;
 
     // STEADY

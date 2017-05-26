@@ -530,9 +530,6 @@ public class Allocator {
             move(v, spillWorklist, coalescedNodes);
         }
 
-        if (u.name().equals("ref_0"))
-            err.flush();
-
         v.alias = u;
         u.moveList.addAll(v.moveList);
         enableMoves(v);
@@ -575,9 +572,6 @@ public class Allocator {
             addWorkList(v);
         } else if (precolored.contains(u) && OK(u, v) ||
                 !precolored.contains(u) && conservative(u, v)) {
-            if (u.name().equals("ref_0")) {
-                conservative(u, v);
-            }
 
             coalescedMoves.add(move);
             combine(u,v);
@@ -638,9 +632,6 @@ public class Allocator {
 
 
     private void move(Reference ref, Set<Reference> from, Set<Reference> to) {
-        if (ref.name().equals("ref_0") && to == spilledNodes)
-            err.flush();
-
         if (from.contains(ref)) {
             if (!to.contains(ref)) {
                 from.remove(ref);
@@ -797,11 +788,12 @@ public class Allocator {
             }
         }
 
-
-        err.println("===== REWRITE =====");
-        for (BasicBlock basicBlock : entity.bbs()) {
-            for (Instruction ins : basicBlock.ins()) {
-                err.println(ins);
+        if (Option.printUseDefInfo) {
+            err.println("===== REWRITE =====");
+            for (BasicBlock basicBlock : entity.bbs()) {
+                for (Instruction ins : basicBlock.ins()) {
+                    err.println(ins);
+                }
             }
         }
 

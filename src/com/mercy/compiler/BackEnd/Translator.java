@@ -209,7 +209,10 @@ public class Translator {
     }
 
     private void add(String op, Operand l, Operand r) {
-        asm.add("\t" + op + " " + l.toNASM() + ", " + r.toNASM());
+        if (op.equals("mov") && l.toNASM().equals(r.toNASM()))
+            ;
+        else
+            asm.add("\t" + op + " " + l.toNASM() + ", " + r.toNASM());
     }
     private void add(String op, Operand l) {
         asm.add("\t" + op + " " + l.toNASM());
@@ -228,10 +231,7 @@ public class Translator {
     }
     private int addMove(Register reg, Operand operand) {
         if (operand.isDirect()) {
-            if (reg == operand)
-                ;
-            else
-                add("mov", reg, operand);
+            add("mov", reg, operand);
         } else {
             if (((Address) operand).base().isRegister()) {
                 add("mov", reg, operand);

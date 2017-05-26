@@ -512,12 +512,17 @@ public class InstructionEmitter {
      */
     List<Reference> tmpStack;
     int tmpTop = 0;
+    int tmpCounter = 0;
     public Reference getTmp() {
+        Entity tmp = new VariableEntity(null, null, "ref_" + tmpCounter++, null);
+        return new Reference(tmp);
+
+        /*
         if (tmpTop >= tmpStack.size()) {
             Entity tmp = new VariableEntity(null, null, "ref_" + tmpTop, null);
             tmpStack.add(new Reference(tmp));
         }
-        return tmpStack.get(tmpTop++);
+        return tmpStack.get(tmpTop++);*/
     }
 
     // getter
