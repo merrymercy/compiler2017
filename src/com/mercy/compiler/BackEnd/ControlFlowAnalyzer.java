@@ -10,8 +10,6 @@ import com.mercy.compiler.INS.Label;
 import java.io.PrintStream;
 import java.util.*;
 
-import static java.lang.System.err;
-
 
 /**
  * Created by mercy on 17-5-23.
@@ -196,7 +194,6 @@ public class ControlFlowAnalyzer {
                     }
                 }
                 bb.setLayouted(true);
-                err.println(bb);
                 newBBs.add(bb);
                 newIns.addAll(bb.ins());
                 bb = next;

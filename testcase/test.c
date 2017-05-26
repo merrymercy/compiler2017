@@ -21,10 +21,10 @@ int main() {
 	int j;
 
     N = getInt();
-    head = 0;tail = 0;startx = 0;starty = 0;
-    targetx = 0;targety  = N - 1;
-    x = 0;y = 0;
-    now = 0;ok = 0;
+    head = tail = startx = starty = 0;
+    targetx = targety  = N - 1;
+    x = y = 0;
+    now = ok = 0;
     xlist = new int[N * N];
     for (i = 0; i < N * N; i = i ++ )
         xlist[i] = 0;
@@ -130,18 +130,3 @@ int main() {
     else print("no solution!\n");
     return 0;
 }
-
-
-
-/*!! metadata:
-=== comment ===
-horse2-5100309153-yanghuan.mx
-=== assert ===
-success_compile
-=== phase ===
-semantic pretest
-=== is_public ===
-True
-
-!!*/
-

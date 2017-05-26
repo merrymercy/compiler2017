@@ -348,15 +348,17 @@ public class Allocator {
 
         }
 
-        err.println("====== EDGE ======");
-        for (Reference u : initial) {
-            err.printf("%-10s:", u.name());
-            for (Reference v : u.adjList) {
-                err.print( "  " + v.name());
+        if (Option.printUseDefInfo) {
+            err.println("====== EDGE ======");
+            for (Reference u : initial) {
+                err.printf("%-10s:", u.name());
+                for (Reference v : u.adjList) {
+                    err.print( "  " + v.name());
+                }
+                err.println();
             }
             err.println();
         }
-        err.println();
 
     }
 
@@ -600,12 +602,12 @@ public class Allocator {
             }
 
             if (okColors.isEmpty()) {
-                err.println("spill " + n.name());
+                //err.println("spill " + n.name());
                 move(n, selectWorklist, spilledNodes);
                 n.color = null;
             } else {
                 Register color = okColors.iterator().next();
-                err.println("assign " + n.name() + " -> " + color.name());
+               // err.println("assign " + n.name() + " -> " + color.name());
                 move(n, selectWorklist, coloredNodes);
                 n.color = color;
             }

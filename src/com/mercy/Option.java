@@ -20,7 +20,7 @@ public class Option {
     public static boolean printBasicBlocks = false;
 
     public static boolean printNaiveAllocatorInfo = false;
-    public static boolean printUseDefInfo = true;
+    public static boolean printUseDefInfo = false;
 
     // OPTIMIZATION
     public static boolean enableRegisterAllocation = true;
