@@ -2,6 +2,8 @@ package com.mercy.compiler.BackEnd;
 
 import com.mercy.Option;
 import com.mercy.compiler.Entity.FunctionEntity;
+import com.mercy.compiler.Entity.ParameterEntity;
+import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.INS.Instruction;
 import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.INS.Operand.Register;
@@ -11,6 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
+import static com.mercy.Option.REG_SIZE;
 import static java.lang.System.err;
 
 /**
@@ -41,13 +44,12 @@ public class NaiveAllocator  {
         }
     }
 
-
     private void allocateTmpStack(FunctionEntity entity){
         if (Option.enableInlineFunction && entity.canbeInlined())
             return;
 
         /*************************************************/
-        // count times
+        // count times and sort
         Set<Reference> allRef = entity.allReference();
         for (Instruction ins : entity.ins()) {
             for (Reference ref : ins.use()) {
@@ -59,7 +61,6 @@ public class NaiveAllocator  {
                 allRef.add(ref);
             }
         }
-
         List<Reference> tosort = new ArrayList<>(allRef);
         tosort.sort(new Comparator<Reference>() {
             @Override
@@ -87,6 +88,43 @@ public class NaiveAllocator  {
             }
         }
         entity.regUsed().add(rbp);
+        /*************************************************/
+
+        // locate parameters
+        int paraBase, lvarBase;
+        paraBase = 0;
+        lvarBase = paraBase;
+        List<ParameterEntity> params = entity.params();
+        for (int i = 0; i < params.size(); i++) {
+            ParameterEntity par = params.get(i);
+            Reference ref = par.reference();
+            if (i < paraRegister.size()) {
+                lvarBase += par.type().size();
+                par.reference().setOffset(-lvarBase, rbp);
+            } else {
+                ref.alias = par.source();
+            }
+        }
+
+        // locate frame
+        int stackBase, savedTempBase;
+        stackBase = lvarBase;
+        stackBase += entity.scope().locateLocalVariable(lvarBase, Option.STACK_VAR_ALIGNMENT_SIZE);
+        for (VariableEntity var : entity.scope().allLocalVariables()) {
+            var.reference().setOffset(-var.offset(), rbp);
+        }
+
+        // locate tmpStack
+        List<Reference> tmpStack = entity.tmpStack();
+        savedTempBase = stackBase;
+        for (int i = 0; i < tmpStack.size(); i++) {
+            if (tmpStack.get(i).isUnknown()) {
+                savedTempBase += REG_SIZE;
+                tmpStack.get(i).setOffset(-savedTempBase, rbp);
+            }
+        }
+
+        entity.setLocalVariableOffset(savedTempBase - paraBase);
     }
 
 }

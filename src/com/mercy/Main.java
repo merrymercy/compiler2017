@@ -112,7 +112,7 @@ public class Main {
         if (Option.enableOutputIrrelevantElimination) // eliminate output-irrelevant code
             ast.eliminateOutputIrrelevantNode();
         int entitySize = ast.scope().allLocalVariables().size();
-        if (entitySize > 200)
+        if (entitySize > 256)
             Option.enableGlobalRegisterAllocation = false;
 
         IRBuilder irBuilder = new IRBuilder(ast);

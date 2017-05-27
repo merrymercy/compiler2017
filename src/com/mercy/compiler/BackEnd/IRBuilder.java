@@ -562,7 +562,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             return null;
         }
 
-        // common expr elimination
+        // common assign elimination
         if (Option.enableCommonExpressionElimination && lhs instanceof  Var) {
             Entity entity = ((Var) lhs).entity();
 

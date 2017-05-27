@@ -128,7 +128,8 @@ public class ControlFlowAnalyzer {
             BasicBlock now;
             // merge
             for (BasicBlock basicBlock : entity.bbs()) {
-                if (basicBlock.successor().size() == 1 && basicBlock.successor().get(0).predecessor().size() == 1) {
+                if (basicBlock.successor().size() == 1 && basicBlock.successor().get(0).predecessor().size() == 1
+                        && basicBlock.ins().get(basicBlock.ins().size() - 1) instanceof Jmp) { // suc_size == 1 may happen when func_end is a branch of Cjump, so ignore this case
                     now = basicBlock;
                     BasicBlock next = now.successor().get(0);
                     if (next.successor().size() != 0) {
@@ -159,12 +160,55 @@ public class ControlFlowAnalyzer {
                 }
             }
 
-            // empty block
-            for (BasicBlock basicBlock : entity.bbs()) {
-                if (basicBlock.ins().size() == 1) {
-                    ;
+            // only jump block
+            List<BasicBlock> uselessBasicBlock = new LinkedList<>();
+            for (BasicBlock toremove : entity.bbs()) {
+                Instruction last = toremove.ins().get(1);
+                if (toremove.ins().size() == 2 && last instanceof Jmp) {
+                    //err.println("transform jump " + toremove.label() + " -> " + ((Jmp) last).dest());
+                    for (BasicBlock pre : toremove.predecessor()) {
+                        Instruction jump = pre.ins().get(pre.ins().size() - 1);
+                        if (jump instanceof Jmp) {
+                            modified = true;
+                            ((Jmp) jump).setDest(((Jmp) last).dest());
+                            pre.successor().remove(toremove);
+                            uselessBasicBlock.add(toremove);
+                            if (toremove.successor().size() == 1) {
+                                BasicBlock suc = toremove.successor().get(0);
+                                pre.successor().add(suc);
+                                suc.predecessor().add(pre);
+                            }
+                        } else if (jump instanceof CJump) {
+                            modified = true;
+                            if (((CJump) jump).trueLabel() == toremove.label())
+                                ((CJump) jump).setTrueLabel(((Jmp) last).dest());
+                            if (((CJump) jump).falseLabel() == toremove.label())
+                                ((CJump) jump).setFalseLabel(((Jmp) last).dest());
+                            if (((CJump) jump).fallThrough() == toremove.label())
+                                ((CJump) jump).setFallThrough(((Jmp) last).dest());
+
+                            pre.successor().remove(toremove);
+                            uselessBasicBlock.add(toremove);
+                            if (toremove.successor().size() == 1) {
+                                BasicBlock suc = toremove.successor().get(0);
+                                pre.successor().add(suc);
+                                suc.predecessor().add(pre);
+                            }
+                        }
+                    }
+                    if (modified)
+                        break;
                 }
             }
+
+            for (BasicBlock basicBlock : entity.bbs()) {
+                if (basicBlock.predecessor().size() == 0 && basicBlock.label() != entity.beginLabelINS()) {
+                    modified = true;
+                    uselessBasicBlock.add(basicBlock);
+                }
+            }
+
+            entity.bbs().removeAll(uselessBasicBlock);
         }
     }
 
@@ -207,8 +251,6 @@ public class ControlFlowAnalyzer {
     /********** DEBUG TOOL **********/
     public void printSelf(PrintStream out) {
         for (FunctionEntity functionEntity : functionEntities) {
-            if (Option.enableInlineFunction && functionEntity.canbeInlined())
-                return;
             out.println("========== " + functionEntity.name() + " ==========");
             if (Option.enableInlineFunction && functionEntity.canbeInlined()) {
                 out.println("BE INLINED");

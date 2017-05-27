@@ -34,6 +34,13 @@ public class CJump extends Instruction {
         this.falseLabel = falseLabel;
     }
 
+    public void setTrueLabel(Label trueLabel) {
+        this.trueLabel = trueLabel;
+    }
+
+    public void setFalseLabel(Label falseLabel) {
+        this.falseLabel = falseLabel;
+    }
 
     @Override
     public void replaceUse(Reference from, Reference to) {

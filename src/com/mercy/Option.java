@@ -21,8 +21,8 @@ public class Option {
     // DEBUG
     public static int testLevel = TEST_LEVEL_DEVELOP;
 
-    public static boolean printRemoveInfo = false;
-    public static boolean printInlineInfo = false;
+    public static boolean printRemoveInfo = true;
+    public static boolean printInlineInfo = true;
     public static boolean printInsturction = false;
     public static boolean printBasicBlocks = false;
 
@@ -30,15 +30,15 @@ public class Option {
     public static boolean printGlobalAllocationInfo = false;
 
     // OPTIMIZATION
-    public static boolean enableGlobalRegisterAllocation = true;
+    public static boolean enableGlobalRegisterAllocation = false;
 
-    public static boolean enableInstructionSelection        = true;
-    public static boolean enableInlineFunction              = true;
-    public static boolean enableCommonExpressionElimination = true;
+    public static boolean enableInstructionSelection        = false;
+    public static boolean enableInlineFunction              = false;
+    public static boolean enableCommonExpressionElimination = false;
 
-    public static boolean enableControlFlowOptimization     = true;
+    public static boolean enableControlFlowOptimization     = false;
     public static boolean enableOutputIrrelevantElimination = false;
 
     // STEADY
-    public static boolean enablePrintExpand = true;
+    public static boolean enablePrintExpand = false;
 }

@@ -3,6 +3,7 @@ package com.mercy.compiler.Entity;
 import com.mercy.Option;
 import com.mercy.compiler.AST.BlockNode;
 import com.mercy.compiler.AST.Location;
+import com.mercy.compiler.AST.StmtNode;
 import com.mercy.compiler.BackEnd.BasicBlock;
 import com.mercy.compiler.INS.Instruction;
 import com.mercy.compiler.INS.Label;
@@ -64,12 +65,24 @@ public class FunctionEntity extends Entity {
         } else {
             visited = new Hashtable<>();
             canbeInlined = !findLoop(this, this);
-            if (body.stmts().size() > 3)
+            if (stmtsSize(body) > 5)
                 canbeInlined = false;
             if (canbeInlined && Option.enableInlineFunction && Option.printInlineInfo)
                 System.err.println(name() + " is inlined");
         }
     }
+
+    int stmtsSize(BlockNode node) {
+        int ct = 0;
+        for (StmtNode stmtNode : node.stmts()) {
+            if (stmtNode instanceof  BlockNode)
+                ct += stmtsSize((BlockNode)stmtNode);
+            else
+                ct++;
+        }
+        return ct;
+    }
+
     private boolean findLoop(FunctionEntity called, FunctionEntity root) {
         if (visited.containsKey(called)) {
             return called == root;

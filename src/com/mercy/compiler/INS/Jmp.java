@@ -16,6 +16,10 @@ public class Jmp extends Instruction {
         return dest;
     }
 
+    public void setDest(Label dest) {
+        this.dest = dest;
+    }
+
     @Override
     public void replaceUse(Reference from, Reference to) {
     }
