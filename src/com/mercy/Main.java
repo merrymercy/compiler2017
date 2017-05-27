@@ -111,6 +111,9 @@ public class Main {
         ast.checkType();                              // check type
         if (Option.enableOutputIrrelevantElimination) // eliminate output-irrelevant code
             ast.eliminateOutputIrrelevantNode();
+        int entitySize = ast.scope().allLocalVariables().size();
+        if (entitySize > 200)
+            Option.enableGlobalRegisterAllocation = false;
 
         IRBuilder irBuilder = new IRBuilder(ast);
         irBuilder.generateIR();                      // generate IR, do simple constant folding
@@ -131,12 +134,13 @@ public class Main {
         // allocate register
         RegisterConfig registerConfig = new RegisterConfig();
 
-        if (Option.enableRegisterAllocation) {
+        if (Option.enableGlobalRegisterAllocation) {
             Allocator allocator = new Allocator(emitter, registerConfig);
             allocator.allocate();
+        } else {
+            NaiveAllocator allocator = new NaiveAllocator(emitter, registerConfig);
+            allocator.allocate();
         }
-        /*NaiveAllocator allocator = new NaiveAllocator(emitter, registerConfig);
-        allocator.allocate();*/
 
         // translate to x86 nasm
         Translator translator = new Translator(emitter, registerConfig);

@@ -136,20 +136,48 @@ public class Translator {
             }
             if (i < paraRegister.size()) {
                 par.source().setRegister(paraRegister.get(i));
-//                par.setSource(new Reference(paraRegister.get(i)));
                 if (ref.alias != null)
                     ref = ref.alias;
                 if (ref.isUnknown()) {
-                    err.println("unsed parameter " + ref.name());
+                    if (Option.enableGlobalRegisterAllocation)
+                        err.println("unsed parameter " + ref.name());
+                    else {
+                        lvarBase += par.type().size();
+                        par.reference().setOffset(-lvarBase, rbp());
+                    }
                 }
             } else {
                 par.source().setOffset(sourceBase, rbp());
-//                par.setSource(new Reference(sourceBase, rbp()));
                 sourceBase += par.type().size();
                 if (ref.isUnknown()) {
-                    err.println("unsed parameter " + ref.name());
+                    if (Option.enableGlobalRegisterAllocation)
+                        err.println("unsed parameter " + ref.name());
+                    else
+                        ref.setOffset(par.source().offset(), par.source().reg());
                 }
             }
+        }
+
+        if (!Option.enableGlobalRegisterAllocation) {
+            int stackBase, savedRegBase;
+            stackBase = lvarBase;
+            stackBase += entity.scope().locateLocalVariable(lvarBase, ALIGNMENT);
+            for (VariableEntity var : entity.scope().allLocalVariables()) {
+                if (var.reference().isUnknown()) {
+                    var.reference().setOffset(-var.offset(), rbp());
+                }
+            }
+
+            // locate tmpStack
+            List<Reference> tmpStack = entity.tmpStack();
+            savedRegBase = stackBase;
+            for (int i = 0; i < tmpStack.size(); i++) {
+                if (tmpStack.get(i).isUnknown()) {
+                    savedRegBase += REG_SIZE;
+                    tmpStack.get(i).setOffset(-savedRegBase, rbp());
+                }
+            }
+            entity.setLocalVariableOffset(savedRegBase - lvarBase);
         }
 
         total = lvarBase + entity.localVariableOffset();
@@ -185,6 +213,17 @@ public class Translator {
             add("mov", rbp(), rsp());
         if (entity.calls().size() != 0)   // leaf function optimization
             add("sub", rsp(), new Immediate(entity.frameSize()));
+
+        // store parameters
+        if (!Option.enableGlobalRegisterAllocation) {
+            List<ParameterEntity> params = entity.params();
+            for (ParameterEntity param : params) {
+                if (!param.reference().equals(param.source())) {  // copy when source and ref are different
+                    add("mov", param.reference(), param.source());
+                }
+            }
+        }
+
         add("");
 
         // insert prologue

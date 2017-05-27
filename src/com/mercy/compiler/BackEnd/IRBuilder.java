@@ -1142,19 +1142,21 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     int newIntTempCounter = 0;
     public Var newIntTemp() {
-        VariableEntity tmp = new VariableEntity(null, new IntegerType(),
-                "tmp" + newIntTempCounter++, null);
-        currentFunction.scope().insert(tmp);
-        return new Var(tmp);
-
-        /*if (tmpTop >= tmpStack.size()) {
+        if (Option.enableGlobalRegisterAllocation) {
             VariableEntity tmp = new VariableEntity(null, new IntegerType(),
-                    "tmp" + tmpTop, null);
+                    "tmp" + newIntTempCounter++, null);
             currentFunction.scope().insert(tmp);
-            //currentScope.insert(tmp);
-            tmpStack.add(new Var(tmp));
+            return new Var(tmp);
+
+        } else {
+            if (tmpTop >= tmpStack.size()) {
+                VariableEntity tmp = new VariableEntity(null, new IntegerType(),
+                        "tmp" + tmpTop, null);
+                currentFunction.scope().insert(tmp);
+                tmpStack.add(new Var(tmp));
+            }
+            return tmpStack.get(tmpTop++);
         }
-        return tmpStack.get(tmpTop++);*/
     }
 
     /*

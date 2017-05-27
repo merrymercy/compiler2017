@@ -279,7 +279,7 @@ public class Allocator {
     }
     private void livenessAnalysis(FunctionEntity entity) {
         // print Def and Use
-        if (Option.printUseDefInfo) {
+        if (Option.printGlobalAllocationInfo) {
             err.println("====== USE & DEF ======");
             for (BasicBlock basicBlock : entity.bbs()) {
                 for (Instruction ins : basicBlock.ins()) {
@@ -396,7 +396,7 @@ public class Allocator {
             ref.originalAdjList.addAll(ref.adjList);
         }
 
-        if (Option.printUseDefInfo) {
+        if (Option.printGlobalAllocationInfo) {
             // print Liveness Info
             err.println("====== IN & OUT ======");
             for (BasicBlock basicBlock : entity.bbs()) {
@@ -416,7 +416,7 @@ public class Allocator {
 
         }
 
-        if (Option.printUseDefInfo) {
+        if (Option.printGlobalAllocationInfo) {
            /* err.println("====== EDGE ======");
             for (Reference u : initial) {
                 err.printf("%-10s:", u.name());
@@ -687,7 +687,7 @@ public class Allocator {
             }
         }
 
-        if (Option.printUseDefInfo) {
+        if (Option.printGlobalAllocationInfo) {
             err.println("=== Assign Result ===");
             err.print("colored :");
             for (Reference ref : coloredNodes) {
@@ -788,7 +788,7 @@ public class Allocator {
             }
         }
 
-        if (Option.printUseDefInfo) {
+        if (Option.printGlobalAllocationInfo) {
             err.println("===== REWRITE =====");
             for (BasicBlock basicBlock : entity.bbs()) {
                 for (Instruction ins : basicBlock.ins()) {

@@ -41,23 +41,6 @@ public class NaiveAllocator  {
         }
     }
 
-    public static final class MutableInteger{
-        private int val;
-        public MutableInteger(int val){
-            this.val = val;
-        }
-        public int get(){
-            return this.val;
-        }
-        public void set(int val){
-            this.val = val;
-        }
-
-        @Override
-        public String toString() {
-            return Integer.toString(val);
-        }
-    }
 
     private void allocateTmpStack(FunctionEntity entity){
         if (Option.enableInlineFunction && entity.canbeInlined())
@@ -86,7 +69,7 @@ public class NaiveAllocator  {
         });
 
         // allocate register
-        int[] toAllocate = {12, 13, 14, 15, 1, 10, 11};
+        int[] toAllocate = {12, 13, 14, 15};
 
         if (Option.printNaiveAllocatorInfo)
             err.println("naive allocator : " + entity.name());

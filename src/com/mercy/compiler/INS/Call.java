@@ -88,9 +88,10 @@ public class Call extends Instruction {
         for (Operand operand : operands) {
             use.addAll(operand.getAllRef());
         }
-        for (Reference parareg : usedParameterRegister) {
-            use.addAll(parareg.getAllRef());
-        }
+        if (usedParameterRegister != null)
+            for (Reference parareg : usedParameterRegister) {
+                use.addAll(parareg.getAllRef());
+            }
         allref.addAll(use);
         allref.addAll(def);
     }

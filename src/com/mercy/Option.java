@@ -20,16 +20,17 @@ public class Option {
 
     // DEBUG
     public static int testLevel = TEST_LEVEL_DEVELOP;
+
     public static boolean printRemoveInfo = false;
     public static boolean printInlineInfo = false;
     public static boolean printInsturction = false;
     public static boolean printBasicBlocks = false;
 
-    public static boolean printNaiveAllocatorInfo = false;
-    public static boolean printUseDefInfo = false;
+    public static boolean printNaiveAllocatorInfo = true;
+    public static boolean printGlobalAllocationInfo = false;
 
     // OPTIMIZATION
-    public static boolean enableRegisterAllocation = true;
+    public static boolean enableGlobalRegisterAllocation = true;
 
     public static boolean enableInstructionSelection        = true;
     public static boolean enableInlineFunction              = true;
