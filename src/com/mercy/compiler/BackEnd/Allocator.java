@@ -38,7 +38,6 @@ public class Allocator {
         rsi = registers.get(4); rdi = registers.get(5);
         rbp = registers.get(6); rsp = registers.get(7);
 
-
         rr10 = new Reference(registers.get(10));
         rr11 = new Reference(registers.get(11));
 
@@ -107,9 +106,21 @@ public class Allocator {
                         newIns.add(new Move(ins.ret(), rax));
                     }
                 } else if (raw instanceof Div || raw instanceof Mod) {
-                    newIns.add(raw);
-                   // newIns.add(new Move(rrax, rax));
-                    newIns.add(new Move(rrdx, rdx));
+                    newIns.add(new Move(rax, ((Bin)raw).left()));
+                    newIns.add(new Move(rrdx, rdx)); // cqo
+                    newIns.add(new Move(rrcx, ((Bin)raw).right()));
+
+                    if (raw instanceof Div) {
+                        newIns.add(new Div(rax, rrcx));
+                        newIns.add(new Move(rax, rax)); // refresh
+                        newIns.add(new Move(rrdx, rdx));
+                        newIns.add(new Move(((Div) raw).left(), rax));
+                    } else {
+                        newIns.add(new Mod(rax, rrcx));
+                        newIns.add(new Move(rax, rax)); // refresh
+                        newIns.add(new Move(rrdx, rdx));
+                        newIns.add(new Move(((Bin) raw).left(), rrdx));
+                    }
                 } else if (raw instanceof Return) {
                     if (((Return) raw).ret() != null)
                         newIns.add(new Move(rax, ((Return) raw).ret()));
@@ -127,13 +138,18 @@ public class Allocator {
                         }
                     }
                     newIns.add(raw);
+                } else if (raw instanceof Sal || raw instanceof Sar) {
+                    newIns.add(new Move(rrcx, ((Bin)raw).right()));
+                    if (raw instanceof Sal)
+                        newIns.add(new Sal(((Bin)raw).left(), rrcx));
+                    else
+                        newIns.add(new Sar(((Bin)raw).left(), rrcx));
                 } else {
                     newIns.add(raw);
                     if (raw instanceof CJump || raw instanceof Cmp || raw instanceof Lea
-                            || raw instanceof Mod || raw instanceof  Div || raw instanceof Move
-                            || raw instanceof Bin || raw instanceof Sal || raw instanceof Sar) {
-                        newIns.add(new Move(rrcx, rcx));
-                        newIns.add(new Move(rrdx, rdx));
+                            || raw instanceof Move || raw instanceof Bin) {
+                       /*newIns.add(new Move(rrcx, rcx)); // FIXME ? why is this correct ?
+                       newIns.add(new Move(rrdx, rdx));*/
                     }
                 }
             }
@@ -367,6 +383,10 @@ public class Allocator {
             while (li.hasPrevious()) {
                 Instruction ins = (Instruction) li.previous();
 
+                for (Reference ref : live) {
+                    ref.addRefTime();
+                }
+
                 tmp= new HashSet<>(); tmp.addAll(live); ins.setOut(tmp);
 
                 if (ins instanceof Move && ((Move) ins).isRefMove()) {
@@ -378,7 +398,7 @@ public class Allocator {
                         ref.moveList.add((Move)ins);
                     worklistMoves.add((Move)ins);
                 }
-                live .addAll(ins.def());
+                live.addAll(ins.def());
                 for (Reference d : ins.def()) {
                     for (Reference l : live) {
                         addEdge(d, l);
@@ -560,8 +580,6 @@ public class Allocator {
             u = x; v = y;
         }
 
-
-
         worklistMoves.remove(move);
         if (u == v) {
             coalescedMoves.add(move);
@@ -615,19 +633,15 @@ public class Allocator {
 
     private void selectSpill() {
         // SPILL HEURISTIC HERE
-        Reference ref = spillWorklist.iterator().next();
+        Reference toSpill = spillWorklist.iterator().next();
 
-        if (Option.testLevel >= Option.TEST_LEVEL_STRICT) {
-            for (Reference re : spillWorklist) {
-                if (re.name().equals("ref_0")) {
-                    ref = re;
-                    break;
-                }
-            }
-        }
+        /*for (Reference ref : spillWorklist) {
+            if (ref.refTimes() < toSpill.refTimes() && !ref.name().contains("spill"))
+                toSpill = ref;
+        }*/
 
-        move(ref, spillWorklist, simplifyWorklist);
-        freezeMoves(ref);
+        move(toSpill, spillWorklist, simplifyWorklist);
+        freezeMoves(toSpill);
     }
 
 
@@ -647,8 +661,6 @@ public class Allocator {
     Set<Register> okColors = new HashSet<>();
     private void assignColors(FunctionEntity entity) {
         // restore simplified edges
-
-        int before = edgeSet.size();
         for (Edge edge : simplifiedEdge) {
             addEdge(getAlias(edge.u), getAlias(edge.v));
         }
@@ -682,12 +694,9 @@ public class Allocator {
 
         for (Reference node : coalescedNodes) {
             node.color = getAlias(node).color;
-            if (coloredNodes.contains(node)) {
-                throw new InternalError("double contain " + node.name());
-            }
         }
 
-        if (Option.printGlobalAllocationInfo) {
+        if (true || Option.printGlobalAllocationInfo) {
             err.println("=== Assign Result ===");
             err.print("colored :");
             for (Reference ref : coloredNodes) {

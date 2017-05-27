@@ -166,7 +166,8 @@ public class ControlFlowAnalyzer {
                 Instruction last = toremove.ins().get(1);
                 if (toremove.ins().size() == 2 && last instanceof Jmp) {
                     //err.println("transform jump " + toremove.label() + " -> " + ((Jmp) last).dest());
-                    for (BasicBlock pre : toremove.predecessor()) {
+                    List<BasicBlock> backup = new LinkedList<>(toremove.predecessor());
+                    for (BasicBlock pre : backup) {
                         Instruction jump = pre.ins().get(pre.ins().size() - 1);
                         if (jump instanceof Jmp) {
                             modified = true;

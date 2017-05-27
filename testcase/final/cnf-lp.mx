@@ -1,0 +1,166 @@
+int[][] sat;
+int[] assignment;
+int[] cond_ass;
+int k;
+int n;
+int m;
+int last;
+
+int myHash = 0;
+
+int check()
+{
+	int i;
+	int j;
+	for(i = 0; i < m; ++i)
+	{
+		int succ = 0;
+		for(j = 0; j < 3; ++j)
+		{
+			int var = sat[i][j];
+			if(var > 0 && assignment[var] == 1)
+				succ = 1;
+			if(var < 0 && assignment[-var] == 0)
+				succ = 1;
+		}
+		if(succ == 0)
+			return 0;
+	}
+	return 1;
+}
+
+void myprint(string x)
+{
+	int i;
+	for(i = 0; i < x.length(); ++i)
+	{
+		myHash = myHash + x.ord(i);
+	}
+}
+
+int payoff(int[] a, int[] b)
+{
+	int ret = 0;
+	int i;
+	for(i = 0; i < 3; ++i)
+	{
+		if(a[i] != b[i])
+			ret++;
+	}
+	return ret;
+}
+
+void print_cond(int dep)
+{
+	if(dep == n)
+	{
+		myprint("- " + toString(payoff(cond_ass, assignment)) + "*x");
+		int i;
+		for(i = 0; i < n; ++i)
+		{
+			if(i % 10 == 0)
+			{
+				myprint(toString(cond_ass[i + 1]));
+			}
+		}
+		return;
+	}
+	cond_ass[dep + 1] = 1;
+	print_cond(dep + 1);
+	cond_ass[dep + 1] = 0;
+	print_cond(dep + 1);
+}
+
+void dfs(int dep)
+{
+	if(dep == n)
+	{
+		if(check() == 1)
+		{
+			myprint("xz ");
+			print_cond(0);
+			myprint(" <= 0;\n");
+		}
+		return;
+	}
+	assignment[dep + 1] = 1;
+	dfs(dep + 1);
+	assignment[dep + 1] = 0;
+	dfs(dep + 1);
+}
+
+void print_last_cond(int dep)
+{
+	if(dep == n)
+	{
+		myprint("x");
+		int islast = 1;
+		int i;
+		for(i = 0; i < n; ++i)
+		{
+			if(assignment[i + 1] == 1)
+				islast = 0;
+			myprint(toString(assignment[i + 1]));
+		}
+		if(islast == 0)
+		{
+			myprint(" + ");
+		}
+		else
+		{
+			myprint(" = 1;\n");
+		}
+		return;
+	}
+	assignment[dep + 1] = 1;
+	print_last_cond(dep + 1);
+	assignment[dep + 1] = 0;
+	print_last_cond(dep + 1);
+}
+
+int main()
+{
+	k = 5;
+	n = 2 * k + 1;
+	m = k;
+	last = 1;
+	myprint("max: xz;\n");
+	sat = new int[m][];
+	int i;
+	for(i = 0; i < m; ++i)
+	{
+		int[] clause = new int[3];
+		clause[0] = last;
+		clause[1] = last + 1;
+		clause[2] = -(last + 2);
+		last = last + 2;
+		sat[i] = clause;
+	}
+	assignment = new int[n + 1];
+	cond_ass = new int[n + 1];
+	dfs(0);
+	print_last_cond(0);
+	println(toString(myHash));
+	return 0;
+}
+
+
+/*!! metadata:
+=== comment ===
+cnf_lp-5140309234-xietiancheng.txt
+3-cnf to lp, fast fast dfs
+=== output ===
+755895903
+=== assert ===
+output
+=== timeout ===
+2.0
+=== input ===
+
+=== phase ===
+optim pretest
+=== is_public ===
+True
+
+!!*/
+

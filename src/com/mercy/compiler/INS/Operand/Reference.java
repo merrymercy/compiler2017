@@ -36,6 +36,7 @@ public class Reference extends Operand {
     public boolean isSpilled;
 
     public void reset() {
+        refTimes = 0;
         moveList = new HashSet<>();
         adjList = new HashSet<>();
         originalAdjList = new HashSet<>();

@@ -25,9 +25,7 @@ import static java.lang.System.err;
 public class Translator {
     public static int VIRTUAL_STACK_REG_SIZE = 8;
     public static int ALIGNMENT = 4;
-    public static String END_SUFFIX = "_ret";
     public static String GLOBAL_PREFIX = "__global_";
-    public static String FUNC_SUFFIX = "__func";
 
 
     private List<FunctionEntity> functionEntities;
@@ -60,7 +58,7 @@ public class Translator {
         // add extern
         add("global main");
         add("extern printf, scanf, puts, gets, sprintf, sscanf, getchar, strlen, strcmp, strcpy, strncpy, malloc");
-        add("extern stdin, _IO_getc");
+        add("extern stdin, _IO_getc, memcpy");
         add("");
 
         // add data section
@@ -91,12 +89,13 @@ public class Translator {
         add("");
 
         // translate functions
-        add("section .text");
+        add("section .text 6");
         for (FunctionEntity entity : functionEntities) {
             if (Option.enableInlineFunction && entity.canbeInlined())
                 continue;
             currentFunction = entity;
             locateFrame(entity);
+            add("ALIGN 16");
             translateFunction(entity);
             add("");
         }
@@ -309,7 +308,8 @@ public class Translator {
                 add("idiv", rcx());
             }
         }
-        add("mov", left, res);
+        if (!Option.enableGlobalRegisterAllocation)
+            add("mov", left, res);
     }
 
     public void visit(Div ins) {

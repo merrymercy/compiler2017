@@ -32,13 +32,13 @@ public class Option {
     // OPTIMIZATION
     public static boolean enableGlobalRegisterAllocation = true;
 
-    public static boolean enableInstructionSelection        = false;
-    public static boolean enableInlineFunction              = false;
-    public static boolean enableCommonExpressionElimination = false;
+    public static boolean enableInstructionSelection        = true;
+    public static boolean enableInlineFunction              = true;
+    public static boolean enableCommonExpressionElimination = true;
 
-    public static boolean enableControlFlowOptimization     = false;
-    public static boolean enableOutputIrrelevantElimination = false;
+    public static boolean enableControlFlowOptimization     = true;
+    public static boolean enableOutputIrrelevantElimination = true;
 
     // STEADY
-    public static boolean enablePrintExpand = false;
+    public static boolean enablePrintExpand = true;
 }
