@@ -25,7 +25,11 @@ public class Move extends Instruction {
     public boolean isRefMove() {
         if(dest instanceof Reference && src instanceof Reference) {
             return ((Reference) dest).type() != Reference.Type.GLOBAL &&
-                    ((Reference) src).type() != Reference.Type.GLOBAL;
+                    ((Reference) src).type() != Reference.Type.GLOBAL &&
+                    ((Reference)dest).type() != Reference.Type.SPECIAL &&
+                    ((Reference) src).type() != Reference.Type.SPECIAL &&
+                    ((Reference) dest).type() != Reference.Type.CANNOT_COLOR &&
+                    ((Reference) src).type() != Reference.Type.CANNOT_COLOR;
         }
         return false;
     }

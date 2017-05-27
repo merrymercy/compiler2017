@@ -5,6 +5,9 @@ import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.Utility.InternalError;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Created by mercy on 17-4-25.
  */
@@ -13,6 +16,7 @@ public class CJump extends Instruction {
     Label trueLabel, falseLabel;
     Label fallThrough;
     Operand left, right;
+    Set<Reference> bringOut;
 
     public enum Type {
         EQ, NE, GT, GE, LT, LE, BOOL
@@ -42,8 +46,24 @@ public class CJump extends Instruction {
         this.falseLabel = falseLabel;
     }
 
+    public Set<Reference> bringOut() {
+        return bringOut;
+    }
+
+    public void setBringOut(Set<Reference> bringOut) {
+        this.bringOut = bringOut;
+    }
+
     @Override
     public void replaceUse(Reference from, Reference to) {
+        if (bringOut != null && bringOut.contains(from)) {
+            Set<Reference> newBringOut = new HashSet<>();
+            for (Reference reference : bringOut) {
+                newBringOut.add((Reference) reference.replace(from, to));
+            }
+            bringOut = newBringOut;
+        }
+
         if (type == Type.BOOL) {
             cond = cond.replace(from, to);
         } else {
@@ -64,6 +84,8 @@ public class CJump extends Instruction {
             use.addAll(left.getAllRef());
             use.addAll(right.getAllRef());
         }
+        if (bringOut != null)
+            use.addAll(bringOut);
         allref.addAll(use);
     }
 

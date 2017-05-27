@@ -37,7 +37,8 @@ public class Option {
     public static boolean enableCommonExpressionElimination = true;
 
     public static boolean enableControlFlowOptimization     = true;
-    public static boolean enableOutputIrrelevantElimination = true;
+    public static boolean enableLeafFunctionOptimization    = true;
+    public static boolean enableOutputIrrelevantElimination = false;
 
     // STEADY
     public static boolean enablePrintExpand = true;

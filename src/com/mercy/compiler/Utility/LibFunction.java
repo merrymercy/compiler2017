@@ -22,6 +22,7 @@ public class LibFunction {
             }
         }
         entity = new FunctionEntity(null, returnType, name, paramEntities, null);
+        entity.setLibFunction(true);
     }
 
     public LibFunction(Type returnType, String name, String asmName, Type [] paramTypes) {

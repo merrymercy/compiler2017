@@ -24,14 +24,16 @@ public class FunctionEntity extends Entity {
     private BlockNode body;
     private Scope scope;
     private boolean isConstructor = false;
+    private boolean isLibFunction = false;
     
     private boolean canbeInlined = false;
-    private List<FunctionEntity> calls = new LinkedList<>();
+    private Set<FunctionEntity> calls = new HashSet<>();
     
     private com.mercy.compiler.IR.Label beginLabelIR, endLabelIR;
     private com.mercy.compiler.INS.Label beginLabelINS, endLabelINS;
     private List<IR> irs;
     private List<Instruction> ins;
+    private List<Instruction> beginIns = new LinkedList<>(), endIns = new LinkedList<>();
     private List<BasicBlock> bbs;
     private List<Reference> tmpStack;
     private int frameSize;
@@ -65,7 +67,7 @@ public class FunctionEntity extends Entity {
         } else {
             visited = new Hashtable<>();
             canbeInlined = !findLoop(this, this);
-            if (stmtsSize(body) > 5)
+            if (stmtsSize(body) > 4)
                 canbeInlined = false;
             if (canbeInlined && Option.enableInlineFunction && Option.printInlineInfo)
                 System.err.println(name() + " is inlined");
@@ -166,7 +168,31 @@ public class FunctionEntity extends Entity {
         this.asmName = name;
     }
 
-    public List<FunctionEntity> calls() {
+    public List<Instruction> beginIns() {
+        return beginIns;
+    }
+
+    public void setBeginIns(List<Instruction> beginIns) {
+        this.beginIns = beginIns;
+    }
+
+    public List<Instruction> endIns() {
+        return endIns;
+    }
+
+    public void setEndIns(List<Instruction> endIns) {
+        this.endIns = endIns;
+    }
+
+    public boolean isLibFunction() {
+        return isLibFunction;
+    }
+
+    public void setLibFunction(boolean libFunction) {
+        isLibFunction = libFunction;
+    }
+
+    public Set<FunctionEntity> calls() {
         return calls;
     }
 

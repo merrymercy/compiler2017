@@ -25,6 +25,22 @@ public class Immediate extends Operand {
         this.type = Type.LABEL;
     }
 
+    public int value() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+
+    public Type type() {
+        return type;
+    }
+
+    public void setType(Type type) {
+        this.type = type;
+    }
+
     @Override
     public Operand replace(Operand from, Operand to) {
         return this;

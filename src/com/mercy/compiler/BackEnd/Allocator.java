@@ -3,12 +3,14 @@ package com.mercy.compiler.BackEnd;
 import com.mercy.Option;
 import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.Entity.ParameterEntity;
+import com.mercy.compiler.Entity.Scope;
 import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.Operand.*;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.util.*;
 
+import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
 import static java.lang.System.err;
 
 /**
@@ -25,10 +27,12 @@ public class Allocator {
     private Reference rrax, rrbx, rrcx, rrdx, rrsi, rrdi, rrsp, rrbp;
     private Reference rr10, rr11;
     private Set<Register> colors = new HashSet<>();
+    private Scope globalScope;
 
     public Allocator (InstructionEmitter emitter, RegisterConfig regConfig) {
         functionEntities = emitter.functionEntities();
         this.regConfig = regConfig;
+        globalScope = emitter.globalScope();
 
         // load registers
         rbp = regConfig.rbp();
@@ -45,8 +49,8 @@ public class Allocator {
         for (Register register : regConfig.paraRegister()) {
             paraRegisterRef.add(new Reference(register));
         }
-        rrdx = paraRegisterRef.get(2);
-        rrcx = paraRegisterRef.get(3);
+        rrdi = paraRegisterRef.get(0); rrsi = paraRegisterRef.get(1);
+        rrdx = paraRegisterRef.get(2); rrcx = paraRegisterRef.get(3);
 
         callerSaveRegRef = new HashSet<>();
         callerSaveRegRef.addAll(paraRegisterRef);
@@ -80,30 +84,52 @@ public class Allocator {
             List<Instruction> newIns = new LinkedList<>();
             for (Instruction raw : basicBlock.ins()) {
                 if (raw instanceof Call) {
-                    Set<Reference> paraRegUsed = new HashSet<>();
-                    Call ins = (Call) raw;
-                    int i = 0, pushCt = 0;
-                    for (Operand operand : ins.operands()) {
-                        if (i < paraRegisterRef.size()) {
-                            paraRegUsed.add(paraRegisterRef.get(i));
-                            newIns.add(new Move(paraRegisterRef.get(i), operand));
-                        } else {
-                            newIns.add(new Move(rax, operand));
-                            newIns.add(new Push(rax));
-                            pushCt++;
+                    // inline two small function
+                    if (((Call) raw).entity().asmName().equals(LIB_PREFIX + "str_length")) {
+                        newIns.add(new Move(rrdi, ((Call) raw).operands().get(0)));
+                        if (((Call) raw).ret() != null) {
+                            newIns.add(new Move(rdi, rrdi));
+                            newIns.add(new Move(new Reference("eax", Reference.Type.SPECIAL),
+                                    new Reference("dword [rdi-4]", Reference.Type.SPECIAL)));
+                            newIns.add(new Move(((Call) raw).ret(), rax));
                         }
-                        i++;
-                    }
-                    Call newCall = new Call(ins.entity(), new LinkedList<>());
-                    newCall.setCallorsave(callerSaveRegRef);
-                    newCall.setUsedParameterRegister(paraRegUsed);
-                    newIns.add(newCall);
-                    if (pushCt > 0) {
-                        newIns.add(new Add(rsp, new Immediate(pushCt * Option.REG_SIZE)));
-                    }
+                    } else if (((Call) raw).entity().asmName().equals(LIB_PREFIX + "str_ord")) {
+                        newIns.add(new Move(rrdi, ((Call) raw).operands().get(0)));
+                        newIns.add(new Move(rrsi, ((Call) raw).operands().get(1)));
+                        if (((Call) raw).ret() != null) {
+                            newIns.add(new Move(rdi, rrdi));
+                            newIns.add(new Move(rsi, rrsi));
+                            newIns.add(new Xor(rax, rax));
+                            newIns.add(new Move(new Reference("al", Reference.Type.SPECIAL),
+                                    new Reference("byte [rdi+rsi]", Reference.Type.SPECIAL)));
+                            newIns.add(new Move(((Call) raw).ret(), rax));
+                        }
+                    } else {
+                        Set<Reference> paraRegUsed = new HashSet<>();
+                        Call ins = (Call) raw;
+                        int i = 0, pushCt = 0;
+                        for (Operand operand : ins.operands()) {
+                            if (i < paraRegisterRef.size()) {
+                                paraRegUsed.add(paraRegisterRef.get(i));
+                                newIns.add(new Move(paraRegisterRef.get(i), operand));
+                            } else {
+                                newIns.add(new Move(rax, operand));
+                                newIns.add(new Push(rax));
+                                pushCt++;
+                            }
+                            i++;
+                        }
+                        Call newCall = new Call(ins.entity(), new LinkedList<>());
+                        newCall.setCallorsave(callerSaveRegRef);
+                        newCall.setUsedParameterRegister(paraRegUsed);
+                        newIns.add(newCall);
+                        if (pushCt > 0) {
+                            newIns.add(new Add(rsp, new Immediate(pushCt * Option.REG_SIZE)));
+                        }
 
-                    if (ins.ret() != null) {
-                        newIns.add(new Move(ins.ret(), rax));
+                        if (ins.ret() != null) {
+                            newIns.add(new Move(ins.ret(), rax));
+                        }
                     }
                 } else if (raw instanceof Div || raw instanceof Mod) {
                     newIns.add(new Move(rax, ((Bin)raw).left()));
@@ -139,23 +165,33 @@ public class Allocator {
                     }
                     newIns.add(raw);
                 } else if (raw instanceof Sal || raw instanceof Sar) {
-                    newIns.add(new Move(rrcx, ((Bin)raw).right()));
-                    if (raw instanceof Sal)
-                        newIns.add(new Sal(((Bin)raw).left(), rrcx));
-                    else
-                        newIns.add(new Sar(((Bin)raw).left(), rrcx));
+                    if (((Bin)raw).right() instanceof Immediate && log2(((Immediate) ((Bin)raw).right()).value()) != -1) {
+                        newIns.add(raw);
+                    } else {
+                        newIns.add(new Move(rrcx, ((Bin)raw).right()));
+                        if (raw instanceof Sal)
+                            newIns.add(new Sal(((Bin)raw).left(), rrcx));
+                        else
+                            newIns.add(new Sar(((Bin)raw).left(), rrcx));
+                    }
                 } else {
                     newIns.add(raw);
-                    if (raw instanceof CJump || raw instanceof Cmp || raw instanceof Lea
-                            || raw instanceof Move || raw instanceof Bin) {
-                       /*newIns.add(new Move(rrcx, rcx)); // FIXME ? why is this correct ?
-                       newIns.add(new Move(rrdx, rdx));*/
+                    if (raw instanceof CJump)
+                        ;
+                    if (raw instanceof Cmp)
+                        ;
+                    if( raw instanceof Lea)
+                        ;
+                    if (raw instanceof Move)
+                        ;
+                    if (raw instanceof Bin) {
+ //                       newIns.add(new Move(rrcx, rcx)); // FIXME ? why is this correct ?
+ //                       newIns.add(new Move(rrdx, rdx));
                     }
                 }
             }
             basicBlock.setIns(newIns);
         }
-
     }
 
     public void allocate() {
@@ -258,8 +294,10 @@ public class Allocator {
         err.println("allocate for " + entity.name());
         boolean finish = false;
         iter = 0;
+        // begin allocation iteration
         do {
             err.println(" === iter " + iter + " ===");
+
             livenessAnalysis(entity);
             build(entity);
             makeWorklist();
@@ -279,7 +317,6 @@ public class Allocator {
             rewriteProgram(entity);
             iter++;
         } while (!finish);
-
     }
 
     List<BasicBlock> sorted;
@@ -333,6 +370,11 @@ public class Allocator {
                 }
 
                 if (iter == 0) { // first iteration
+                    for (Reference ref : ins.allref()) {
+                        if (ref.name().equals("xx"))
+                            throw new InternalError("NIMAHIGH");
+                    }
+
                     initial.addAll(ins.allref());
                 }
             }
@@ -631,19 +673,21 @@ public class Allocator {
         }
     }
 
+    Set<String> protect = new HashSet<>();
+
     private void selectSpill() {
         // SPILL HEURISTIC HERE
-        Reference toSpill = spillWorklist.iterator().next();
+        Iterator<Reference> iter = spillWorklist.iterator();
+        Reference toSpill = iter.next();
 
-        /*for (Reference ref : spillWorklist) {
-            if (ref.refTimes() < toSpill.refTimes() && !ref.name().contains("spill"))
-                toSpill = ref;
-        }*/
+        protect.add("i"); protect.add("j"); protect.add("g_chunks");
+        while ((protect.contains(toSpill.name()) || toSpill.name().contains("spill")) && iter.hasNext()) {
+            toSpill = iter.next();
+        }
 
         move(toSpill, spillWorklist, simplifyWorklist);
         freezeMoves(toSpill);
     }
-
 
     private void move(Reference ref, Set<Reference> from, Set<Reference> to) {
         if (from.contains(ref)) {
@@ -895,5 +939,13 @@ public class Allocator {
         } else {
             return find;
         }
+    }
+
+    public int log2(int x) {
+        for (int i = 0; i < 30; i++) {
+            if (x == (1 << i))
+                return i;
+        }
+        return -1;
     }
 }

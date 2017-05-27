@@ -19,9 +19,10 @@ import com.mercy.compiler.Utility.Triple;
 import java.io.PrintStream;
 import java.util.*;
 
+import static com.mercy.compiler.INS.Operand.Reference.Type.CANNOT_COLOR;
 import static com.mercy.compiler.INS.Operand.Reference.Type.GLOBAL;
-import static com.mercy.compiler.IR.Binary.BinaryOp.ADD;
-import static com.mercy.compiler.IR.Binary.BinaryOp.MUL;
+import static com.mercy.compiler.IR.Binary.BinaryOp.*;
+import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-4-25.
@@ -33,6 +34,7 @@ public class InstructionEmitter {
 
     private List<Instruction> ins;
     FunctionEntity currentFunction;
+    boolean isInLeaf;
 
     public InstructionEmitter(IRBuilder irBuilder) {
         this.globalScope = irBuilder.globalScope();
@@ -67,15 +69,37 @@ public class InstructionEmitter {
             functionEntity.setTmpStack(tmpStack);
         }
     }
+    Map<Entity, Entity> globalLocalMap = new HashMap<>();
+    Set<Entity> usedGlobal;
 
     public List<Instruction> emitFunction(FunctionEntity entity) {
         if (Option.enableInlineFunction && entity.canbeInlined())
             return null;
 
+        // leaf function optimization
+        int callSize = entity.calls().size();
+        for (FunctionEntity called : entity.calls()) {
+            if ((Option.enableInlineFunction && called.canbeInlined()) || called.isLibFunction())
+                callSize--;
+        }
+        if (Option.enableLeafFunctionOptimization && callSize == 0) {
+            isInLeaf = true;
+            err.println(entity.name() + " is leaf");
+            usedGlobal = new HashSet<>();
+            for (Entity global : globalScope.entities().values()) {
+                if (global instanceof  VariableEntity) {
+                    VariableEntity local = new VariableEntity(global.location(), global.type(), "g_" + global.name(), null);
+                    globalLocalMap.put(global, local);
+                    currentFunction.scope().insert(local);
+                }
+            }
+        } else
+            isInLeaf = false;
+
         // set reference for params and local variable
         for (ParameterEntity parameterEntity : entity.params()) {
             parameterEntity.setReference(new Reference(parameterEntity));
-            parameterEntity.setSource(new Reference(parameterEntity.name() + "_src", GLOBAL));
+            parameterEntity.setSource(new Reference(parameterEntity.name() + "_src", CANNOT_COLOR));
             // set to global, i.e. don't allocate register for this
         }
         for (VariableEntity variableEntity : entity.allLocalVariables()) {
@@ -88,6 +112,14 @@ public class InstructionEmitter {
             tmpTop = exprDepth = 0;
             ir.accept(this);
         }
+
+        if (isInLeaf) {
+            for (Entity global : usedGlobal) {
+                ins.add(1, new Move(transEntity(global).reference(), global.reference()));
+                ins.add(ins.size() - 1, new Move(global.reference(), transEntity(global).reference()));
+            }
+        }
+
         return ins;
     }
 
@@ -197,11 +229,21 @@ public class InstructionEmitter {
             }
         }
 
+        if (baseIndexMul != null) {
+            base = baseIndexMul.first;
+            index = baseIndexMul.second;
+            mul = baseIndexMul.third;
+        }
+
         if (matched) {
-            if (baseIndexMul == null)
-                return new AddressTuple(base, index, mul, add);
-            else   // copy from baseIndexMul
-                return new AddressTuple(baseIndexMul.first, baseIndexMul.second, baseIndexMul.third, add);
+            // get rid of nested address
+            if (base != null && matchAddress(base) != null)
+                return null;
+
+            if (index != null && matchAddress(index) != null)
+                return null;
+
+            return new AddressTuple(base, index, mul, add);
         } else {
             return null;
         }
@@ -225,6 +267,12 @@ public class InstructionEmitter {
             Operand index = null;
             if (addr.index != null)
                 index = visitExpr(addr.index);
+
+            if (index instanceof Address) {
+                Reference tmp = getTmp();
+                ins.add(new Move(tmp, index));
+                index = tmp;
+            }
 
             if (base instanceof Reference) {
                 tmpTop = backupTop + 1; // only leave ret, remove other useless tmp register
@@ -260,13 +308,18 @@ public class InstructionEmitter {
         Operand dest = null;
 
         if (ir.left() instanceof Var) {
-            dest = new Address(((Var) ir.left()).entity().reference());
+            dest = new Address(transEntity(((Var) ir.left()).entity()).reference());
         } else  if (ir.left() instanceof Addr) {
-            dest = ((Addr) ir.left()).entity().reference();
+            dest = transEntity(((Addr) ir.left()).entity()).reference();
         }
 
         if (dest == null) {
             Operand lhs = visitExpr(ir.left());
+            if (lhs instanceof Address) {
+                Reference tmp = getTmp();
+                ins.add(new Move(tmp, lhs));
+                lhs = tmp;
+            }
             dest = new Address(lhs);
         }
 
@@ -331,23 +384,47 @@ public class InstructionEmitter {
         }
     }
 
+
+    public int log2(int x) {
+        for (int i = 0; i < 30; i++) {
+            if (x == (1 << i))
+                return i;
+        }
+        return -1;
+    }
+
     public Operand visit(com.mercy.compiler.IR.Binary ir) {
         Operand ret;
-        if (ir.left() instanceof IntConst && isCommutative(ir.operator())) {
-            ret = visitExpr(ir.right());
-            ret = addBinary(ir.operator(), ret, new Immediate(((IntConst) ir.left()).value()));
-        } else if (ir.right() instanceof IntConst) {
-            ret = visitExpr(ir.left());
-            ret = addBinary(ir.operator(), ret, new Immediate(((IntConst) ir.right()).value()));
+        Expr left = ir.left(), right = ir.right();
+        Binary.BinaryOp op = ir.operator();
+
+        if (op == MUL) {
+            if (right instanceof IntConst && log2(((IntConst) right).value()) != -1) {
+                op = LSHIFT;
+                right = new IntConst(log2(((IntConst) right).value()));
+            }
+        } else if (op == Binary.BinaryOp.DIV) {
+            if (right instanceof IntConst && log2(((IntConst) right).value()) != -1) {
+                op = RSHIFT;
+                right = new IntConst(log2(((IntConst) right).value()));
+            }
+        }
+
+        if (left instanceof IntConst && isCommutative(op)) {
+            ret = visitExpr(right);
+            ret = addBinary(op, ret, new Immediate(((IntConst) left).value()));
+        } else if (right instanceof IntConst) {
+            ret = visitExpr(left);
+            ret = addBinary(op, ret, new Immediate(((IntConst) right).value()));
         } else {
-            ret = visitExpr(ir.left());
+            ret = visitExpr(left);
             if (ret instanceof Immediate) {  // not needy in the first two cases
                 Reference tmp = getTmp();
                 ins.add(new Move(tmp, ret));
                 ret = tmp;
             }
-            Operand right = visitExpr(ir.right());
-            ret = addBinary(ir.operator(), ret, right);
+            Operand rrr = visitExpr(right);
+            ret = addBinary(op, ret, rrr);
             tmpTop--;   // remove right
         }
         return ret;
@@ -481,6 +558,21 @@ public class InstructionEmitter {
                 ret = ((Address) ret).base();
             }
 
+            if ((base instanceof Address) && (index instanceof Address))
+                throw new InternalError("Unhandled case in memory instruction selection");
+
+            if (base instanceof Address) { // get rid of nested address
+                Reference tmp = getTmp();
+                ins.add(new Move(tmp, base));
+                base = tmp;
+            }
+
+            if (index instanceof Address) {
+                Reference tmp = getTmp();
+                ins.add(new Move(tmp, index));
+                index = tmp;
+            }
+
             ins.add(new Move(ret, new Address(base, index, addr.mul, addr.add)));
             return ret;
         } else {
@@ -501,9 +593,20 @@ public class InstructionEmitter {
         return new Immediate(ir.value());
     }
 
+    private Entity transEntity(Entity entity) {
+        if (isInLeaf) {
+            Entity ret = globalLocalMap.get(entity);
+            if (ret != null) {
+                usedGlobal.add(entity);
+                return ret;
+            }
+        }
+        return entity;
+    }
+
     public Operand visit(com.mercy.compiler.IR.Var ir) {
         Reference ret = getTmp();
-        ins.add(new Move(ret, ir.entity().reference()));
+        ins.add(new Move(ret, transEntity(ir.entity()).reference()));
         return ret;
     }
 

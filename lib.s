@@ -251,12 +251,6 @@ getString:
     ret
 
 ALIGN 16
-__lib_array_size:
-    mov eax, dword [rdi -4]
-
-    ret
-
-ALIGN 16
 __lib_str_operator_ADD_hand:
     push rbx
     push r12
@@ -334,13 +328,6 @@ __lib_str_parseInt:
     ret
 
 ALIGN 16
-__lib_str_ord:
-    xor rax, rax
-    mov al, byte [rdi + rsi]
-
-    ret
-
-ALIGN 16
 __lib_str_operator_LT:
     sub rsp, 8
 
@@ -386,6 +373,20 @@ __lib_str_operator_GT:
     movzx rax, al
 
     add rsp, 8
+    ret
+
+
+ALIGN 16
+__lib_array_size:
+    mov eax, dword [rdi -4]
+
+    ret
+
+ALIGN 16
+__lib_str_ord:
+    xor rax, rax
+    mov al, byte [rdi + rsi]
+
     ret
 
 ALIGN 16

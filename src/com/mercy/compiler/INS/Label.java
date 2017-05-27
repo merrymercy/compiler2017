@@ -13,7 +13,7 @@ import java.util.Set;
 public class Label extends Instruction {
     String name;
     BasicBlock basicBlock;
-    Set<Reference> bringIn;
+    Set<Reference> bringUse = new HashSet<>();
 
     public Label(String name) {
         this.name = name;
@@ -23,12 +23,12 @@ public class Label extends Instruction {
         return name;
     }
 
-    public Set<Reference> bringIn() {
-        return bringIn;
+    public Set<Reference> bringUse() {
+        return bringUse;
     }
 
-    public void setBringIn(Set<Reference> bringIn) {
-        this.bringIn = bringIn;
+    public void setBringUse(Set<Reference> bringUse) {
+        this.bringUse = bringUse;
     }
 
     public BasicBlock basicBlock() {
@@ -45,13 +45,6 @@ public class Label extends Instruction {
 
     @Override
     public void replaceDef(Reference from, Reference to) {
-        if (bringIn != null) {
-            Set<Reference> newBringin = new HashSet<>();
-            for (Reference ref : bringIn) {
-                newBringin.add((Reference) ref.replace(from, to));
-            }
-            bringIn = newBringin;
-        }
     }
 
     @Override
@@ -61,8 +54,6 @@ public class Label extends Instruction {
 
     @Override
     public void calcDefAndUse() {
-        if (bringIn != null)
-            def.addAll(bringIn);
     }
 
     @Override

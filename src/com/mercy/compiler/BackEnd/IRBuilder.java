@@ -664,22 +664,22 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         // convert string operator to function call
         if (node.left().type().isString()) {
-            ExprNode trans;
+            Expr right = rhs;
             switch (node.operator()) {   // can be optimized here (use inline call)
                 case ADD:
-                    return new Call(StringType.operatorADD, new LinkedList<Expr>(){{ add(lhs); add(rhs); }});
+                    return new Call(StringType.operatorADD, new LinkedList<Expr>(){{ add(lhs); add(right); }});
                 case EQ:
-                    return new Call(StringType.operatorEQ, new LinkedList<Expr>(){{ add(lhs); add(rhs); }});
+                    return new Call(StringType.operatorEQ, new LinkedList<Expr>(){{ add(lhs); add(right); }});
                 case NE:
-                    return new Call(StringType.operatorNE, new LinkedList<Expr>(){{ add(lhs); add(rhs); }});
+                    return new Call(StringType.operatorNE, new LinkedList<Expr>(){{ add(lhs); add(right); }});
                 case GT:
-                    return new Call(StringType.operatorGT, new LinkedList<Expr>(){{ add(lhs); add(rhs); }});
+                    return new Call(StringType.operatorGT, new LinkedList<Expr>(){{ add(lhs); add(right); }});
                 case LT:
-                    return new Call(StringType.operatorLT, new LinkedList<Expr>(){{ add(lhs); add(rhs); }});
+                    return new Call(StringType.operatorLT, new LinkedList<Expr>(){{ add(lhs); add(right); }});
                 case LE:
-                    return new Call(StringType.operatorLE, new LinkedList<Expr>(){{ add(lhs); add(rhs); }});
+                    return new Call(StringType.operatorLE, new LinkedList<Expr>(){{ add(lhs); add(right); }});
                 case GE:
-                    return new Call(StringType.operatorGE, new LinkedList<Expr>(){{ add(lhs); add(rhs); }});
+                    return new Call(StringType.operatorGE, new LinkedList<Expr>(){{ add(lhs); add(right); }});
                 default:
                     throw new InternalError(node.location(), "invalid operator " + node.operator());
             }
@@ -711,6 +711,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             return new Binary(lhs, op, rhs);
         }
     }
+
 
     @Override
     public Expr visit(LogicalAndNode node) {

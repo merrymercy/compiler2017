@@ -1,6 +1,7 @@
 package com.mercy.compiler.INS.Operand;
 
 import com.mercy.compiler.Entity.Entity;
+import com.mercy.compiler.Utility.InternalError;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -19,6 +20,9 @@ public class Address extends Operand {
 
     public Address(Operand base) {
         this.base = base;
+
+        if (base instanceof Address)
+            throw new InternalError("invalid address : nested address");
     }
 
     public Address(Operand base, Operand index, int mul, int add) {
@@ -26,6 +30,9 @@ public class Address extends Operand {
         this.index = index;
         this.mul = mul;
         this.add = add;
+
+        if (base instanceof Address || index instanceof  Address)
+            throw new InternalError("invalid address : nested address");
     }
 
     @Override

@@ -15,7 +15,7 @@ import static com.mercy.compiler.INS.Operand.Reference.Type.*;
  */
 public class Reference extends Operand {
     public enum Type {
-        GLOBAL, OFFSET, REG, UNKNOWN, UNUSED
+        GLOBAL, OFFSET, REG, UNKNOWN, UNUSED, CANNOT_COLOR, SPECIAL
     }
 
     Type type;
@@ -100,6 +100,10 @@ public class Reference extends Operand {
         return type;
     }
 
+    public void setType(Type type) {
+        this.type = type;
+    }
+
     public int offset() {
         return offset;
     }
@@ -109,7 +113,7 @@ public class Reference extends Operand {
     }
 
     public boolean isUnknown() {
-        return type == UNKNOWN;
+        return type == UNKNOWN && color == null;
     }
 
     public void addRefTime() {
@@ -118,6 +122,20 @@ public class Reference extends Operand {
 
     public int refTimes() {
         return refTimes;
+    }
+
+    public Reference copy() {
+        switch (type) {
+            case REG:
+                return new Reference(reg);
+            case OFFSET:
+                return new Reference(offset, reg);
+            case UNKNOWN:
+                if (color != null)
+                    return new Reference(color);
+            default:
+                throw new InternalError("unhandled case in copy reference");
+        }
     }
 
     @Override
@@ -149,7 +167,7 @@ public class Reference extends Operand {
     @Override
     public Set<Reference> getAllRef() {
         Set<Reference> ret = new HashSet<>();
-        if (this.type != GLOBAL)
+        if (this.type != GLOBAL && this.type != CANNOT_COLOR && this.type != SPECIAL)
             ret.add(this);
         return ret;
     }
@@ -170,6 +188,7 @@ public class Reference extends Operand {
             case GLOBAL: return "qword " + "[" + GLOBAL_PREFIX + name + "]";
             case OFFSET: return "qword " + "[" + reg.name() + "+" + offset + "]";
             case REG:    return reg.name();
+            case SPECIAL:return name;
             case UNUSED:
             case UNKNOWN:
             default:
