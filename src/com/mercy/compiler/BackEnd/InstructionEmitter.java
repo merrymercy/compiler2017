@@ -19,8 +19,7 @@ import com.mercy.compiler.Utility.Triple;
 import java.io.PrintStream;
 import java.util.*;
 
-import static com.mercy.compiler.INS.Operand.Reference.Type.CANNOT_COLOR;
-import static com.mercy.compiler.INS.Operand.Reference.Type.GLOBAL;
+import static com.mercy.compiler.INS.Operand.Reference.Type.*;
 import static com.mercy.compiler.IR.Binary.BinaryOp.*;
 import static java.lang.System.err;
 
@@ -64,7 +63,6 @@ public class InstructionEmitter {
         for (FunctionEntity functionEntity : functionEntities) {
             currentFunction = functionEntity;
             tmpStack = new ArrayList<>();
-            tmpTop = 0;
             functionEntity.setINS(emitFunction(functionEntity));
             functionEntity.setTmpStack(tmpStack);
         }
@@ -127,7 +125,6 @@ public class InstructionEmitter {
     /*
      * Instruction Selection (match address)
      */
-
     private boolean isPowerOf2(Expr ir) {
         if (ir instanceof IntConst) {
             int x = ((IntConst) ir).value();
@@ -263,34 +260,16 @@ public class InstructionEmitter {
 
         // instruction selection for "lea"
         if ((addr = matchAddress(ir)) != null) {
-            int backupTop = tmpTop;
             Operand base = visitExpr(addr.base);
             Operand index = null;
-            if (addr.index != null)
+            if (addr.index != null) {
                 index = visitExpr(addr.index);
-
-            if (index instanceof Address) {
-                Reference tmp = getTmp();
-                ins.add(new Move(tmp, index));
-                index = tmp;
+                index = eliminateAddress(index);
             }
+            base = eliminateAddress(base);
 
-            if (base instanceof Reference) {
-                tmpTop = backupTop + 1; // only leave ret, remove other useless tmp register
-                ret = base;
-                ins.add(new Lea((Reference) ret, new Address(base, index, addr.mul, addr.add)));
-            } else if (base instanceof Immediate) {
-                ret = getTmp();
-                ins.add(new Move(ret, base));
-                ins.add(new Lea((Reference) ret, new Address(ret, index, addr.mul, addr.add)));
-            } else if (base instanceof Address) {
-                tmpTop = backupTop; // only leave ret, remove other useless tmp register
-                ret = getTmp();
-                ins.add(new Move(ret, base));
-                ins.add(new Lea((Reference) ret, new Address(ret, index, addr.mul, addr.add)));
-            } else {
-                throw new InternalError("Unhandled case in lea");
-            }
+            ret = getTmp();
+            ins.add(new Lea((Reference) ret, new Address(base, index, addr.mul, addr.add)));
             matched = true;
         }
 
@@ -302,17 +281,7 @@ public class InstructionEmitter {
     }
 
     public Operand visit(com.mercy.compiler.IR.Addr ir) {
-        throw new InternalError("Unhandled case in IR Addr");
-    }
-
-    private Operand eliminateAddress(Operand operand) {
-        if (operand instanceof Address) {
-            Reference tmp = getTmp();
-            ins.add(new Move(tmp, operand));
-            return tmp;
-        } else {
-            return operand;
-        }
+        throw new InternalError("cannot happen in instruction emitter Addr ir");
     }
 
     public Operand visit(com.mercy.compiler.IR.Assign ir) {
@@ -335,13 +304,7 @@ public class InstructionEmitter {
     }
 
     private Operand addBinary(com.mercy.compiler.IR.Binary.BinaryOp operator, Operand left, Operand right) {
-        if (left instanceof Address) {
-            while(((Address) left).base() instanceof Address) {
-                left = ((Address) left).base();
-            }
-            ins.add(new Move(((Address) left).base(), left));
-            left = ((Address) left).base();
-        }
+        left = getLvalue(left);
         switch (operator) {
             case ADD: ins.add(new Add(left, right)); break;
             case SUB: ins.add(new Sub(left, right)); break;
@@ -376,30 +339,16 @@ public class InstructionEmitter {
         return left;
     }
 
-    private boolean isCommutative(com.mercy.compiler.IR.Binary.BinaryOp op) {
-        switch(op) {
-            case ADD: case MUL:
-            case BIT_AND: case BIT_OR: case BIT_XOR:
-            case EQ: case NE:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    public int log2(int x) {
-        for (int i = 0; i < 30; i++) {
-            if (x == (1 << i))
-                return i;
-        }
-        return -1;
-    }
-
     public Operand visit(com.mercy.compiler.IR.Binary ir) {
         Operand ret;
         Expr left = ir.left(), right = ir.right();
         Binary.BinaryOp op = ir.operator();
 
+        if (isCommutative(op) && left instanceof IntConst) {
+            Expr t = left; left = right; right = t;
+        }
+
+        // use shift to boost multiplication and division
         if (op == MUL) {
             if (right instanceof IntConst && log2(((IntConst) right).value()) != -1) {
                 op = LSHIFT;
@@ -412,36 +361,21 @@ public class InstructionEmitter {
             }
         }
 
-        if (left instanceof IntConst && isCommutative(op)) {
-            ret = visitExpr(right);
-            ret = addBinary(op, ret, new Immediate(((IntConst) left).value()));
-        } else if (right instanceof IntConst) {
-            ret = visitExpr(left);
-            ret = addBinary(op, ret, new Immediate(((IntConst) right).value()));
-        } else {
-            ret = visitExpr(left);
-            if (ret instanceof Immediate) {  // not needy in the first two cases
-                Reference tmp = getTmp();
-                ins.add(new Move(tmp, ret));
-                ret = tmp;
-            }
-            Operand rrr = visitExpr(right);
-            ret = addBinary(op, ret, rrr);
-            tmpTop--;   // remove right
-        }
+        ret = visitExpr(left);
+        Operand rrr = visitExpr(right);
+        ret = addBinary(op, ret, rrr);
+
         return ret;
     }
 
     public Operand visit(com.mercy.compiler.IR.Call ir) {
         List<Operand> operands = new LinkedList<>();
 
-        int backupTop = tmpTop;
         for (Expr arg : ir.args()) {
             exprDepth++;
             operands.add(visitExpr(arg));
             exprDepth--;
         }
-        tmpTop = backupTop;
 
         Reference ret = null;
         Call call = new Call(ir.entity(), operands);
@@ -454,30 +388,8 @@ public class InstructionEmitter {
         return ret;
     }
 
-    // make the label unique, i.e. point to the same object
-    private Map<String, Label> labelMap = new HashMap<>();
-    private Label getLabel(String name) {
-        Label ret = labelMap.get(name);
-        if (ret == null) {
-            ret = new Label(name);
-            labelMap.put(name, ret);
-        }
-        return ret;
-    }
-
-    private boolean isCompare(Binary.BinaryOp op) {
-        switch (op) {
-            case EQ: case NE:
-            case GT: case GE:
-            case LT: case LE:
-                return true;
-            default:
-                return false;
-        }
-    }
-
     public Operand visit(com.mercy.compiler.IR.CJump ir) {
-        if (ir.cond() instanceof Binary && isCompare(((Binary) ir.cond()).operator())) {
+        if (ir.cond() instanceof Binary && isCompareOP(((Binary) ir.cond()).operator())) {
             Operand left = visitExpr(((Binary) ir.cond()).left());
             Operand right = visitExpr(((Binary) ir.cond()).right());
 
@@ -525,11 +437,7 @@ public class InstructionEmitter {
 
     public Operand visit(com.mercy.compiler.IR.Unary ir) {
         Operand ret = visitExpr(ir.expr());
-        if (ret instanceof Immediate) {
-            Reference tmp = getTmp();
-            ins.add(new Move(tmp, ret));
-            ret = tmp;
-        }
+        ret = getLvalue(ret);
         switch (ir.operator()) {
             case MINUS:
                 ins.add(new Neg(ret)); break;
@@ -554,16 +462,8 @@ public class InstructionEmitter {
                 index = visitExpr(addr.index);
                 index = eliminateAddress(index);
             }
-
-            Operand ret = base;
-            while (ret instanceof Address) {
-                ret = ((Address) ret).base();
-            }
-
             base = eliminateAddress(base);
-
-            if (!(base instanceof Reference))
-                throw new InternalError("nihahigh");
+            Reference ret = getTmp();
 
             ins.add(new Move(ret, new Address(base, index, addr.mul, addr.add)));
             return ret;
@@ -583,8 +483,20 @@ public class InstructionEmitter {
     }
 
     public Operand visit(com.mercy.compiler.IR.Var ir) {
-        Reference ret = getTmp();
-        ins.add(new Move(ret, transEntity(ir.entity()).reference()));
+        return transEntity(ir.entity()).reference();
+    }
+
+    /*
+     * utility for emitter
+     */
+    // make the label unique, i.e. point to the same object
+    private Map<String, Label> labelMap = new HashMap<>();
+    private Label getLabel(String name) {
+        Label ret = labelMap.get(name);
+        if (ret == null) {
+            ret = new Label(name);
+            labelMap.put(name, ret);
+        }
         return ret;
     }
 
@@ -600,22 +512,71 @@ public class InstructionEmitter {
         return entity;
     }
 
-    /*
-     * temp virtual register
-     */
+    // to get rid of nested address
+    private Operand eliminateAddress(Operand operand) {
+        if (operand instanceof Address || (operand instanceof Reference && ((Reference) operand).type() == GLOBAL)) {
+            Reference tmp = getTmp();
+            ins.add(new Move(tmp, operand));
+            return tmp;
+        } else {
+            return operand;
+        }
+    }
+
+    // get lvalue for immediate or reference of entity
+    private Reference getLvalue(Operand operand) {
+        operand = eliminateAddress(operand);
+        if (operand instanceof Immediate ||
+                (operand instanceof Reference && !((Reference) operand).canBeAccumulator())) {
+            Reference ret = getTmp();
+            ins.add(new Move(ret, operand));
+            return ret;
+        }
+        return (Reference) operand;
+    }
+
+    private int log2(int x) {
+        for (int i = 0; i < 30; i++) {
+            if (x == (1 << i))
+                return i;
+        }
+        return -1;
+    }
+
+    // temp virtual register
     List<Reference> tmpStack;
     int tmpTop = 0;
     int tmpCounter = 0;
     public Reference getTmp() {
         if (Option.enableGlobalRegisterAllocation) {
-            Entity tmp = new VariableEntity(null, null, "ref_" + tmpCounter++, null);
-            return new Reference(tmp);
+            return new Reference("ref_" + tmpCounter++, UNKNOWN);
         } else {
             if (tmpTop >= tmpStack.size()) {
-                Entity tmp = new VariableEntity(null, null, "ref_" + tmpTop, null);
-                tmpStack.add(new Reference(tmp));
+                tmpStack.add(new Reference("ref_" + tmpCounter, UNKNOWN));
             }
             return tmpStack.get(tmpTop++);
+        }
+    }
+
+    private boolean isCommutative(com.mercy.compiler.IR.Binary.BinaryOp op) {
+        switch(op) {
+            case ADD: case MUL:
+            case BIT_AND: case BIT_OR: case BIT_XOR:
+            case EQ: case NE:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private boolean isCompareOP(Binary.BinaryOp op) {
+        switch (op) {
+            case EQ: case NE:
+            case GT: case GE:
+            case LT: case LE:
+                return true;
+            default:
+                return false;
         }
     }
 

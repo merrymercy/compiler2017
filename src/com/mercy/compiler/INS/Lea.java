@@ -9,7 +9,7 @@ import com.mercy.compiler.INS.Operand.Reference;
  * Created by mercy on 17-4-25.
  */
 public class Lea extends Instruction {
-    Operand dest;
+    Reference dest;
     Address addr;
 
     public Lea (Reference dest, Address addr) {
@@ -29,18 +29,18 @@ public class Lea extends Instruction {
     public void replaceUse(Reference from, Reference to) {
         addr = addr.replace(from, to);
         if (dest != from)
-            dest =  dest.replace(from, to);
+            dest =  (Reference)dest.replace(from, to);
     }
 
     @Override
     public void replaceDef(Reference from, Reference to) {
-        dest = dest.replace(from, to);
+        dest = (Reference) dest.replace(from, to);
     }
 
     @Override
     public void replaceAll(Reference from, Reference to) {
         addr = addr.replace(from, to);
-        dest = dest.replace(from, to);
+        dest = (Reference) dest.replace(from, to);
     }
 
 

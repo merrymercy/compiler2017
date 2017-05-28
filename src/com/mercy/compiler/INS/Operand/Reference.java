@@ -35,21 +35,6 @@ public class Reference extends Operand {
     public boolean isPrecolored;
     public boolean isSpilled;
 
-    public void reset() {
-        refTimes = 0;
-        moveList = new HashSet<>();
-        adjList = new HashSet<>();
-        originalAdjList = new HashSet<>();
-        if (!isPrecolored) {
-            color = null;
-            degree = 0;
-        } else {
-            degree = 999999;
-        }
-        alias = null;
-        isSpilled = false;
-    }
-
     public Reference(String name, Type type) {
         this.name = name;
         this.type = type;
@@ -68,6 +53,26 @@ public class Reference extends Operand {
         this.name = entity.name();
         this.entity = entity;
         this.type = UNKNOWN;
+    }
+
+    // reset for a new iteration in global allocation
+    public void reset() {
+        refTimes = 0;
+        moveList = new HashSet<>();
+        adjList = new HashSet<>();
+        originalAdjList = new HashSet<>();
+        if (!isPrecolored) {
+            color = null;
+            degree = 0;
+        } else {
+            degree = 999999;
+        }
+        alias = null;
+        isSpilled = false;
+    }
+
+    public boolean canBeAccumulator() {
+        return type == UNKNOWN && entity == null;
     }
 
     /*
@@ -170,16 +175,22 @@ public class Reference extends Operand {
 
     @Override
     public String toNASM() {
-        switch (type) {
-            case GLOBAL: return "qword " + "[" + GLOBAL_PREFIX + name + "]";
-            case OFFSET: return "qword " + "[" + reg.name() + "+" + offset + "]";
-            case REG:    return reg.name();
-            case SPECIAL:return name;
-            case UNUSED:
-            case UNKNOWN:
-            default:
-                throw new InternalError("Unallocated reference " + this);
+        try {
+            switch (type) {
+                case GLOBAL: return "qword " + "[" + GLOBAL_PREFIX + name + "]";
+                case OFFSET: return "qword " + "[" + reg.name() + "+" + offset + "]";
+                case REG:    return reg.name();
+                case SPECIAL:return name;
+                case UNUSED:
+                case UNKNOWN:
+                default:
+                    throw new Exception();
+                    //throw new InternalError("Unallocated reference " + this);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+        return null;
     }
 
     @Override

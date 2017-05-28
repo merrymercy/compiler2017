@@ -26,7 +26,7 @@ public class Allocator {
     private Register rax, rbx, rcx, rdx, rsi, rdi, rsp, rbp;
     private Reference rrax, rrbx, rrcx, rrdx, rrsi, rrdi, rrsp, rrbp;
     private Reference rr10, rr11;
-    private Set<Register> colors = new HashSet<>();
+    private List<Register> colors = new LinkedList<>();
     private Scope globalScope;
 
     public Allocator (InstructionEmitter emitter, RegisterConfig regConfig) {
@@ -42,6 +42,7 @@ public class Allocator {
         rsi = registers.get(4); rdi = registers.get(5);
         rbp = registers.get(6); rsp = registers.get(7);
 
+        rrax = new Reference(rax);
         rr10 = new Reference(registers.get(10));
         rr11 = new Reference(registers.get(11));
 
@@ -79,121 +80,6 @@ public class Allocator {
         K = colors.size();
     }
 
-    public void loadPrecolord(FunctionEntity entity) {
-        for (BasicBlock basicBlock : entity.bbs()) {
-            List<Instruction> newIns = new LinkedList<>();
-            for (Instruction raw : basicBlock.ins()) {
-                if (raw instanceof Call) {
-                    // inline two small function
-                    if (((Call) raw).entity().asmName().equals(LIB_PREFIX + "str_length")) {
-                        newIns.add(new Move(rrdi, ((Call) raw).operands().get(0)));
-                        if (((Call) raw).ret() != null) {
-                            newIns.add(new Move(rdi, rrdi));
-                            newIns.add(new Move(new Reference("eax", Reference.Type.SPECIAL),
-                                    new Reference("dword [rdi-4]", Reference.Type.SPECIAL)));
-                            newIns.add(new Move(((Call) raw).ret(), rax));
-                        }
-                    } else if (((Call) raw).entity().asmName().equals(LIB_PREFIX + "str_ord")) {
-                        newIns.add(new Move(rrdi, ((Call) raw).operands().get(0)));
-                        newIns.add(new Move(rrsi, ((Call) raw).operands().get(1)));
-                        if (((Call) raw).ret() != null) {
-                            newIns.add(new Move(rdi, rrdi));
-                            newIns.add(new Move(rsi, rrsi));
-                            newIns.add(new Xor(rax, rax));
-                            newIns.add(new Move(new Reference("al", Reference.Type.SPECIAL),
-                                    new Reference("byte [rdi+rsi]", Reference.Type.SPECIAL)));
-                            newIns.add(new Move(((Call) raw).ret(), rax));
-                        }
-                    } else {
-                        Set<Reference> paraRegUsed = new HashSet<>();
-                        Call ins = (Call) raw;
-                        int i = 0, pushCt = 0;
-                        for (Operand operand : ins.operands()) {
-                            if (i < paraRegisterRef.size()) {
-                                paraRegUsed.add(paraRegisterRef.get(i));
-                                newIns.add(new Move(paraRegisterRef.get(i), operand));
-                            } else {
-                                newIns.add(new Move(rax, operand));
-                                newIns.add(new Push(rax));
-                                pushCt++;
-                            }
-                            i++;
-                        }
-                        Call newCall = new Call(ins.entity(), new LinkedList<>());
-                        newCall.setCallorsave(callerSaveRegRef);
-                        newCall.setUsedParameterRegister(paraRegUsed);
-                        newIns.add(newCall);
-                        if (pushCt > 0) {
-                            newIns.add(new Add(rsp, new Immediate(pushCt * Option.REG_SIZE)));
-                        }
-
-                        if (ins.ret() != null) {
-                            newIns.add(new Move(ins.ret(), rax));
-                        }
-                    }
-                } else if (raw instanceof Div || raw instanceof Mod) {
-                    newIns.add(new Move(rax, ((Bin)raw).left()));
-                    newIns.add(new Move(rrdx, rdx)); // cqo
-                    newIns.add(new Move(rrcx, ((Bin)raw).right()));
-
-                    if (raw instanceof Div) {
-                        newIns.add(new Div(rax, rrcx));
-                        newIns.add(new Move(rax, rax)); // refresh
-                        newIns.add(new Move(rrdx, rdx));
-                        newIns.add(new Move(((Div) raw).left(), rax));
-                    } else {
-                        newIns.add(new Mod(rax, rrcx));
-                        newIns.add(new Move(rax, rax)); // refresh
-                        newIns.add(new Move(rrdx, rdx));
-                        newIns.add(new Move(((Bin) raw).left(), rrdx));
-                    }
-                } else if (raw instanceof Return) {
-                    if (((Return) raw).ret() != null)
-                        newIns.add(new Move(rax, ((Return) raw).ret()));
-                    newIns.add(new Return(null));
-                } else if (raw instanceof Label) {
-                    if (raw == entity.beginLabelINS()) {
-                        int i = 0;
-                        for (ParameterEntity par : entity.params()) {   // load parameters
-                            if (i < paraRegisterRef.size()) {
-                                newIns.add(new Move(par.reference(), paraRegisterRef.get(i)));
-                            } else {
-                                newIns.add(new Move(par.reference(), par.source()));
-                            }
-                            i++;
-                        }
-                    }
-                    newIns.add(raw);
-                } else if (raw instanceof Sal || raw instanceof Sar) {
-                    if (((Bin)raw).right() instanceof Immediate && log2(((Immediate) ((Bin)raw).right()).value()) != -1) {
-                        newIns.add(raw);
-                    } else {
-                        newIns.add(new Move(rrcx, ((Bin)raw).right()));
-                        if (raw instanceof Sal)
-                            newIns.add(new Sal(((Bin)raw).left(), rrcx));
-                        else
-                            newIns.add(new Sar(((Bin)raw).left(), rrcx));
-                    }
-                } else {
-                    newIns.add(raw);
-                    if (raw instanceof CJump)
-                        ;
-                    if (raw instanceof Cmp)
-                        ;
-                    if( raw instanceof Lea)
-                        ;
-                    if (raw instanceof Move)
-                        ;
-                    if (raw instanceof Bin) {
- //                       newIns.add(new Move(rrcx, rcx)); // FIXME ? why is this correct ?
- //                       newIns.add(new Move(rrdx, rdx));
-                    }
-                }
-            }
-            basicBlock.setIns(newIns);
-        }
-    }
-
     public void allocate() {
         for (FunctionEntity functionEntity : functionEntities) {
             if (Option.enableInlineFunction && functionEntity.canbeInlined())
@@ -221,7 +107,8 @@ public class Allocator {
             functionEntity.setAllReference(allRef);
             LinkedList<Register> listRegUse = new LinkedList<>(regUsed);
             functionEntity.setRegUsed(listRegUse);
-            functionEntity.regUsed().add(rbp);
+            if (iter != 1) // if someone is spilled
+                functionEntity.regUsed().add(rbp);
             functionEntity.setLocalVariableOffset(localOffset);
         }
     }
@@ -264,7 +151,7 @@ public class Allocator {
         localOffset = 0;
     }
 
-    // aha
+    // global
     Set<Edge> edgeSet;
     Set<Edge> simplifiedEdge;
     int K;
@@ -680,6 +567,12 @@ public class Allocator {
             toSpill = iter.next();
         }
 
+        for (Reference ref : spillWorklist) {
+            if (ref.name().equals("tmp2")) {
+                toSpill = ref;
+                break;
+            }
+        }
 
         move(toSpill, spillWorklist, simplifyWorklist);
         freezeMoves(toSpill);
@@ -698,7 +591,7 @@ public class Allocator {
         }
     }
 
-    Set<Register> okColors = new HashSet<>();
+    LinkedList<Register> okColors = new LinkedList<>();
     private void assignColors(FunctionEntity entity) {
         // restore simplified edges
         for (Edge edge : simplifiedEdge) {
@@ -856,6 +749,129 @@ public class Allocator {
         initial.addAll(newTemp);
         coloredNodes.clear();
         coalescedNodes.clear();
+    }
+
+
+    private boolean inlineLibraryFunction(List<Instruction> newIns, Call raw) {
+        if (raw.entity().asmName().equals(LIB_PREFIX + "str_length")) {
+            newIns.add(new Move(rrdi, raw.operands().get(0)));
+            if (raw.ret() != null) {
+                newIns.add(new Move(rdi, rrdi));
+                newIns.add(new Move(new Reference("eax", Reference.Type.SPECIAL),
+                        new Reference("dword [rdi-4]", Reference.Type.SPECIAL)));
+                newIns.add(new Move(raw.ret(), rax));
+            }
+            return true;
+        } else if (raw.entity().asmName().equals(LIB_PREFIX + "str_ord")) {
+            newIns.add(new Move(rrdi, raw.operands().get(0)));
+            newIns.add(new Move(rrsi, raw.operands().get(1)));
+            if (raw.ret() != null) {
+                newIns.add(new Move(rdi, rrdi));
+                newIns.add(new Move(rsi, rrsi));
+                newIns.add(new Xor(rax, rax));
+                newIns.add(new Move(new Reference("al", Reference.Type.SPECIAL),
+                        new Reference("byte [rdi+rsi]", Reference.Type.SPECIAL)));
+                newIns.add(new Move(raw.ret(), rax));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // inject machine related register information into instruction
+    private void loadPrecolord(FunctionEntity entity) {
+        for (BasicBlock basicBlock : entity.bbs()) {
+            List<Instruction> newIns = new LinkedList<>();
+            for (Instruction raw : basicBlock.ins()) {
+                if (raw instanceof Call) {
+                    if (inlineLibraryFunction(newIns, (Call)raw)) {
+                        ; // done in above function
+                    } else {
+                        Set<Reference> paraRegUsed = new HashSet<>();
+                        Call ins = (Call) raw;
+                        int i = 0, pushCt = 0;
+                        for (Operand operand : ins.operands()) {
+                            if (i < paraRegisterRef.size()) {
+                                paraRegUsed.add(paraRegisterRef.get(i));
+                                newIns.add(new Move(paraRegisterRef.get(i), operand));
+                            } else {
+                                newIns.add(new Push(operand));
+                                pushCt++;
+                            }
+                            i++;
+                        }
+                        Call newCall = new Call(ins.entity(), new LinkedList<>());
+                        newCall.setCallorsave(callerSaveRegRef);
+                        newCall.setUsedParameterRegister(paraRegUsed);
+                        newIns.add(newCall);
+                        if (pushCt > 0) {
+                            newIns.add(new Add(rsp, new Immediate(pushCt * Option.REG_SIZE)));
+                        }
+                        if (ins.ret() != null) {
+                            newIns.add(new Move(ins.ret(), rax));
+                        }
+                    }
+                } else if (raw instanceof Div || raw instanceof Mod) {
+                    newIns.add(new Move(rax, ((Bin)raw).left()));
+                    newIns.add(new Move(rrdx, rdx)); // cqo
+
+                    Operand right = ((Bin)raw).right();
+                    if (right instanceof Immediate) { // right cannot be immediate
+                        newIns.add(new Move(rrcx, right));
+                        right = rrcx;
+                    }
+                    if (raw instanceof Div) {
+                        newIns.add(new Div(rax, right));
+                        newIns.add(new Move(rax, rax)); // refresh
+                        newIns.add(new Move(rrdx, rdx));
+                        newIns.add(new Move(((Div) raw).left(), rax));
+                    } else {
+                        newIns.add(new Mod(rax, right));
+                        newIns.add(new Move(rax, rax)); // refresh
+                        newIns.add(new Move(rrdx, rdx));
+                        newIns.add(new Move(((Bin) raw).left(), rrdx));
+                    }
+                } else if (raw instanceof Return) {
+                    if (((Return) raw).ret() != null)
+                        newIns.add(new Move(rax, ((Return) raw).ret()));
+                    newIns.add(new Return(null));
+                } else if (raw instanceof Label) {
+                    if (raw == entity.beginLabelINS()) {
+                        int i = 0;
+                        for (ParameterEntity par : entity.params()) {   // load parameters
+                            if (i < paraRegisterRef.size()) {
+                                newIns.add(new Move(par.reference(), paraRegisterRef.get(i)));
+                            } else {
+                                newIns.add(new Move(par.reference(), par.source()));
+                            }
+                            i++;
+                        }
+                    }
+                    newIns.add(raw);
+                } else if (raw instanceof Sal || raw instanceof Sar) {
+                    if (((Bin)raw).right() instanceof Immediate) {
+                        newIns.add(raw);
+                    } else {
+                        newIns.add(new Move(rrcx, ((Bin)raw).right()));
+                        if (raw instanceof Sal)
+                            newIns.add(new Sal(((Bin)raw).left(), rrcx));
+                        else
+                            newIns.add(new Sar(((Bin)raw).left(), rrcx));
+                    }
+                } else if (raw instanceof Move) {
+                    if (((Move) raw).dest() instanceof Address &&
+                            ((Move) raw).src() instanceof Address) {
+                        newIns.add(new Move(rax, ((Move) raw).src()));
+                        newIns.add(new Move(((Move) raw).dest(), rax));
+                    } else {
+                        newIns.add(raw);
+                    }
+                } else {
+                    newIns.add(raw);
+                }
+            }
+            basicBlock.setIns(newIns);
+        }
     }
 
     /* small utility */
