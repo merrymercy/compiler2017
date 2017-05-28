@@ -685,6 +685,7 @@ public class Allocator {
             toSpill = iter.next();
         }
 
+
         move(toSpill, spillWorklist, simplifyWorklist);
         freezeMoves(toSpill);
     }
