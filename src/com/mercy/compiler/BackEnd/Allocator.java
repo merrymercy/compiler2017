@@ -370,11 +370,6 @@ public class Allocator {
                 }
 
                 if (iter == 0) { // first iteration
-                    for (Reference ref : ins.allref()) {
-                        if (ref.name().equals("xx"))
-                            throw new InternalError("NIMAHIGH");
-                    }
-
                     initial.addAll(ins.allref());
                 }
             }
