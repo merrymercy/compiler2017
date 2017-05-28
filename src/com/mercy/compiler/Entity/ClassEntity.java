@@ -30,7 +30,6 @@ public class ClassEntity extends Entity {
     public List<VariableDefNode> memberVars() {
         return memberVars;
     }
-
     public List<FunctionDefNode> memberFuncs() {
         return memberFuncs;
     }
@@ -38,7 +37,6 @@ public class ClassEntity extends Entity {
     public Scope scope() {
         return scope;
     }
-
     public void setScope(Scope scope) {
         this.scope = scope;
     }
@@ -46,7 +44,6 @@ public class ClassEntity extends Entity {
     public FunctionEntity constructor() {
         return constructor;
     }
-
     public void setConstructor(FunctionEntity constructor) {
         this.constructor = constructor;
     }

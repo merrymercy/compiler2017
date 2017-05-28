@@ -16,11 +16,6 @@ public class ClassType extends Type {
         this.name = name;
     }
 
-    public ClassType(ClassEntity entity) {
-        this.name = entity.name();
-        this.entity = entity;
-    }
-
     public String name() {
         return name;
     }
@@ -40,20 +35,13 @@ public class ClassType extends Type {
 
     @Override
     public boolean isCompatible(Type other) {
-        if (!other.isClass())
-            return false;
-        if (other.isNull())
-            return true;
+        if (other.isNull())    return true;
+        if (!other.isClass())  return false;
         return entity.equals(((ClassType)other).entity);
     }
 
     @Override
     public int size() {
-        return DEFAULT_SIZE;
-    }
-
-    @Override
-    public long alignment() {
         return DEFAULT_SIZE;
     }
 

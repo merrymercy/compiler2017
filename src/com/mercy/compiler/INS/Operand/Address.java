@@ -81,15 +81,13 @@ public class Address extends Operand {
     public Operand baseNasm() {
         return baseNasm != null ? baseNasm : base;
     }
-
-    public Operand indexNasm() {
-        return indexNasm != null ? indexNasm : index;
-    }
-
     public void setBaseNasm(Operand baseNasm) {
         this.baseNasm = baseNasm;
     }
 
+    public Operand indexNasm() {
+        return indexNasm != null ? indexNasm : index;
+    }
     public void setIndexNasm(Operand indexNasm) {
         this.indexNasm = indexNasm;
     }
@@ -101,7 +99,6 @@ public class Address extends Operand {
     public boolean baseOnly() {
         return base != null && index == null && mul == 1 && add == 0;
     }
-
 
     @Override
     public boolean isDirect() {

@@ -31,16 +31,6 @@ public class Scope {
         entities.put(entity.name(), entity);
     }
 
-    public void insertConstant(Entity entity) {
-        Scope scope = this;
-        while (!scope.isToplevel) {
-            scope = scope.parent;
-        }
-        if (entities.containsKey(entity.name()))
-            throw new SemanticError(entity.location(), "duplicated string constant : " + entity.name());
-        entities.put(entity.name(), entity);
-    }
-
     // search in entire symbol table
     public Entity lookup(String name) {
         Entity entity = entities.get(name);
@@ -64,7 +54,6 @@ public class Scope {
     public List<Scope> children() {
         return children;
     }
-
     public void addChildren(Scope s) {
         children.add(s);
     }

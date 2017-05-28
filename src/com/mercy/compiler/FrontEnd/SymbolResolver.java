@@ -165,12 +165,6 @@ public class SymbolResolver extends Visitor {
         return null;
     }
 
-    /*@Override
-    public Void visit(FuncallNode node ) {
-
-        return null;
-    }*/
-
     @Override
     public Void visit(VariableNode node) {
         Entity entity = currentScope.lookup(node.name());

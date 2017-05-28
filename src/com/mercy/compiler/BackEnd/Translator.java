@@ -23,10 +23,7 @@ import static java.lang.System.err;
  * Created by mercy on 17-5-4.
  */
 public class Translator {
-    public static int VIRTUAL_STACK_REG_SIZE = 8;
-    public static int ALIGNMENT = 4;
     public static String GLOBAL_PREFIX = "__global_";
-
 
     private List<FunctionEntity> functionEntities;
     private Scope globalScope;
@@ -185,7 +182,6 @@ public class Translator {
                 }
             }
         }
-
         add("");
 
         // insert prologue
@@ -491,7 +487,7 @@ public class Translator {
     }
 
     public void visit(Lea ins) {
-        mem2reg(ins.addr(), rax(), null);
+        mem2reg(ins.addr(), rax(), rcx());
         ins.addr().setShowSize(false);
         if (ins.dest().isRegister()) {
             add("lea", ins.dest(), ins.addr());
@@ -532,7 +528,7 @@ public class Translator {
 
         if (operands.size() > paraRegister.size())
             add("add", rsp(), new Immediate(
-                    (operands.size() - paraRegister.size()) * VIRTUAL_STACK_REG_SIZE));
+                    (operands.size() - paraRegister.size()) * Option.REG_SIZE));
 
 
         // restore callor-save register

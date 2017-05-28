@@ -36,7 +36,6 @@ public class Unary extends Expr {
         this.operator = operator;
     }
 
-
     @Override
     public Operand accept(InstructionEmitter emitter) {
         return emitter.visit(this);

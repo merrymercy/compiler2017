@@ -39,7 +39,7 @@ public class ControlFlowAnalyzer {
         List<BasicBlock> bbs = new LinkedList<>();
 
         BasicBlock bb = null;
-        for (Instruction ins : entity.ins()) {
+        for (Instruction ins : entity.INS()) {
             if (bb == null && !(ins instanceof Label)) { // add new label
                 Label label = new Label("cfg_added_" + ct++);
                 bb = new BasicBlock(label);
@@ -85,7 +85,7 @@ public class ControlFlowAnalyzer {
         }
 
         entity.setBbs(bbs);
-        entity.setINS(null);
+        entity.setINS(null); // disable direct instruction access, so you must access instructions by BasicBlocks
     }
 
     private void buildControFlowGraph(FunctionEntity entity) {
@@ -185,8 +185,6 @@ public class ControlFlowAnalyzer {
                                 ((CJump) jump).setTrueLabel(((Jmp) last).dest());
                             if (((CJump) jump).falseLabel() == toremove.label())
                                 ((CJump) jump).setFalseLabel(((Jmp) last).dest());
-                            if (((CJump) jump).fallThrough() == toremove.label())
-                                ((CJump) jump).setFallThrough(((Jmp) last).dest());
 
                             pre.successor().remove(toremove);
                             uselessBasicBlock.add(toremove);

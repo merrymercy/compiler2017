@@ -1,28 +1,32 @@
 package com.mercy.compiler.FrontEnd;
 
 import com.mercy.compiler.AST.*;
-import com.mercy.compiler.Entity.ClassEntity;
-import com.mercy.compiler.Entity.Entity;
-import com.mercy.compiler.Entity.FunctionEntity;
-import com.mercy.compiler.Entity.ParameterEntity;
+import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.Type.*;
 import com.mercy.compiler.Utility.InternalError;
 import com.mercy.compiler.Utility.SemanticError;
 
 import java.util.List;
-import java.util.logging.Logger;
+
+import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
 
 /**
  * Created by mercy on 17-3-24.
  */
 public class TypeChecker extends Visitor {
-    Logger logger = Logger.getGlobal();
     static final Type boolType = new BoolType();
     static final Type integerType = new IntegerType();
     static final Type stringType = new StringType();
 
     private int loopDepth = 0;
     private FunctionEntity currentFunction = null;
+    private Scope scope;
+    private FunctionEntity mallocFunc;
+
+    public TypeChecker (Scope scope) {
+        this.scope = scope;
+        mallocFunc = (FunctionEntity) scope.lookupCurrentLevel(LIB_PREFIX + "malloc");
+    }
 
     static private void checkCompatibility(Location loc, Type real, Type expect, boolean isExpected) {
         if (!real.isCompatible(expect)) {
@@ -122,7 +126,7 @@ public class TypeChecker extends Visitor {
         if (currentFunction == null)
             throw new SemanticError(node.location(), "cannot return outside function");
 
-        if (currentFunction != null && currentFunction.isConstructor()) {
+        if (currentFunction.isConstructor()) {
             if (node.expr() != null) {
                 throw new SemanticError(node.location(), "cannot return in constructor");
             }
@@ -146,8 +150,7 @@ public class TypeChecker extends Visitor {
         if (!node.lhs().isAssignable()) {
             throw new SemanticError(node.location(), "LHS of '=' is not assignable");
         }
-        // note !! swap left and right for null
-        checkCompatibility(node.location(), node.rhs().type(), node.lhs().type(), false);
+        checkCompatibility(node.location(), node.lhs().type(), node.rhs().type(), false);
         return null;
     }
 
@@ -173,8 +176,6 @@ public class TypeChecker extends Visitor {
         visit((UnaryOpNode)node);
         if (node.operator() == UnaryOpNode.UnaryOp.PRE_INC ||
                 node.operator() == UnaryOpNode.UnaryOp.PRE_DEC) {
-            /*System.out.println("haha\n");
-            System.out.println(node);*/
             node.setAssignable(true);
         }
         return null;
@@ -304,7 +305,7 @@ public class TypeChecker extends Visitor {
         visitExpr(node.index());
         if (!node.expr().type().isArray()) {
             throw new SemanticError(node.location(), "Invalid reference of "
-                    + node.expr().type() + ", expecting array");
+                    + node.expr().type() + ", expecting an array");
         }
         checkCompatibility(node.index().location(), node.index().type(), integerType, true);
         node.setType(((ArrayType)(node.expr().type())).baseType());
@@ -314,6 +315,8 @@ public class TypeChecker extends Visitor {
     @Override
     public Void visit(CreatorNode node) {
         // check index
+        if (currentFunction != null)
+            currentFunction.addCall(mallocFunc);
         if (node.exprs() != null) {
             for (ExprNode expr : node.exprs()) {
                 visitExpr(expr);

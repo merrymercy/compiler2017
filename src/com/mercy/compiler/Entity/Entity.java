@@ -49,18 +49,16 @@ abstract public class Entity {
         return type.size();
     }
 
-    public void setOffset(int offset) {
-        this.offset = offset;
-    }
-
     public int offset() {
         return this.offset;
+    }
+    public void setOffset(int offset) {
+        this.offset = offset;
     }
 
     public Reference reference() {
         return reference;
     }
-
     public void setReference(Reference reference) {
         this.reference = reference;
     }
@@ -68,7 +66,6 @@ abstract public class Entity {
     public boolean outputIrrelevant() {
         return isOutputIrrelevant;
     }
-
     public void setOutputIrrelevant(boolean outputIrrelevant) {
         isOutputIrrelevant = outputIrrelevant;
     }
@@ -76,7 +73,6 @@ abstract public class Entity {
     public Set<Entity> dependence() {
         return dependence;
     }
-
     public void addDependence(Entity entity) {
         dependence.add(entity);
     }

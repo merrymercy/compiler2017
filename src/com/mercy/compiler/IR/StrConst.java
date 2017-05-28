@@ -18,7 +18,6 @@ public class StrConst extends Expr {
         return entity;
     }
 
-
     @Override
     public Operand accept(InstructionEmitter emitter) {
         return emitter.visit(this);

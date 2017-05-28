@@ -19,15 +19,13 @@ public class AssignNode extends ExprNode {
     public ExprNode lhs() {
         return lhs;
     }
-
-    public ExprNode rhs() {
-        return rhs;
-    }
-
     public void setLhs(ExprNode lhs) {
         this.lhs = lhs;
     }
 
+    public ExprNode rhs() {
+        return rhs;
+    }
     public void setRhs(ExprNode rhs) {
         this.rhs = rhs;
     }

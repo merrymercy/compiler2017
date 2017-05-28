@@ -43,16 +43,19 @@ public class BasicBlock {
         return label;
     }
 
-    public List<Instruction> ins() {
-        return ins;
-    }
-
     public List<Label> jumpTo() {
         return jumpTo;
     }
 
     public boolean layouted() {
         return layouted;
+    }
+
+    public List<Instruction> ins() {
+        return ins;
+    }
+    public void setIns(List<Instruction> ins) {
+        this.ins = ins;
     }
 
     public void setLayouted(boolean layouted) {
@@ -62,7 +65,6 @@ public class BasicBlock {
     public Set<Reference> liveIn() {
         return liveIn;
     }
-
     public void setLiveIn(Set<Reference> liveIn) {
         this.liveIn = liveIn;
     }
@@ -70,7 +72,6 @@ public class BasicBlock {
     public Set<Reference> liveOut() {
         return liveOut;
     }
-
     public void setLiveOut(Set<Reference> liveOut) {
         this.liveOut = liveOut;
     }
@@ -78,7 +79,6 @@ public class BasicBlock {
     public Set<Reference> use() {
         return use;
     }
-
     public void setUse(Set<Reference> use) {
         this.use = use;
     }
@@ -86,13 +86,8 @@ public class BasicBlock {
     public Set<Reference> def() {
         return def;
     }
-
     public void setDef(Set<Reference> def) {
         this.def = def;
-    }
-
-    public void setIns(List<Instruction> ins) {
-        this.ins = ins;
     }
 
     @Override

@@ -124,7 +124,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         fetchStmts(); // discard end label
     }
 
-
     @Override
     public Void visit(FunctionDefNode node) {
         throw new InternalError("invalid call to visit(FunctionDefNode node) in IRBuilder.");
@@ -151,7 +150,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         return null;
     }
 
-
     public Void visit(BlockNode node) {
         Scope newScope = node.scope();
         if (inlineMode > 0) {
@@ -176,186 +174,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         scopeStack.pop();
         currentScope = scopeStack.peek();
         return null;
-    }
-
-
-    private class ExprTuple {
-        int nodehash;
-        CommonExprInfo left, right;
-
-        ExprTuple (int nodehash, CommonExprInfo left, CommonExprInfo right) {
-            this.nodehash = nodehash;
-            this.left = left;
-            this.right = right;
-        }
-
-        @Override
-        public int hashCode() {
-            int base = nodehash;
-            if (left != null)
-                base *= left.hashCode();
-            if (right != null) {
-                base += right.hashCode();
-            }
-            return base;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            return hashCode() == o.hashCode();
-        }
-
-        @Override
-        public String toString() {
-            String base = Integer.toString(nodehash);
-            if (left != null)
-                base += " " + left.toString();
-            if (right != null)
-                base += " " + right.toString();
-            return base;
-        }
-    }
-
-    public class CommonExprInfo {
-        Expr expr;
-        int ref, depth;
-        String str;
-        Var var; // assigned temp var
-        boolean replaced;
-        ExprTuple tuple;
-
-        CommonExprInfo(Expr expr) {
-            this.expr = expr;
-        }
-
-        CommonExprInfo(Expr expr,  String str) {
-            this.expr = expr;
-            this.str = str;
-            this.ref = 1;
-        }
-
-        @Override
-        public int hashCode() {
-            return tuple.hashCode();
-        }
-
-        @Override
-        public String toString() {
-            return str;
-        }
-    }
-
-    Map<ExprTuple, CommonExprInfo> commonExprMap = new HashMap<>();
-    private Expr CommonExpressionElimination(Expr expr) {
-        if (!Option.enableCommonExpressionElimination)
-            return null;
-
-        Pair<Boolean, CommonExprInfo> ret = calcSubTree(expr);
-
-        if (!ret.first) {
-            return null;
-        }
-
-        /*for (Map.Entry<ExprTuple, CommonExprInfo> entry : commonExprMap.entrySet()) {
-            System.err.println(entry.getKey().hashCode() + "   " + entry.getValue() + "  " + entry.getValue().ref + " " + entry.getValue().depth);
-        }*/
-
-        for (CommonExprInfo info : commonExprMap.values()) {
-            info.replaced = (info.depth >= 2 && info.ref >= 2);
-        }
-
-        return replaceSubtree(expr);
-    }
-
-    private Pair<Boolean, CommonExprInfo> calcSubTree(Expr expr) {
-        CommonExprInfo ret = null;
-        if (expr instanceof Binary) {
-            Pair<Boolean, CommonExprInfo> left =  calcSubTree(((Binary) expr).left());
-            Pair<Boolean, CommonExprInfo> right = calcSubTree(((Binary) expr).right());
-
-            if (left.first && right.first) {
-                ExprTuple tuple = new ExprTuple(((Binary) expr).operator().hashCode(), left.second, right.second);
-                ret = commonExprMap.get(tuple);
-                if (ret == null) {
-                    ret = new CommonExprInfo(expr, left.second + " " + ((Binary) expr).operator().toString() + " " + right.second);
-                    ret.tuple = tuple;
-                    ret.depth = (left.second.depth > right.second.depth ? left.second.depth : right.second.depth) + 1;
-                    commonExprMap.put(tuple, ret);
-                } else {
-                    ret.ref++;
-                }
-            }
-
-        } else if (expr instanceof Var) {
-            ExprTuple tuple = new ExprTuple(((Var) expr).entity().hashCode(), null, null);
-            ret = commonExprMap.get(tuple);
-            if (ret == null) {
-                ret = new CommonExprInfo(expr, ((Var) expr).entity().name());
-                ret.tuple = tuple;
-                ret.depth = 0;
-                commonExprMap.put(tuple, ret);
-            } else {
-                ret.ref++;
-            }
-        } else if (expr instanceof IntConst) {
-            ExprTuple tuple = new ExprTuple(((IntConst) expr).value(), null, null);
-            ret = commonExprMap.get(tuple);
-            if (ret == null) {
-                ret = new CommonExprInfo(expr, Integer.toString(((IntConst) expr).value()));
-                ret.tuple = tuple;
-                ret.depth = 0;
-                commonExprMap.put(tuple, ret);
-            } else {
-                ret.ref++;
-            }
-        } else if (expr instanceof Mem) {
-            Pair<Boolean, CommonExprInfo> base =  calcSubTree(((Mem) expr).expr());
-
-            if (base.first) {
-                ExprTuple tuple = new ExprTuple(expr.getClass().hashCode(), base.second, null);
-                ret = commonExprMap.get(tuple);
-                if (ret == null) {
-                    ret = new CommonExprInfo(expr, "mem " + base.second);
-                    ret.tuple = tuple;
-                    ret.depth = base.second.depth + 1;
-                    commonExprMap.put(tuple, ret);
-                } else {
-                    ret.ref++;
-                }
-            }
-        }
-        expr.setCommonExprInfo(ret);
-        return new Pair<>(ret != null, ret);
-    }
-
-    private Expr replaceSubtree(Expr expr) {
-        CommonExprInfo info = expr.commonExprInfo();
-        if (info.replaced) {
-            if (info.var == null) {
-                Var tmp = newIntTemp();
-                info.var = tmp;
-                addAssign(tmp, info.expr);
-            }
-        }
-
-        if (expr instanceof Binary) {
-            if (info.replaced) {
-                return info.var;
-            }
-            Expr left = replaceSubtree(((Binary) expr).left());
-            Expr right = replaceSubtree(((Binary) expr).right());
-
-            return new Binary(left, ((Binary) expr).operator(), right);
-        } else if (expr instanceof Var || expr instanceof  IntConst) {
-            return expr;
-        } else if (expr instanceof Mem) {
-            if (info.replaced)
-                return info.var;
-
-            Expr base = replaceSubtree(((Mem) expr).expr());
-            return new Mem(base);
-        }
-        return expr;
     }
 
     int maxDepth = 0;
@@ -545,7 +363,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     Map<Integer, Entity> assignTable = new HashMap<>();
     Set<Entity> inDependency = new HashSet<>();
     void clearAssignTable() {
-        //err.println("clean");
         assignTable = new HashMap<>();
         inDependency = new HashSet<>();
     }
@@ -556,6 +373,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         Expr lhs = visitExpr(node.lhs());
         Expr rhs = null;
 
+        /***** OPTIMIZATION BEGIN *****/
         if (!needReturn() && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
                 err.println("remove assign " + node.location());
@@ -569,28 +387,23 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             Pair<Boolean, Integer> ret = ExprHashing(node.rhs());
             if (ret.first && !(node.rhs() instanceof IntegerLiteralNode)) {
                 Entity same = assignTable.get(new Integer(ret.second));
-                if (same == null) {
-                    //err.println("add to table " + entity.name() + " = " + ret.second);
+                if (same == null) {  //err.println("add to table " + entity.name() + " = " + ret.second);
                     for (Entity dep : getDependency(node.rhs())) {
                         inDependency.add(dep);
                     }
                     assignTable.put(ret.second, entity);
-                } else {
-                    //err.println(entity.name() + " = " + same.name());
+                } else {              //err.println(entity.name() + " = " + same.name());
                     rhs = new Var(same);
                 }
             }
         }
+        /***** OPTIMIZATION END *****/
 
         // cannot find common expr, build normally
         if (rhs == null) {
-            if (node.rhs() instanceof FuncallNode) {
-                notuseTmp = true;
-                rhs = visitExpr(node.rhs());
-                notuseTmp = false;
-            } else {
-                rhs = visitExpr(node.rhs());
-            }
+            notuseTmp = true;
+            rhs = visitExpr(node.rhs());
+            notuseTmp = false;
         }
 
         addAssign(lhs, rhs);
@@ -683,7 +496,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 default:
                     throw new InternalError(node.location(), "invalid operator " + node.operator());
             }
-        } else {  // convert the type of operator (AST.BinaryOp -> IR.BinaryOP), can be optimized here
+        } else {  // convert the type of operator (AST.BinaryOp -> IR.BinaryOP)
             Binary.BinaryOp op;
             switch (node.operator()) {
                 case ADD: op = ADD; break;
@@ -711,7 +524,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             return new Binary(lhs, op, rhs);
         }
     }
-
 
     @Override
     public Expr visit(LogicalAndNode node) {
@@ -741,71 +553,13 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         return needReturn() ? tmp : null;
     }
 
-    private void expandPrint(ExprNode arg, boolean newline, boolean last) {
-        if (arg instanceof FuncallNode && ((FuncallNode)arg).functionType().entity().name().equals("toString")) {
-            Expr x = visitExpr(((FuncallNode)arg).args().get(0));
-            stmts.add(new Call(newline && last ? printlnIntFunc : printIntFunc, new LinkedList<Expr>() {{add(x);}}));
-        } else if (arg instanceof BinaryOpNode && ((BinaryOpNode)arg).operator() == BinaryOpNode.BinaryOp.ADD) {
-            expandPrint(((BinaryOpNode)arg).left(), newline, false);
-            expandPrint(((BinaryOpNode)arg).right(), newline, last);
-        } else {
-            Expr x = visitExpr(arg);
-            stmts.add(new Call(newline && last ? printlnFunc : printFunc, new LinkedList<Expr>() {{add(x);}}));
-        }
-    }
-
-    int inlineCt = 0;
-    int inlineMode = 0;
-    Var inlineNoUse = new Var(new VariableEntity(null, null, null, null));
-    Stack<Map<Entity, Entity>> inlineMap = new Stack<>();
-    Stack<Label> inlineReturnLabel = new Stack<>();
-    Stack<Var> inlineReturnVar = new Stack<>();
-    private void inlineFunction(FunctionEntity entity, Var returnVar, List<Expr> args) {
-        Label returnLable = new Label();
-        Map<Entity, Entity> map = new HashMap<>();
-
-        inlineMap.push(map);
-        inlineReturnLabel.push(returnLable);
-        inlineReturnVar.push(returnVar);
-
-        // new scope
-        Scope scope = new Scope(currentScope);
-
-        // copy parameters, and assign init
-        Iterator<Expr> iter = args.iterator();
-        for (ParameterEntity par : entity.params()) {
-            VariableEntity clone = new VariableEntity(par.location(), par.type(),
-                    par.name() + "_inline_" + inlineCt++, null);
-            scope.insert(clone);
-            map.put(par, clone);
-            addAssign(new Var(clone), iter.next());
-        }
-
-        // compile body
-        currentScope = scope;
-        scopeStack.push(currentScope);
-
-        inlineMode++;
-        visit(entity.body());
-        addLabel(returnLable, "inline_return_" + entity.name());
-        inlineMode--;
-
-        scopeStack.pop();
-        currentScope = scopeStack.peek();
-
-        inlineMap.pop();
-        inlineReturnLabel.pop();
-        inlineReturnVar.pop();
-    }
-
     @Override
     public Expr visit(FuncallNode node) {
         clearAssignTable();
 
         FunctionEntity entity = node.functionType().entity();
 
-        if (Option.enablePrintExpand) {
-            // expand print (optimization)
+        if (Option.enablePrintExpand) { // expand print (optimization)
             if (entity.name().equals("print")) {
                 expandPrint(node.args().get(0), false, true);
                 return null;
@@ -883,7 +637,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             Expr base = new Var(node.getThisPointer());
             int offset = node.entity().offset();
 
-            if (false && offset == 0)  //TODO: see below
+            if (offset == 0)
                 return new Mem(base);
             else
                 return new Mem(new Binary(base, ADD, new IntConst(offset)));
@@ -902,7 +656,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         Expr base = visitExpr(node.expr());
         int offset = node.entity().offset();
 
-        if (false && offset == 0)  //TODO: see up
+        if (offset == 0)
             return new Mem(base);
         else
             return new Mem(new Binary(base, ADD, new IntConst(offset)));
@@ -965,7 +719,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
             Var tmpAddress = newIntTemp();
             addAssign(tmpAddress, new Binary(base, ADD, new Binary(tmpI, MUL, sizeof)));
-            // !!!!!!!!!
             addAssign(new Mem(tmpAddress), new Call(mallocFunc, new LinkedList<Expr>(){{ add(sizeof); }}));
             if (constructor != null)
                 stmts.add(new Call(constructor, new LinkedList<Expr>(){{ add(new Mem(tmpAddress)); }}));
@@ -981,7 +734,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(CreatorNode node) {
         clearAssignTable();
 
-        currentFunction.addCall(mallocFunc);
         if (node.type() instanceof ArrayType) {
             Type baseType = ((ArrayType) node.type()).baseType();
             Type deepType = ((ArrayType) node.type()).deepType();
@@ -1055,10 +807,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
     }
 
-    private boolean needReturn() {
-        return exprDepth > 1;
-    }
-
     @Override
     public Expr visit(PrefixOpNode node) {
         return visit((UnaryOpNode)node);
@@ -1068,9 +816,16 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Expr visit(SuffixOpNode node) {
         return visit((UnaryOpNode)node);
     }
+
+
     /*
-     * private utility
+     * utility for generating IR
      */
+
+    private boolean needReturn() {
+        return exprDepth > 1;
+    }
+
     private List<IR> fetchStmts() {
         List<IR> ret = stmts;
         stmts = new LinkedList<>();
@@ -1087,12 +842,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
     }
 
-    /*
-     * utility for generating IR
-     */
-
     private void addAssign(Expr lhs, Expr rhs) {
-        if (Option.enableCommonExpressionElimination && lhs instanceof  Var) {
+        if (Option.enableCommonExpressionElimination && lhs instanceof Var) {
             if (inDependency.contains(((Var) lhs).entity())) {
                 clearAssignTable();
             }
@@ -1100,11 +851,10 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         stmts.add(new Assign(getAddress(lhs), rhs));
     }
 
-    static int labelCounter = 0;
+    private int labelCounter = 0;
     private void addLabel(Label label, String name) {
-        label.setName(name + "_" + labelCounter);
+        label.setName(name + "_" + labelCounter++);
         stmts.add(label);
-        labelCounter++;
     }
 
     private void addCJump(ExprNode cond, Label trueLabel, Label falseLabel) {
@@ -1138,17 +888,14 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
     }
 
-    List<Var> tmpStack = new LinkedList<>();
-    int tmpTop = 0;
-
-    int newIntTempCounter = 0;
-    public Var newIntTemp() {
+    private List<Var> tmpStack = new LinkedList<>();
+    private int tmpTop = 0, newIntTempCounter = 0;
+    private Var newIntTemp() {
         if (Option.enableGlobalRegisterAllocation) {
             VariableEntity tmp = new VariableEntity(null, new IntegerType(),
                     "tmp" + newIntTempCounter++, null);
             currentFunction.scope().insert(tmp);
             return new Var(tmp);
-
         } else {
             if (tmpTop >= tmpStack.size()) {
                 VariableEntity tmp = new VariableEntity(null, new IntegerType(),
@@ -1160,7 +907,242 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
     }
 
-    /*
+    /**
+     * some optimization in IRBuilder (expand print, function inline)
+     */
+    private void expandPrint(ExprNode arg, boolean newline, boolean last) {
+        if (arg instanceof FuncallNode && ((FuncallNode)arg).functionType().entity().name().equals("toString")) {
+            Expr x = visitExpr(((FuncallNode)arg).args().get(0));
+            stmts.add(new Call(newline && last ? printlnIntFunc : printIntFunc, new LinkedList<Expr>() {{add(x);}}));
+        } else if (arg instanceof BinaryOpNode && ((BinaryOpNode)arg).operator() == BinaryOpNode.BinaryOp.ADD) {
+            expandPrint(((BinaryOpNode)arg).left(), newline, false);
+            expandPrint(((BinaryOpNode)arg).right(), newline, last);
+        } else {
+            Expr x = visitExpr(arg);
+            stmts.add(new Call(newline && last ? printlnFunc : printFunc, new LinkedList<Expr>() {{add(x);}}));
+        }
+    }
+
+    private int inlineCt = 0;
+    private int inlineMode = 0;
+    private Var inlineNoUse = new Var(new VariableEntity(null, null, null, null));
+    private Stack<Map<Entity, Entity>> inlineMap = new Stack<>();
+    private Stack<Label> inlineReturnLabel = new Stack<>();
+    private Stack<Var> inlineReturnVar = new Stack<>();
+    private void inlineFunction(FunctionEntity entity, Var returnVar, List<Expr> args) {
+        Label returnLable = new Label();
+        Map<Entity, Entity> map = new HashMap<>();
+
+        inlineMap.push(map);
+        inlineReturnLabel.push(returnLable);
+        inlineReturnVar.push(returnVar);
+
+        // new scope
+        Scope scope = new Scope(currentScope);
+
+        // copy parameters, and assign init
+        Iterator<Expr> iter = args.iterator();
+        for (ParameterEntity par : entity.params()) {
+            VariableEntity clone = new VariableEntity(par.location(), par.type(),
+                    par.name() + "_inline_" + inlineCt++, null);
+            scope.insert(clone);
+            map.put(par, clone);
+            addAssign(new Var(clone), iter.next());
+        }
+
+        // compile body
+        currentScope = scope;
+        scopeStack.push(currentScope);
+
+        inlineMode++;
+        visit(entity.body());
+        addLabel(returnLable, "inline_return_" + entity.name());
+        inlineMode--;
+
+        scopeStack.pop();
+        currentScope = scopeStack.peek();
+
+        inlineMap.pop();
+        inlineReturnLabel.pop();
+        inlineReturnVar.pop();
+    }
+
+    // ugly common expr elimination
+    private class ExprTuple {
+        int nodehash;
+        CommonExprInfo left, right;
+
+        ExprTuple (int nodehash, CommonExprInfo left, CommonExprInfo right) {
+            this.nodehash = nodehash;
+            this.left = left;
+            this.right = right;
+        }
+
+        @Override
+        public int hashCode() {
+            int base = nodehash;
+            if (left != null)
+                base *= left.hashCode();
+            if (right != null) {
+                base += right.hashCode();
+            }
+            return base;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return hashCode() == o.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            String base = Integer.toString(nodehash);
+            if (left != null)
+                base += " " + left.toString();
+            if (right != null)
+                base += " " + right.toString();
+            return base;
+        }
+    }
+    public class CommonExprInfo {
+        Expr expr;
+        int ref, depth;
+        String str;
+        Var var; // assigned temp var
+        boolean replaced;
+        ExprTuple tuple;
+
+        CommonExprInfo(Expr expr) {
+            this.expr = expr;
+        }
+
+        CommonExprInfo(Expr expr,  String str) {
+            this.expr = expr;
+            this.str = str;
+            this.ref = 1;
+        }
+
+        @Override
+        public int hashCode() {
+            return tuple.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return str;
+        }
+    }
+    Map<ExprTuple, CommonExprInfo> commonExprMap = new HashMap<>();
+    private Expr CommonExpressionElimination(Expr expr) {
+        if (!Option.enableCommonExpressionElimination)
+            return null;
+
+        Pair<Boolean, CommonExprInfo> ret = calcSubTree(expr);
+        if (!ret.first) {
+            return null;
+        }
+
+        /*for (Map.Entry<ExprTuple, CommonExprInfo> entry : commonExprMap.entrySet()) {
+            System.err.println(entry.getKey().hashCode() + "   " + entry.getValue() + "  " + entry.getValue().ref + " " + entry.getValue().depth);
+        }*/
+
+        for (CommonExprInfo info : commonExprMap.values()) {
+            info.replaced = (info.depth >= 2 && info.ref >= 2);
+        }
+
+        return replaceSubtree(expr);
+    }
+    private Pair<Boolean, CommonExprInfo> calcSubTree(Expr expr) {
+        CommonExprInfo ret = null;
+        if (expr instanceof Binary) {
+            Pair<Boolean, CommonExprInfo> left =  calcSubTree(((Binary) expr).left());
+            Pair<Boolean, CommonExprInfo> right = calcSubTree(((Binary) expr).right());
+
+            if (left.first && right.first) {
+                ExprTuple tuple = new ExprTuple(((Binary) expr).operator().hashCode(), left.second, right.second);
+                ret = commonExprMap.get(tuple);
+                if (ret == null) {
+                    ret = new CommonExprInfo(expr, left.second + " " + ((Binary) expr).operator().toString() + " " + right.second);
+                    ret.tuple = tuple;
+                    ret.depth = (left.second.depth > right.second.depth ? left.second.depth : right.second.depth) + 1;
+                    commonExprMap.put(tuple, ret);
+                } else {
+                    ret.ref++;
+                }
+            }
+
+        } else if (expr instanceof Var) {
+            ExprTuple tuple = new ExprTuple(((Var) expr).entity().hashCode(), null, null);
+            ret = commonExprMap.get(tuple);
+            if (ret == null) {
+                ret = new CommonExprInfo(expr, ((Var) expr).entity().name());
+                ret.tuple = tuple;
+                ret.depth = 0;
+                commonExprMap.put(tuple, ret);
+            } else {
+                ret.ref++;
+            }
+        } else if (expr instanceof IntConst) {
+            ExprTuple tuple = new ExprTuple(((IntConst) expr).value(), null, null);
+            ret = commonExprMap.get(tuple);
+            if (ret == null) {
+                ret = new CommonExprInfo(expr, Integer.toString(((IntConst) expr).value()));
+                ret.tuple = tuple;
+                ret.depth = 0;
+                commonExprMap.put(tuple, ret);
+            } else {
+                ret.ref++;
+            }
+        } else if (expr instanceof Mem) {
+            Pair<Boolean, CommonExprInfo> base =  calcSubTree(((Mem) expr).expr());
+
+            if (base.first) {
+                ExprTuple tuple = new ExprTuple(expr.getClass().hashCode(), base.second, null);
+                ret = commonExprMap.get(tuple);
+                if (ret == null) {
+                    ret = new CommonExprInfo(expr, "mem " + base.second);
+                    ret.tuple = tuple;
+                    ret.depth = base.second.depth + 1;
+                    commonExprMap.put(tuple, ret);
+                } else {
+                    ret.ref++;
+                }
+            }
+        }
+        expr.setCommonExprInfo(ret);
+        return new Pair<>(ret != null, ret);
+    }
+    private Expr replaceSubtree(Expr expr) {
+        CommonExprInfo info = expr.commonExprInfo();
+        if (info.replaced) {
+            if (info.var == null) {
+                Var tmp = newIntTemp();
+                info.var = tmp;
+                addAssign(tmp, info.expr);
+            }
+        }
+
+        if (expr instanceof Binary) {
+            if (info.replaced) {
+                return info.var;
+            }
+            Expr left = replaceSubtree(((Binary) expr).left());
+            Expr right = replaceSubtree(((Binary) expr).right());
+
+            return new Binary(left, ((Binary) expr).operator(), right);
+        } else if (expr instanceof Var || expr instanceof  IntConst) {
+            return expr;
+        } else if (expr instanceof Mem) {
+            if (info.replaced)
+                return info.var;
+
+            Expr base = replaceSubtree(((Mem) expr).expr());
+            return new Mem(base);
+        }
+        return expr;
+    }
+
+    /**
      * getter
      */
     public List<IR> globalInitializer() {

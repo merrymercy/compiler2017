@@ -3,7 +3,7 @@ package com.mercy.compiler.Type;
 /**
  * Created by mercy on 17-3-18.
  */
-public abstract class Type {
+abstract public class Type {
     static final public long sizeUnknown = -1;
 
     static public BoolType boolType = new BoolType();
@@ -42,10 +42,7 @@ public abstract class Type {
         return false;
     }
 
-    // Ability methods (unary)
-    public boolean isScalar() {
-        return false;
-    }
+    // Ability methods
     public boolean isFullComparable() {
         return false;
     }
@@ -53,23 +50,11 @@ public abstract class Type {
         return false;
     } // can comparable w.r.t. '==' and '!='
 
-    // Ability methods (binary)
     abstract public boolean isCompatible(Type other);
-    // abstract public boolean isCastableTo(Type target);
 
     abstract public int size();
 
     public long allocSize() {
         return size();
-    }
-    public long alignment() {
-        return allocSize();
-    }
-
-    public FunctionType getFunctionType() {
-        return (FunctionType)this;
-    }
-    public ClassType getClassType() {
-        return (ClassType)this;
     }
 }

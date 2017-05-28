@@ -31,10 +31,6 @@ public class ArefNode extends LHSNode {
         return isMultiDimension() ? ((ArefNode)expr).baseExpr() : expr;
     }
 
-    public long elementSize() {
-        return type().size();
-    }
-
     public Location location() {
         return expr.location();
     }

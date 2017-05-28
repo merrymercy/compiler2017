@@ -15,11 +15,6 @@ public class IntegerType extends Type {
     }
 
     @Override
-    public boolean isScalar() {
-        return true;
-    }
-
-    @Override
     public boolean isCompatible(Type other) {
         return other.isInteger();
     }

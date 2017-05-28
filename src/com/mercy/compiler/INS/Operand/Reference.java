@@ -124,20 +124,6 @@ public class Reference extends Operand {
         return refTimes;
     }
 
-    public Reference copy() {
-        switch (type) {
-            case REG:
-                return new Reference(reg);
-            case OFFSET:
-                return new Reference(offset, reg);
-            case UNKNOWN:
-                if (color != null)
-                    return new Reference(color);
-            default:
-                throw new InternalError("unhandled case in copy reference");
-        }
-    }
-
     @Override
     public Operand replace(Operand from, Operand to) {
         return this == from ? to : this;

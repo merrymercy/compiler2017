@@ -40,18 +40,18 @@ public class NaiveAllocator  {
 
     public void allocate() {
         for (FunctionEntity functionEntity : functionEntities) {
-            allocateTmpStack(functionEntity);
+            allocateFunction(functionEntity);
         }
     }
 
-    private void allocateTmpStack(FunctionEntity entity){
+    private void allocateFunction(FunctionEntity entity){
         if (Option.enableInlineFunction && entity.canbeInlined())
             return;
 
         /*************************************************/
         // count times and sort
         Set<Reference> allRef = entity.allReference();
-        for (Instruction ins : entity.ins()) {
+        for (Instruction ins : entity.INS()) {
             for (Reference ref : ins.use()) {
                 ref.addRefTime();
                 allRef.add(ref);
@@ -70,19 +70,19 @@ public class NaiveAllocator  {
         });
 
         // allocate register
-        int[] toAllocate = {12, 13, 14, 15};
+        int[] toAllocate = {1, 12, 13, 14, 15};
 
         if (Option.printNaiveAllocatorInfo)
             err.println("naive allocator : " + entity.name());
         for (int i = 0; i < tosort.size(); i++) {
             if (i < toAllocate.length) {
                 Reference ref = tosort.get(i);
-
-                if (ref.type() == Reference.Type.GLOBAL)
+                if (ref.type() == Reference.Type.GLOBAL) // skip global variable
                     continue;
 
                 ref.setRegister(registers.get(toAllocate[i]));
                 entity.regUsed().add(registers.get(toAllocate[i]));
+
                 if (Option.printNaiveAllocatorInfo)
                     err.printf("%-8s -> %s\n", ref.name(), ref.reg());
             }
@@ -91,9 +91,8 @@ public class NaiveAllocator  {
         /*************************************************/
 
         // locate parameters
-        int paraBase, lvarBase;
-        paraBase = 0;
-        lvarBase = paraBase;
+        int lvarBase, stackBase, savedTempBase;
+        lvarBase = 0;
         List<ParameterEntity> params = entity.params();
         for (int i = 0; i < params.size(); i++) {
             ParameterEntity par = params.get(i);
@@ -107,7 +106,6 @@ public class NaiveAllocator  {
         }
 
         // locate frame
-        int stackBase, savedTempBase;
         stackBase = lvarBase;
         stackBase += entity.scope().locateLocalVariable(lvarBase, Option.STACK_VAR_ALIGNMENT_SIZE);
         for (VariableEntity var : entity.scope().allLocalVariables()) {
@@ -124,7 +122,7 @@ public class NaiveAllocator  {
             }
         }
 
-        entity.setLocalVariableOffset(savedTempBase - paraBase);
+        entity.setLocalVariableOffset(savedTempBase);
     }
 
 }

@@ -22,11 +22,6 @@ public class BoolType extends Type {
     }
 
     @Override
-    public boolean isScalar() {
-        return true;
-    }
-
-    @Override
     public int size() {
         return DEFAULT_SIZE;
     }

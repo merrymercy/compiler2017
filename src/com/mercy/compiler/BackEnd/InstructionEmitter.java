@@ -86,6 +86,7 @@ public class InstructionEmitter {
             isInLeaf = true;
             err.println(entity.name() + " is leaf");
             usedGlobal = new HashSet<>();
+            // make copy to local
             for (Entity global : globalScope.entities().values()) {
                 if (global instanceof  VariableEntity) {
                     VariableEntity local = new VariableEntity(global.location(), global.type(), "g_" + global.name(), null);
@@ -100,12 +101,12 @@ public class InstructionEmitter {
         for (ParameterEntity parameterEntity : entity.params()) {
             parameterEntity.setReference(new Reference(parameterEntity));
             parameterEntity.setSource(new Reference(parameterEntity.name() + "_src", CANNOT_COLOR));
-            // set to global, i.e. don't allocate register for this
         }
         for (VariableEntity variableEntity : entity.allLocalVariables()) {
             variableEntity.setReference(new Reference(variableEntity));
         }
 
+        // emit instructions
         entity.setLabelINS(getLabel(entity.beginLabelIR().name()), getLabel(entity.endLabelIR().name()));
         ins = new LinkedList<>();
         for (IR ir : entity.IR()) {
@@ -113,13 +114,13 @@ public class InstructionEmitter {
             ir.accept(this);
         }
 
+        // if is in leaf, add move instruction for copy global to local
         if (isInLeaf) {
             for (Entity global : usedGlobal) {
                 ins.add(1, new Move(transEntity(global).reference(), global.reference()));
                 ins.add(ins.size() - 1, new Move(global.reference(), transEntity(global).reference()));
             }
         }
-
         return ins;
     }
 
@@ -304,22 +305,24 @@ public class InstructionEmitter {
         throw new InternalError("Unhandled case in IR Addr");
     }
 
+    private Operand eliminateAddress(Operand operand) {
+        if (operand instanceof Address) {
+            Reference tmp = getTmp();
+            ins.add(new Move(tmp, operand));
+            return tmp;
+        } else {
+            return operand;
+        }
+    }
+
     public Operand visit(com.mercy.compiler.IR.Assign ir) {
         Operand dest = null;
 
-        if (ir.left() instanceof Var) {
-            dest = new Address(transEntity(((Var) ir.left()).entity()).reference());
-        } else  if (ir.left() instanceof Addr) {
+        if (ir.left() instanceof Addr) {
             dest = transEntity(((Addr) ir.left()).entity()).reference();
-        }
-
-        if (dest == null) {
+        } else {
             Operand lhs = visitExpr(ir.left());
-            if (lhs instanceof Address) {
-                Reference tmp = getTmp();
-                ins.add(new Move(tmp, lhs));
-                lhs = tmp;
-            }
+            lhs = eliminateAddress(lhs);
             dest = new Address(lhs);
         }
 
@@ -383,7 +386,6 @@ public class InstructionEmitter {
                 return false;
         }
     }
-
 
     public int log2(int x) {
         for (int i = 0; i < 30; i++) {
@@ -453,7 +455,7 @@ public class InstructionEmitter {
     }
 
     // make the label unique, i.e. point to the same object
-    Map<String, Label> labelMap = new HashMap<>();
+    private Map<String, Label> labelMap = new HashMap<>();
     private Label getLabel(String name) {
         Label ret = labelMap.get(name);
         if (ret == null) {
@@ -546,42 +548,29 @@ public class InstructionEmitter {
         AddressTuple addr;
 
         if ((addr = matchAddress(ir.expr())) != null) {
-            int backupTop = tmpTop;
             Operand base =  visitExpr(addr.base);
             Operand index = null;
-            if (addr.index != null)
-                index =  visitExpr(addr.index);
-            Operand ret = base;
-            tmpTop = backupTop + 1;
+            if (addr.index != null) {
+                index = visitExpr(addr.index);
+                index = eliminateAddress(index);
+            }
 
-            while(ret instanceof Address) {
+            Operand ret = base;
+            while (ret instanceof Address) {
                 ret = ((Address) ret).base();
             }
 
-            if ((base instanceof Address) && (index instanceof Address))
-                throw new InternalError("Unhandled case in memory instruction selection");
+            base = eliminateAddress(base);
 
-            if (base instanceof Address) { // get rid of nested address
-                Reference tmp = getTmp();
-                ins.add(new Move(tmp, base));
-                base = tmp;
-            }
-
-            if (index instanceof Address) {
-                Reference tmp = getTmp();
-                ins.add(new Move(tmp, index));
-                index = tmp;
-            }
+            if (!(base instanceof Reference))
+                throw new InternalError("nihahigh");
 
             ins.add(new Move(ret, new Address(base, index, addr.mul, addr.add)));
             return ret;
         } else {
             Operand expr = visitExpr(ir.expr());
-            if (ir.expr() instanceof Addr) {
-                throw new InternalError("Unhandled case in IR Mem " + ir.expr());
-            } else {       // should add address "[]" in this case
-                return new Address(expr);
-            }
+            expr = eliminateAddress(expr);
+            return new Address(expr); // should add address "[]" in this case
         }
     }
 
@@ -593,6 +582,13 @@ public class InstructionEmitter {
         return new Immediate(ir.value());
     }
 
+    public Operand visit(com.mercy.compiler.IR.Var ir) {
+        Reference ret = getTmp();
+        ins.add(new Move(ret, transEntity(ir.entity()).reference()));
+        return ret;
+    }
+
+    // translate entity for global in leaf function
     private Entity transEntity(Entity entity) {
         if (isInLeaf) {
             Entity ret = globalLocalMap.get(entity);
@@ -602,12 +598,6 @@ public class InstructionEmitter {
             }
         }
         return entity;
-    }
-
-    public Operand visit(com.mercy.compiler.IR.Var ir) {
-        Reference ret = getTmp();
-        ins.add(new Move(ret, transEntity(ir.entity()).reference()));
-        return ret;
     }
 
     /*
@@ -649,7 +639,7 @@ public class InstructionEmitter {
             out.println("BE INLINED");
             return;
         }
-        for (Instruction instruction : entity.ins()) {
+        for (Instruction instruction : entity.INS()) {
             out.println(instruction.toString());
         }
     }

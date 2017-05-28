@@ -1,8 +1,7 @@
 package com.mercy.compiler.AST;
 
 import com.mercy.compiler.Entity.*;
-import com.mercy.compiler.FrontEnd.DependenceEdge;
-import com.mercy.compiler.FrontEnd.OutputIrrelevantAnalyzer;
+import com.mercy.compiler.FrontEnd.OutputIrrelevantMaker;
 import com.mercy.compiler.FrontEnd.SymbolResolver;
 import com.mercy.compiler.FrontEnd.TypeChecker;
 import com.mercy.compiler.Utility.SemanticError;
@@ -17,15 +16,15 @@ import java.util.Set;
 public class AST {
     private Scope scope;
     private List<DefinitionNode> definitionNodes;
-    private List<ClassEntity> classEntitsies;
+    private List<ClassEntity> classEntities;
     private List<FunctionEntity> functionEntities;
     private List<VariableEntity> variableEntities;
 
     public AST(List<DefinitionNode> definitionNodes, List<ClassEntity> definedClass,
                List<FunctionEntity> definedFunction, List<VariableEntity> definedVariable) {
         super();
-        this.definitionNodes = definitionNodes;
-        this.classEntitsies = definedClass;
+        this.definitionNodes  = definitionNodes;
+        this.classEntities    = definedClass;
         this.functionEntities = definedFunction;
         this.variableEntities = definedVariable;
         this.scope = new Scope(true);
@@ -37,12 +36,14 @@ public class AST {
         }
     }
 
+    /*
+     * semantic check
+     */
     public void resolveSymbol() {
         // put function entity and class entity into scope
-        for (ClassEntity entity : classEntitsies) {
+        for (ClassEntity entity : classEntities) {
             scope.insert(entity);
         }
-
         for (FunctionEntity entity : functionEntities) {
             scope.insert(entity);
         }
@@ -53,8 +54,10 @@ public class AST {
     }
 
     public void checkType() {
-        TypeChecker checker = new TypeChecker();
+        TypeChecker checker = new TypeChecker(scope);
         checker.visitDefinitions(definitionNodes);
+
+        // ckeck main function
         FunctionEntity mainFunc = (FunctionEntity)scope.lookup("main");
         if (mainFunc == null) {
             throw new SemanticError(new Location(0,0), "main undefined");
@@ -64,7 +67,29 @@ public class AST {
         }
     }
 
-    Set<DependenceEdge> visited = new HashSet<>();
+    /*
+     * output irrelevant analyze
+     */
+    public class DependenceEdge {
+        public Entity base, rely;
+        public boolean visited = false;
+        public DependenceEdge (Entity base, Entity rely) {
+            this.base = base;
+            this.rely = rely;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return hashCode() == o.hashCode();
+        }
+
+        @Override
+        public int hashCode() {
+            return base.hashCode() ^ rely.hashCode() + base.hashCode() * rely.hashCode();
+        }
+    }
+
+    private Set<DependenceEdge> visited = new HashSet<>();
     private void propaOutputIrrelevant(Entity entity, boolean flag) {
         if (flag)
             return;
@@ -85,10 +110,10 @@ public class AST {
     }
 
     public void eliminateOutputIrrelevantNode() {
-        if (classEntitsies().size() != 0) {
+        if (classEntitsies().size() != 0) {  // don't analyze class type
             return;
         } else {
-            OutputIrrelevantAnalyzer analyzer = new OutputIrrelevantAnalyzer(this);
+            OutputIrrelevantMaker analyzer = new OutputIrrelevantMaker(this);
             analyzer.visitDefinitions(definitionNodes);
 
             // gather all entity, mark irrelevant default
@@ -98,7 +123,7 @@ public class AST {
             }
 
             // print dependence info
-           /* HashSet<Entity> printed = new HashSet<>();
+            /*HashSet<Entity> printed = new HashSet<>();
             for (DependenceEdge edge : analyzer.dependenceEdgeSet()) {
                 if (printed.contains(edge.base))
                     continue;
@@ -137,7 +162,6 @@ public class AST {
         }
     }
 
-
     public Scope scope() {
         return scope;
     }
@@ -147,7 +171,7 @@ public class AST {
     }
 
     public List<ClassEntity> classEntitsies() {
-        return classEntitsies;
+        return classEntities;
     }
 
     public List<FunctionEntity> functionEntities() {

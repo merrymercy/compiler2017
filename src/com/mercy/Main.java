@@ -30,7 +30,7 @@ import static java.lang.System.exit;
 
 public class Main {
 
-    public static void main(String[] args) throws Exception {
+    public static void parseOption(String []args) {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--print-ins":
@@ -53,6 +53,10 @@ public class Main {
                     break;
             }
         }
+    }
+
+    public static void main(String[] args) throws Exception {
+        parseOption(args);
 
         InputStream is = new FileInputStream(Option.inFile);
         PrintStream os = new PrintStream(new FileOutputStream(Option.outFile));
@@ -69,24 +73,6 @@ public class Main {
             e.printStackTrace();
             exit(1);
         }
-    }
-
-    public static List<Entity> getLibrary() {
-        List<Entity> ret = new LinkedList<>();
-
-        // lib function
-        ret.add(new LibFunction(voidType, "print", "printf", new Type[]{stringType}).getEntity());
-        ret.add(new LibFunction(voidType, "println", "puts", new Type[]{stringType}).getEntity());
-        ret.add(new LibFunction(stringType, "getString", null).getEntity());
-        ret.add(new LibFunction(integerType, "getInt", null).getEntity());
-        ret.add(new LibFunction(stringType, "toString", new Type[]{integerType}).getEntity());
-        ret.add(new LibFunction(integerType, LIB_PREFIX + "printInt", LIB_PREFIX + "printInt", new Type[]{integerType}).getEntity());
-        ret.add(new LibFunction(integerType, LIB_PREFIX + "printlnInt", LIB_PREFIX + "printlnInt", new Type[]{integerType}).getEntity());
-        ret.add(new LibFunction(integerType, LIB_PREFIX + "malloc", "malloc", new Type[]{integerType}).getEntity());
-        // null
-        ret.add(new VariableEntity(null, nullType, "null", null));
-
-        return ret;
     }
 
     public static void compile(InputStream sourceCode, PrintStream asmCode) throws Exception {
@@ -111,9 +97,11 @@ public class Main {
         ast.checkType();                              // check type
         if (Option.enableOutputIrrelevantElimination) // eliminate output-irrelevant code
             ast.eliminateOutputIrrelevantNode();
-        int entitySize = ast.scope().allLocalVariables().size();
-        if (entitySize > 256)
+
+        boolean backupSettingForTest = Option.enableGlobalRegisterAllocation;
+        if (ast.scope().allLocalVariables().size() > 256) { // disable global allocation when the number of entities is too large
             Option.enableGlobalRegisterAllocation = false;
+        }
 
         IRBuilder irBuilder = new IRBuilder(ast);
         irBuilder.generateIR();                      // generate IR, do simple constant folding
@@ -130,7 +118,6 @@ public class Main {
         if (Option.printBasicBlocks)
             cfgBuilder.printSelf(System.err);
 
-
         // allocate register
         RegisterConfig registerConfig = new RegisterConfig();
 
@@ -145,10 +132,29 @@ public class Main {
         // translate to x86 nasm
         Translator translator = new Translator(emitter, registerConfig);
         List<String> asm = translator.translate();
-        //translator.printSelf(System.out);
 
         for (String s : asm) {
             asmCode.println(s);
         }
+
+        Option.enableGlobalRegisterAllocation = backupSettingForTest;
+    }
+
+    private static List<Entity> getLibrary() {
+        List<Entity> ret = new LinkedList<>();
+
+        // lib function
+        ret.add(new LibFunction(voidType, "print", "printf", new Type[]{stringType}).getEntity());
+        ret.add(new LibFunction(voidType, "println", "puts", new Type[]{stringType}).getEntity());
+        ret.add(new LibFunction(stringType, "getString", null).getEntity());
+        ret.add(new LibFunction(integerType, "getInt", null).getEntity());
+        ret.add(new LibFunction(stringType, "toString", new Type[]{integerType}).getEntity());
+        ret.add(new LibFunction(integerType, LIB_PREFIX + "printInt", LIB_PREFIX + "printInt", new Type[]{integerType}).getEntity());
+        ret.add(new LibFunction(integerType, LIB_PREFIX + "printlnInt", LIB_PREFIX + "printlnInt", new Type[]{integerType}).getEntity());
+        ret.add(new LibFunction(integerType, LIB_PREFIX + "malloc", "malloc", new Type[]{integerType}).getEntity());
+        // null
+        ret.add(new VariableEntity(null, nullType, "null", null));
+
+        return ret;
     }
 }

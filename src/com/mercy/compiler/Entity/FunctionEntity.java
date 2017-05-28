@@ -23,9 +23,10 @@ public class FunctionEntity extends Entity {
     private List<ParameterEntity> params;
     private BlockNode body;
     private Scope scope;
+
     private boolean isConstructor = false;
     private boolean isLibFunction = false;
-    
+
     private boolean canbeInlined = false;
     private Set<FunctionEntity> calls = new HashSet<>();
     
@@ -33,7 +34,6 @@ public class FunctionEntity extends Entity {
     private com.mercy.compiler.INS.Label beginLabelINS, endLabelINS;
     private List<IR> irs;
     private List<Instruction> ins;
-    private List<Instruction> beginIns = new LinkedList<>(), endIns = new LinkedList<>();
     private List<BasicBlock> bbs;
     private List<Reference> tmpStack;
     private int frameSize;
@@ -54,31 +54,31 @@ public class FunctionEntity extends Entity {
     }
 
     public ParameterEntity addThisPointer(Location loc, ClassEntity entity) {
-        ParameterEntity thisPointer = new ParameterEntity(entity.location(), entity.type(), "this");
+        ParameterEntity thisPointer = new ParameterEntity(loc, entity.type(), "this");
         params.add(0, thisPointer);
         return thisPointer;
     }
 
     // check whether can be inlined
-    Map<FunctionEntity, Boolean> visited;
+    private Map<FunctionEntity, Boolean> visited;
     public void checkInlinable() {
         if (name.equals("main")) {
             canbeInlined = false;
         } else {
             visited = new Hashtable<>();
             canbeInlined = !findLoop(this, this);
-            if (stmtsSize(body) > 4)
+            if (stmtSize(body) > 4)
                 canbeInlined = false;
             if (canbeInlined && Option.enableInlineFunction && Option.printInlineInfo)
                 System.err.println(name() + " is inlined");
         }
     }
 
-    int stmtsSize(BlockNode node) {
+    private int stmtSize(BlockNode node) {
         int ct = 0;
         for (StmtNode stmtNode : node.stmts()) {
             if (stmtNode instanceof  BlockNode)
-                ct += stmtsSize((BlockNode)stmtNode);
+                ct += stmtSize((BlockNode)stmtNode);
             else
                 ct++;
         }
@@ -115,19 +115,17 @@ public class FunctionEntity extends Entity {
     public Scope scope() {
         return scope;
     }
+    public void setScope(Scope scope) {
+        this.scope = scope;
+    }
 
     public Type returnType() {
         return returnType;
     }
 
-    public void setScope(Scope scope) {
-        this.scope = scope;
-    }
-
     public boolean isConstructor() {
         return isConstructor;
     }
-
     public void setConstructor(boolean constructor) {
         isConstructor = constructor;
     }
@@ -135,7 +133,6 @@ public class FunctionEntity extends Entity {
     public List<IR> IR() {
         return irs;
     }
-
     public void setIR(List<IR> irs) {
         this.irs = irs;
     }
@@ -143,19 +140,13 @@ public class FunctionEntity extends Entity {
     public List<Instruction> INS() {
         return ins;
     }
-
     public void setINS(List<Instruction> ins) {
         this.ins = ins;
-    }
-
-    public List<Instruction> ins() {
-        return ins;
     }
 
     public List<Reference> tmpStack() {
         return tmpStack;
     }
-
     public void setTmpStack(List<Reference> tmpStack) {
         this.tmpStack = tmpStack;
     }
@@ -163,31 +154,13 @@ public class FunctionEntity extends Entity {
     public String asmName() {
         return asmName == null ? name : asmName;
     }
-
     public void setAsmName(String name) {
         this.asmName = name;
-    }
-
-    public List<Instruction> beginIns() {
-        return beginIns;
-    }
-
-    public void setBeginIns(List<Instruction> beginIns) {
-        this.beginIns = beginIns;
-    }
-
-    public List<Instruction> endIns() {
-        return endIns;
-    }
-
-    public void setEndIns(List<Instruction> endIns) {
-        this.endIns = endIns;
     }
 
     public boolean isLibFunction() {
         return isLibFunction;
     }
-
     public void setLibFunction(boolean libFunction) {
         isLibFunction = libFunction;
     }
@@ -195,7 +168,6 @@ public class FunctionEntity extends Entity {
     public Set<FunctionEntity> calls() {
         return calls;
     }
-
     public void addCall(FunctionEntity entity) {
         calls.add(entity);
     }
@@ -203,37 +175,34 @@ public class FunctionEntity extends Entity {
     public boolean canbeInlined() {
         return canbeInlined;
     }
-    
+
+
+    public com.mercy.compiler.IR.Label beginLabelIR() {
+        return beginLabelIR;
+    }
+    public com.mercy.compiler.IR.Label endLabelIR() {
+        return endLabelIR;
+    }
     public void setLabelIR(com.mercy.compiler.IR.Label begin, com.mercy.compiler.IR.Label end) {
         this.beginLabelIR = begin;
         this.endLabelIR   = end;
     }
 
-    public com.mercy.compiler.IR.Label beginLabelIR() {
-        return beginLabelIR;
-    }
 
-    public com.mercy.compiler.IR.Label endLabelIR() {
-        return endLabelIR;
-    }
-
-    public void setLabelINS(com.mercy.compiler.INS.Label begin, com.mercy.compiler.INS.Label end) {
-        this.beginLabelINS = begin;
-        this.endLabelINS   = end;
-    }
-    
     public Label beginLabelINS() {
         return beginLabelINS;
     }
-
     public Label endLabelINS() {
         return endLabelINS;
+    }
+    public void setLabelINS(com.mercy.compiler.INS.Label begin, com.mercy.compiler.INS.Label end) {
+        this.beginLabelINS = begin;
+        this.endLabelINS   = end;
     }
 
     public List<BasicBlock> bbs() {
         return bbs;
     }
-
     public void setBbs(List<BasicBlock> bbs) {
         this.bbs = bbs;
     }
@@ -241,7 +210,6 @@ public class FunctionEntity extends Entity {
     public int frameSize() {
         return frameSize;
     }
-
     public void setFrameSize(int frameSize) {
         this.frameSize = frameSize;
     }
@@ -249,7 +217,6 @@ public class FunctionEntity extends Entity {
     public List<Register> regUsed() {
         return regUsed;
     }
-
     public void setRegUsed(List<Register> regUsed) {
         this.regUsed = regUsed;
     }
@@ -257,7 +224,6 @@ public class FunctionEntity extends Entity {
     public Set<Reference> allReference() {
         return allReference;
     }
-
     public void setAllReference(Set<Reference> allReference) {
         this.allReference = allReference;
     }
@@ -265,7 +231,6 @@ public class FunctionEntity extends Entity {
     public int localVariableOffset() {
         return localVariableOffset;
     }
-
     public void setLocalVariableOffset(int localVariableOffset) {
         this.localVariableOffset = localVariableOffset;
     }

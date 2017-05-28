@@ -17,13 +17,11 @@ import java.util.Stack;
 /**
  * Created by mercy on 17-5-22.
  */
-public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
-    static Set<Entity> outputRelevant = new HashSet<>();
-    FunctionEntity currentFunction;
-    Scope globalScope;
-    Set<DependenceEdge> dependenceEdgeSet = new HashSet<>();
+public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
+    private FunctionEntity currentFunction;
+    private Scope globalScope;
 
-    public OutputIrrelevantAnalyzer(AST ast) {
+    public OutputIrrelevantMaker(AST ast) {
         globalScope = ast.scope();
         ast.scope().lookup("print").setOutputIrrelevant(false);
         ast.scope().lookup("println").setOutputIrrelevant(false);
@@ -79,7 +77,7 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
         } else if (node instanceof VariableNode) {
             return ((VariableNode) node).entity();
         }
-        throw new InternalError("unhandled case in getBaseEntity " + node);
+        throw new InternalError("something cannot happen happened in getBaseEntity " + node);
     }
 
     @Override
@@ -107,8 +105,6 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
                 // add dependency edge
                 Entity base = getBaseEntity(lhs);
 
-
-
                 reliedEntityStack.push(new HashSet<>());
                 sideEffect = false;
 
@@ -116,11 +112,10 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
                 visitExpr(node.rhs());
 
                 for (Entity entity : reliedEntityStack.peek()) {
-                    dependenceEdgeSet.add(new DependenceEdge(base, entity));
                     base.addDependence(entity);
                 }
 
-                if (base.outputIrrelevant() && sideEffect == false) {
+                if (base.outputIrrelevant() && !sideEffect) {
                     node.setOutputIrrelevant(true);
                 }
 
@@ -152,7 +147,6 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
             if (!reliedEntityStack.empty()) {
                 Entity entity = node.entity();
                 if (globalScope.entities().values().contains(entity)) {
-                    dependenceEdgeSet.add(new DependenceEdge(currentFunction, entity));
                     currentFunction.addDependence(entity);
                 }
                 for (Set<Entity> entities : reliedEntityStack) { // add to all above
@@ -249,7 +243,6 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
             if (n.body() != null)
                 visitStmt(n.body());
 
-
             if (n.body() != null && !n.body().outputIrrelevant()) {  // node - entity iteration
                 collectSetStack.push(new HashSet<>());
 
@@ -282,8 +275,7 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
                 visitStmt(n.elseBody());
             }
             if ((n.thenBody() != null && !n.thenBody().outputIrrelevant()) ||
-                (n.elseBody() != null && n.elseBody().outputIrrelevant())) { // node - entity iteration
-
+                (n.elseBody() != null && !n.elseBody().outputIrrelevant())) { // node - entity iteration
                 collectSetStack.push(new HashSet<>());
 
                 if (n.cond() != null)
@@ -311,7 +303,6 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
                 visitExpr(node.expr());
 
                 for (Entity entity : collectSetStack.peek()) {
-                    dependenceEdgeSet.add(new DependenceEdge(currentFunction, entity));
                     currentFunction.addDependence(entity);
                 }
 
@@ -376,9 +367,5 @@ public class OutputIrrelevantAnalyzer extends com.mercy.compiler.AST.Visitor {
     @Override
     public void visitExpr(ExprNode node) {
         node.accept(this);
-    }
-
-    public Set<DependenceEdge> dependenceEdgeSet() {
-        return dependenceEdgeSet;
     }
 }

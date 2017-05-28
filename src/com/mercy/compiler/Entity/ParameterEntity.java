@@ -17,7 +17,6 @@ public class ParameterEntity extends Entity {
     public Reference source() {
         return source;
     }
-
     public void setSource(Reference source) {
         this.source = source;
     }

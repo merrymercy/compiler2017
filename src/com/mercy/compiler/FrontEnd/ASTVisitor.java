@@ -7,33 +7,33 @@ import com.mercy.compiler.AST.*;
  */
 public interface ASTVisitor<S, E> {
     // Statements
-    public S visit(BlockNode node);
-    public S visit(ExprStmtNode node);
-    public S visit(IfNode node);
-    public S visit(WhileNode node);
-    public S visit(ForNode node);
-    public S visit(BreakNode node);
-    public S visit(ContinueNode node);
-    public S visit(ReturnNode node);
+    S visit(BlockNode node);
+    S visit(ExprStmtNode node);
+    S visit(IfNode node);
+    S visit(WhileNode node);
+    S visit(ForNode node);
+    S visit(BreakNode node);
+    S visit(ContinueNode node);
+    S visit(ReturnNode node);
     // Definitions
-    public S visit(VariableDefNode node);
-    public S visit(FunctionDefNode node);
-    public S visit(ClassDefNode node);
+    S visit(VariableDefNode node);
+    S visit(FunctionDefNode node);
+    S visit(ClassDefNode node);
 
     // Expressions
-    public E visit(AssignNode node);
-    public E visit(LogicalOrNode node);
-    public E visit(LogicalAndNode node);
-    public E visit(BinaryOpNode node);
-    public E visit(UnaryOpNode node);
-    public E visit(CreatorNode node);
-    public E visit(PrefixOpNode node);
-    public E visit(SuffixOpNode node);
-    public E visit(ArefNode node);
-    public E visit(MemberNode node);
-    public E visit(FuncallNode node);
-    public E visit(VariableNode node);
-    public E visit(IntegerLiteralNode node);
-    public E visit(StringLiteralNode node);
-    public E visit(BoolLiteralNode node);
+    E visit(AssignNode node);
+    E visit(LogicalOrNode node);
+    E visit(LogicalAndNode node);
+    E visit(BinaryOpNode node);
+    E visit(UnaryOpNode node);
+    E visit(CreatorNode node);
+    E visit(PrefixOpNode node);
+    E visit(SuffixOpNode node);
+    E visit(ArefNode node);
+    E visit(MemberNode node);
+    E visit(FuncallNode node);
+    E visit(VariableNode node);
+    E visit(IntegerLiteralNode node);
+    E visit(StringLiteralNode node);
+    E visit(BoolLiteralNode node);
 }

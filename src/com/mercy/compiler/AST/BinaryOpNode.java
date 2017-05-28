@@ -69,7 +69,6 @@ public class BinaryOpNode extends ExprNode {
         return (type != null) ? type : left.type();
     }
 
-
     @Override
     public Location location() {
         return left.location();

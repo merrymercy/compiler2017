@@ -18,11 +18,9 @@ abstract public class Bin extends Instruction {
     public Operand left() {
         return left;
     }
-
     public Operand right() {
         return right;
     }
-
 
     @Override
     public void replaceUse(Reference from, Reference to) {

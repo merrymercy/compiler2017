@@ -38,9 +38,9 @@ abstract public class Visitor implements ASTVisitor<Void, Void> {
         }
     }
 
-    //
-    // Statements
-    //
+    /*
+     * Statements
+     */
     @Override
     public Void visit(BlockNode node) {
         visitStmts(node.stmts());
@@ -81,7 +81,8 @@ abstract public class Visitor implements ASTVisitor<Void, Void> {
             visitExpr(n.cond());
         if (n.incr() != null)
             visitExpr(n.incr());
-        visitStmt(n.body());
+        if (n.body() != null)
+            visitStmt(n.body());
         return null;
     }
 
@@ -124,9 +125,9 @@ abstract public class Visitor implements ASTVisitor<Void, Void> {
         return null;
     }
 
-    //
-    // Expressions
-    //
+    /*
+     * Expressions
+     */
     @Override
     public Void visit(AssignNode n) {
         visitExpr(n.lhs());

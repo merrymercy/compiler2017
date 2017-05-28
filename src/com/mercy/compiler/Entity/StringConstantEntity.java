@@ -31,7 +31,6 @@ public class StringConstantEntity extends Entity {
     public String asmName() {
         return asmName;
     }
-
     public void setAsmName(String asmName) {
         this.asmName = asmName;
     }

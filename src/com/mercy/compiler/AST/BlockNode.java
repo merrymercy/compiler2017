@@ -36,13 +36,13 @@ public class BlockNode extends StmtNode {
         return stmts;
     }
 
+    public Scope scope() {
+        return scope;
+    }
     public void setScope(Scope scope) {
         this.scope = scope;
     }
 
-    public Scope scope() {
-        return scope;
-    }
 
     @Override
     public <S,E> S accept(ASTVisitor<S,E> visitor) {

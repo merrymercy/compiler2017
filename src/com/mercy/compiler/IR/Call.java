@@ -11,7 +11,7 @@ import java.util.List;
  */
 public class Call extends Expr {
     private FunctionEntity entity;
-    List<Expr> args;
+    private List<Expr> args;
 
     public Call(FunctionEntity entity, List<Expr> args) {
         this.entity = entity;

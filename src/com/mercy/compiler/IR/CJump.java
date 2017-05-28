@@ -7,8 +7,8 @@ import com.mercy.compiler.INS.Operand.Operand;
  * Created by mercy on 17-3-30.
  */
 public class CJump extends IR {
-    Expr cond;
-    Label trueLabel, falseLabel;
+    private Expr cond;
+    private Label trueLabel, falseLabel;
 
     public CJump(Expr condition, Label trueLabel, Label falseLabel) {
         this.cond = condition;
