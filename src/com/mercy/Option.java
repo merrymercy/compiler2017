@@ -27,11 +27,10 @@ public class Option {
     public static boolean printBasicBlocks = false;
 
     public static boolean printNaiveAllocatorInfo = false;
-    public static boolean printGlobalAllocationInfo = true;
-
+    public static boolean printGlobalAllocationInfo = false;
 
     // OPTIMIZATION
-    public static boolean enableGlobalRegisterAllocation = false;
+    public static boolean enableGlobalRegisterAllocation = true;
 
     public static boolean enableInstructionSelection        = false;
     public static boolean enableInlineFunction              = false;
