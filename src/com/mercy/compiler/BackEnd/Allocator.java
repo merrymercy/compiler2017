@@ -784,14 +784,14 @@ public class Allocator {
                     for (Reference use : insUse) {
                         if (use.isSpilled) {
                             if (insDef.contains(use)) {
-                                Reference tmp = new Reference("spill_add_" + spilledCounter++, Reference.Type.UNKNOWN);
+                                Reference tmp = new Reference("spill_" + use.name() + "_" + spilledCounter++, Reference.Type.UNKNOWN);
                                 newTemp.add(tmp);
                                 newIns.add(new Move(tmp, new Address(rbp, null, 1, use.offset())));
                                 ins.replaceUse(use, tmp);
                                 ins.replaceDef(use, tmp);
                                 stores.add(new Move(new Address(rbp, null, 1, use.offset()), tmp));
                             } else {
-                                Reference tmp = new Reference("spill_add_" + spilledCounter++, Reference.Type.UNKNOWN);
+                                Reference tmp = new Reference("spill_" + use.name() + "_" + spilledCounter++, Reference.Type.UNKNOWN);
                                 newTemp.add(tmp);
                                 newIns.add(new Move(tmp, new Address(rbp, null, 1, use.offset())));
                                 ins.replaceUse(use, tmp);
@@ -803,7 +803,7 @@ public class Allocator {
                             if (insUse.contains(def)) {
                                 ; //already done in previous step
                             } else {
-                                Reference tmp = new Reference("spill_add_" + spilledCounter++, Reference.Type.UNKNOWN);
+                                Reference tmp = new Reference("spill_" + def.name() + "_" +  spilledCounter++, Reference.Type.UNKNOWN);
                                 newTemp.add(tmp);
                                 ins.replaceDef(def, tmp);   // improve replace to be able to replace operand
                                 stores.add(new Move(new Address(rbp, null, 1, def.offset()), tmp));

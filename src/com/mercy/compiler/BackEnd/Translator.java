@@ -152,10 +152,6 @@ public class Translator {
     public void translateFunction(FunctionEntity entity) {
         addLabel(entity.asmName());
         int startPos = asm.size();
-        for (Instruction ins : entity.beginIns()) {
-            ins.accept(this);
-        }
-
 
         /***** body *****/
         for (BasicBlock bb : entity.bbs()) {
@@ -200,9 +196,6 @@ public class Translator {
         /***** epilogue *****/
         // restore rsp
         addLabel(entity.endLabelINS().name());
-        for (Instruction ins : entity.endIns()) {
-            ins.accept(this);
-        }
         if (entity.calls().size() != 0)   // leaf function optimization
             add("add", rsp(), new Immediate((entity.frameSize())));
 

@@ -1,53 +1,91 @@
-A object;
+int N;
+int head;
+int startx;
+int starty;
+int targetx;
+int targety;
+int x;
+int y;
+int[] xlist = new int[12000];
+int[] ylist = new int[12000];
+int tail;
+int ok;
+int now;
+int[] dx = new int[8];
+int[] dy = new int[9];
+int[][] step;
+int i;
+int j;
 
-int main() {
-    object.func1(2, 3);
-
-    object.set(0, 1)
-          .set(1, 0);
-
-    object.copy(object
-          .
-           getThis())
-          .copy(object.getThis().getThis());
-
-    return 0;
+void origin(int N)
+{
+    head = 0;
+    tail = 0;
+	step = new int[N][];
+    for (i = 0; i < N; i ++ ) {
+		step[i] = new int[N];
+        for (j = 0; j < N; j ++ )
+        step[i][j] = 0;
+    }
 }
 
-class A {
-    void func1(int x, int y) {
-        func2(this.x*x, this.y*y);
-    }
+bool check(int a) {
+    return ((a < N) && (a >= 0));
+}
 
-    void func2(int xx, int yy) {
-        func1(x*this.x, y*this.y);
+void addList(int x, int y) {
+    if (check(x) && check(y) && step[x][y] == -1) {
+        tail ++;
+        xlist[tail] = x;
+        ylist[tail] = y;
+        step[x][y] = now + 1;
+        if ((x == targetx) && (y == targety)) ok = 1;
     }
-
-    A set(int xx, int yy) {
-        return set(x, y).set(this.x, this.y).set(xx, yy).getThis();
+}
+int main() {
+	origin(106);
+    N = getInt();
+    targety  = N - 1;
+    targetx = targety;
+    for (i = 0; i < N; i ++)
+        for (j = 0; j < N; j ++)
+        step[i][j] = -1;
+    dx[0] = -2; dy[0] = -1;
+    dx[1] = -2; dy[1] = 1;
+    dx[2] = 2; dy[2] = -1;
+    dx[3] = 2; dy[3] = 1;
+    dx[4] = -1; dy[4] = -2;
+    dx[5] = -1; dy[5] = 2;
+    dx[6] = 1; dy[6] = -2;
+    dx[7] = 1; dy[7] = 2;
+    while (head <= tail) {
+        x = xlist[head];
+        y = ylist[head];
+        now = step[x][y];
+        for (j = 0;j < 8;j ++)
+            addList(x + dx[j], y + dy[j]);
+        if (ok == 1) break;
+        head ++;
     }
-
-    A copy(A other) {
-        // this = other;
-        return this;
-    }
-
-    A getThis() {
-        return getThis().getThis().getThis().getThis().copy(this);
-    }
-
-    int x; int y;
+    if (ok == 1) println(toString(step[targetx][targety]));
+    else print("no solution!\n");
+    return 0;
 }
 
 
 /*!! metadata:
 === comment ===
-test return in class
-class-1-515030910117-zhenglianmin.mx
+horse3-5100309153-yanghuan.mx
+=== input ===
+103
 === assert ===
-success_compile
+output
+=== timeout ===
+0.4
+=== output ===
+67
 === phase ===
-semantic extended
+codegen pretest
 === is_public ===
 True
 
