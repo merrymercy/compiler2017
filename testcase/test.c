@@ -1,91 +1,57 @@
-int N;
-int head;
-int startx;
-int starty;
-int targetx;
-int targety;
-int x;
-int y;
-int[] xlist = new int[12000];
-int[] ylist = new int[12000];
-int tail;
-int ok;
-int now;
-int[] dx = new int[8];
-int[] dy = new int[9];
-int[][] step;
-int i;
-int j;
+int[] b;
 
-void origin(int N)
+void sort(int[] a,int l,int r)
 {
-    head = 0;
-    tail = 0;
-	step = new int[N][];
-    for (i = 0; i < N; i ++ ) {
-		step[i] = new int[N];
-        for (j = 0; j < N; j ++ )
-        step[i][j] = 0;
-    }
-}
+	if(r-l==1) return;
+	int m=(l+r)/2;
+	sort(a,l,m);
+	sort(a,m,r);
+	int p=l;
+	int q=m;
 
-bool check(int a) {
-    return ((a < N) && (a >= 0));
+	int i=0;
+	while(p<m && q<r)
+		if(a[p]>a[q])
+			b[i++]=a[q++];
+		else
+			b[i++]=a[p++];
+	while(p<m) b[i++]=a[p++];
+	while(q<r) b[i++]=a[q++];
+	for(i=l;i<r;i++)
+		a[i]=b[i-l];
+	return;
 }
-
-void addList(int x, int y) {
-    if (check(x) && check(y) && step[x][y] == -1) {
-        tail ++;
-        xlist[tail] = x;
-        ylist[tail] = y;
-        step[x][y] = now + 1;
-        if ((x == targetx) && (y == targety)) ok = 1;
-    }
-}
-int main() {
-	origin(106);
-    N = getInt();
-    targety  = N - 1;
-    targetx = targety;
-    for (i = 0; i < N; i ++)
-        for (j = 0; j < N; j ++)
-        step[i][j] = -1;
-    dx[0] = -2; dy[0] = -1;
-    dx[1] = -2; dy[1] = 1;
-    dx[2] = 2; dy[2] = -1;
-    dx[3] = 2; dy[3] = 1;
-    dx[4] = -1; dy[4] = -2;
-    dx[5] = -1; dy[5] = 2;
-    dx[6] = 1; dy[6] = -2;
-    dx[7] = 1; dy[7] = 2;
-    while (head <= tail) {
-        x = xlist[head];
-        y = ylist[head];
-        now = step[x][y];
-        for (j = 0;j < 8;j ++)
-            addList(x + dx[j], y + dy[j]);
-        if (ok == 1) break;
-        head ++;
-    }
-    if (ok == 1) println(toString(step[targetx][targety]));
-    else print("no solution!\n");
-    return 0;
+int main()
+{
+	int n;
+	int[] a;
+	n=getInt();
+	a=new int[n];
+        b = new int[n];
+	int i;
+	for(i=0;i<n;i++)
+		a[i]=n-i;
+	sort(a,0,n);
+	i=n/2;
+	println(toString(a[i]-i));
+	return 0;
 }
 
 
 /*!! metadata:
 === comment ===
-horse3-5100309153-yanghuan.mx
+mergesort-515030910633-xianzangyueyang.txt
+naive mergesort
 === input ===
-103
+2000000
 === assert ===
 output
 === timeout ===
-0.4
+4.0
 === output ===
-67
+1
 === phase ===
-codegen pretest
+optim extended
 === is_public ===
 True
 
