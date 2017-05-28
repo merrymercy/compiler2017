@@ -29,6 +29,7 @@ public class Option {
     public static boolean printNaiveAllocatorInfo = false;
     public static boolean printGlobalAllocationInfo = true;
 
+
     // OPTIMIZATION
     public static boolean enableGlobalRegisterAllocation = false;
 
