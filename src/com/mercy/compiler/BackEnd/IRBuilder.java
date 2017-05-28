@@ -880,6 +880,11 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             }
         } else if (cond instanceof UnaryOpNode) {
             addCJump(((UnaryOpNode) cond).expr(), falseLabel, trueLabel);
+        } else if (cond instanceof BoolLiteralNode) {
+            if (((BoolLiteralNode) cond).value())
+                stmts.add(new Jump(trueLabel));
+            else
+                stmts.add(new Jump(falseLabel));
         } else {
             visitExpr(null); // refresh tmpStack
             exprDepth++;

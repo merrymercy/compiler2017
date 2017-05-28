@@ -1,6 +1,7 @@
 package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
+import com.mercy.compiler.INS.Operand.Immediate;
 import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.Utility.InternalError;
@@ -27,6 +28,8 @@ public class CJump extends Instruction {
     public CJump(Operand cond, Label trueLabel, Label falseLabel) {
         this.type = Type.BOOL;
         this.cond = cond;
+        if (cond instanceof Immediate)
+            throw new InternalError("niha");
         this.trueLabel = trueLabel;
         this.falseLabel = falseLabel;
     }
@@ -97,29 +100,29 @@ public class CJump extends Instruction {
     public Label trueLabel() {
         return trueLabel;
     }
-
     public Label falseLabel() {
         return falseLabel;
-    }
-
-    public void setFallThrough(Label fallThrough) {
-        this.fallThrough = fallThrough;
     }
 
     public Label fallThrough() {
         return fallThrough;
     }
+    public void setFallThrough(Label fallThrough) {
+        this.fallThrough = fallThrough;
+    }
 
     public Type type() {
         return type;
     }
-
     public Operand left() {
         return left;
     }
-
     public Operand right() {
         return right;
+    }
+
+    public void setLeft(Operand left) {
+        this.left = left;
     }
 
     public String name() {
@@ -162,7 +165,6 @@ public class CJump extends Instruction {
                 throw new InternalError("invalid compare operator");
         }
     }
-
 
     @Override
     public void accept(Translator translator) {

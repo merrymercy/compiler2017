@@ -19,6 +19,7 @@ public class Jmp extends Instruction {
         this.dest = dest;
     }
 
+
     @Override
     public void replaceUse(Reference from, Reference to) {
     }

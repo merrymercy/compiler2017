@@ -53,14 +53,10 @@ public class Allocator {
         rrdi = paraRegisterRef.get(0); rrsi = paraRegisterRef.get(1);
         rrdx = paraRegisterRef.get(2); rrcx = paraRegisterRef.get(3);
 
-        callerSaveRegRef = new HashSet<>();
-        callerSaveRegRef.addAll(paraRegisterRef);
-        callerSaveRegRef.add(rr10);
-        callerSaveRegRef.add(rr11);
-
         // set precolored
         precolored = new LinkedHashSet<>();
         precolored.addAll(paraRegisterRef);
+        precolored.add(rrax);
         precolored.add(rr10);
         precolored.add(rr11);
         for (Reference ref : precolored) {
@@ -68,8 +64,17 @@ public class Allocator {
             ref.color = ref.reg();
         }
 
+        // set caller save
+        callerSaveRegRef = new HashSet<>();
+        for (Reference ref : precolored) {
+            if (!ref.reg().isCalleeSave()) {
+                callerSaveRegRef.add(ref);
+            }
+        }
+
         // init colors
         colors.addAll(regConfig.paraRegister());
+        colors.add(rax);
         colors.add(regConfig.registers().get(10));
         colors.add(regConfig.registers().get(11));
         colors.add(regConfig.registers().get(1));
@@ -753,13 +758,15 @@ public class Allocator {
 
 
     private boolean inlineLibraryFunction(List<Instruction> newIns, Call raw) {
+        if (true)
+            return false;
         if (raw.entity().asmName().equals(LIB_PREFIX + "str_length")) {
             newIns.add(new Move(rrdi, raw.operands().get(0)));
             if (raw.ret() != null) {
                 newIns.add(new Move(rdi, rrdi));
                 newIns.add(new Move(new Reference("eax", Reference.Type.SPECIAL),
                         new Reference("dword [rdi-4]", Reference.Type.SPECIAL)));
-                newIns.add(new Move(raw.ret(), rax));
+                newIns.add(new Move(raw.ret(), rrax));
             }
             return true;
         } else if (raw.entity().asmName().equals(LIB_PREFIX + "str_ord")) {
@@ -768,10 +775,10 @@ public class Allocator {
             if (raw.ret() != null) {
                 newIns.add(new Move(rdi, rrdi));
                 newIns.add(new Move(rsi, rrsi));
-                newIns.add(new Xor(rax, rax));
+                newIns.add(new Xor(rrax, rrax));
                 newIns.add(new Move(new Reference("al", Reference.Type.SPECIAL),
                         new Reference("byte [rdi+rsi]", Reference.Type.SPECIAL)));
-                newIns.add(new Move(raw.ret(), rax));
+                newIns.add(new Move(raw.ret(), rrax));
             }
             return true;
         }
@@ -808,11 +815,11 @@ public class Allocator {
                             newIns.add(new Add(rsp, new Immediate(pushCt * Option.REG_SIZE)));
                         }
                         if (ins.ret() != null) {
-                            newIns.add(new Move(ins.ret(), rax));
+                            newIns.add(new Move(ins.ret(), rrax));
                         }
                     }
                 } else if (raw instanceof Div || raw instanceof Mod) {
-                    newIns.add(new Move(rax, ((Bin)raw).left()));
+                    newIns.add(new Move(rrax, ((Bin)raw).left()));
                     newIns.add(new Move(rrdx, rdx)); // cqo
 
                     Operand right = ((Bin)raw).right();
@@ -821,19 +828,19 @@ public class Allocator {
                         right = rrcx;
                     }
                     if (raw instanceof Div) {
-                        newIns.add(new Div(rax, right));
-                        newIns.add(new Move(rax, rax)); // refresh
+                        newIns.add(new Div(rrax, right));
+                        newIns.add(new Move(rrax, rax)); // refresh
                         newIns.add(new Move(rrdx, rdx));
-                        newIns.add(new Move(((Div) raw).left(), rax));
+                        newIns.add(new Move(((Div) raw).left(), rrax));
                     } else {
-                        newIns.add(new Mod(rax, right));
-                        newIns.add(new Move(rax, rax)); // refresh
+                        newIns.add(new Mod(rrax, right));
+                        newIns.add(new Move(rrax, rax)); // refresh
                         newIns.add(new Move(rrdx, rdx));
                         newIns.add(new Move(((Bin) raw).left(), rrdx));
                     }
                 } else if (raw instanceof Return) {
                     if (((Return) raw).ret() != null)
-                        newIns.add(new Move(rax, ((Return) raw).ret()));
+                        newIns.add(new Move(rrax, ((Return) raw).ret()));
                     newIns.add(new Return(null));
                 } else if (raw instanceof Label) {
                     if (raw == entity.beginLabelINS()) {
@@ -858,19 +865,46 @@ public class Allocator {
                         else
                             newIns.add(new Sar(((Bin)raw).left(), rrcx));
                     }
-                } else if (raw instanceof Move) {
-                    if (((Move) raw).dest() instanceof Address &&
-                            ((Move) raw).src() instanceof Address) {
-                        newIns.add(new Move(rax, ((Move) raw).src()));
-                        newIns.add(new Move(((Move) raw).dest(), rax));
-                    } else {
-                        newIns.add(raw);
-                    }
+                } else if (raw instanceof Cmp) {
+                    Operand left = ((Cmp) raw).left();
+                    Operand right = ((Cmp) raw).right();
+                    transCompare(newIns, raw, left, right);
+                } else if (raw instanceof CJump && ((CJump) raw).type() != CJump.Type.BOOL) {
+                    Operand left = ((CJump) raw).left();
+                    Operand right = ((CJump) raw).right();
+                    transCompare(newIns, raw, left, right);
                 } else {
                     newIns.add(raw);
                 }
             }
             basicBlock.setIns(newIns);
+        }
+    }
+
+    private void transCompare(List<Instruction> newIns, Instruction raw, Operand left, Operand right) {
+        if (isAddress(left) && isAddress(right)) {
+            Reference tmp = new Reference("tmp_cmp", Reference.Type.UNKNOWN);
+            newIns.add(new Move(tmp, left));
+            if (raw instanceof Cmp) {
+                ((Cmp) raw).setLeft(tmp);
+                newIns.add(raw);
+                newIns.add(new Move(left, tmp));
+            } else {
+                ((CJump)raw).setLeft(tmp);
+                newIns.add(raw);
+            }
+        } else {
+            newIns.add(raw);
+        }
+    }
+
+    private boolean isAddress(Operand operand) {
+        if (operand instanceof Address) {
+            return true;
+        } else if (operand instanceof Reference) {
+            return ((Reference) operand).type() == Reference.Type.GLOBAL;
+        } else {
+            return false;
         }
     }
 
@@ -951,13 +985,5 @@ public class Allocator {
         } else {
             return find;
         }
-    }
-
-    public int log2(int x) {
-        for (int i = 0; i < 30; i++) {
-            if (x == (1 << i))
-                return i;
-        }
-        return -1;
     }
 }

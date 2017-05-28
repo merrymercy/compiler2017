@@ -17,16 +17,16 @@ public class RegisterConfig {
         // init registers
         registers = new ArrayList<>();
         paraRegister = new ArrayList<>();
-        rax = new Register("rax"); registers.add(rax);
-        rbx = new Register("rbx"); registers.add(rbx);
-        rcx = new Register("rcx"); registers.add(rcx);
-        rdx = new Register("rdx"); registers.add(rdx);
-        rsi = new Register("rsi"); registers.add(rsi);
-        rdi = new Register("rdi"); registers.add(rdi);
-        rbp = new Register("rbp"); registers.add(rbp);
-        rsp = new Register("rsp"); registers.add(rsp);
+        rax = new Register("rax", "al");  registers.add(rax);
+        rbx = new Register("rbx", "bl");  registers.add(rbx);
+        rcx = new Register("rcx", "cl");  registers.add(rcx);
+        rdx = new Register("rdx", "dl");  registers.add(rdx);
+        rsi = new Register("rsi", "sil"); registers.add(rsi);
+        rdi = new Register("rdi", "dil"); registers.add(rdi);
+        rbp = new Register("rbp", "bpl"); registers.add(rbp);
+        rsp = new Register("rsp", "spl"); registers.add(rsp);
         for (int i = 8; i < 16; i++) {
-            registers.add(new Register("r" + i));
+            registers.add(new Register("r" + i, "r" + i + "b"));
         }
         int [] calleeSave = {1, 6, 12, 13, 14, 15};
         for (int x : calleeSave)

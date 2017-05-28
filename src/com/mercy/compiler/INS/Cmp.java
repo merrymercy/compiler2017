@@ -23,9 +23,15 @@ public class Cmp extends Instruction {
     public Operand left() {
         return left;
     }
-
     public Operand right() {
         return right;
+    }
+    public Operator operator() {
+        return operator;
+    }
+
+    public void setLeft(Operand left) {
+        this.left = left;
     }
 
     @Override
@@ -46,10 +52,6 @@ public class Cmp extends Instruction {
         right = right.replace(from, to);
     }
 
-
-    public Operator operator() {
-        return operator;
-    }
 
     @Override
     public void calcDefAndUse() {

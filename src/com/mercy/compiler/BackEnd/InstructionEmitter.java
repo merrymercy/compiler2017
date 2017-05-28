@@ -284,6 +284,16 @@ public class InstructionEmitter {
         throw new InternalError("cannot happen in instruction emitter Addr ir");
     }
 
+    private boolean isAddress(Operand operand) {
+        if (operand instanceof Address) {
+            return true;
+        } else if (operand instanceof Reference) {
+            return ((Reference) operand).type() == Reference.Type.GLOBAL;
+        } else {
+            return false;
+        }
+    }
+
     public Operand visit(com.mercy.compiler.IR.Assign ir) {
         Operand dest = null;
 
@@ -298,7 +308,13 @@ public class InstructionEmitter {
         exprDepth++;
         Operand rhs = visitExpr(ir.right());
         exprDepth--;
-        ins.add(new Move(dest, rhs));
+
+        if (isAddress(dest) && isAddress(rhs)) {
+            Reference tmp = getTmp();
+            ins.add(new Move(tmp, rhs));
+            ins.add(new Move(dest, tmp));
+        } else
+            ins.add(new Move(dest, rhs));
 
         return null;
     }
@@ -409,8 +425,16 @@ public class InstructionEmitter {
                     getLabel(ir.falseLabel().name())));
         } else {
             Operand tmp = visitExpr(ir.cond());
-            ins.add(new CJump(tmp, getLabel(ir.trueLabel().name()),
+            if (tmp instanceof Immediate) {
+                if (((Immediate) tmp).value() != 0) {
+                    ins.add(new Jmp(getLabel(ir.trueLabel().name())));
+                } else {
+                    ins.add(new Jmp(getLabel(ir.falseLabel().name())));
+                }
+            } else {
+                ins.add(new CJump(tmp, getLabel(ir.trueLabel().name()),
                     getLabel(ir.falseLabel().name())));
+            }
         }
         return null;
     }

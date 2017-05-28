@@ -24,8 +24,10 @@ public class Move extends Instruction {
 
     public boolean isRefMove() {
         if(dest instanceof Reference && src instanceof Reference) {
-            return ((Reference) dest).type() == Reference.Type.UNKNOWN
-                    && ((Reference) src).type() == Reference.Type.UNKNOWN;
+            Reference.Type type1 = ((Reference) src).type();
+            Reference.Type type2 = ((Reference) dest).type();
+            return (type1 == Reference.Type.UNKNOWN || type1 == Reference.Type.REG)
+                    && (type2 == Reference.Type.UNKNOWN || type2 == Reference.Type.REG);
         }
         return false;
     }

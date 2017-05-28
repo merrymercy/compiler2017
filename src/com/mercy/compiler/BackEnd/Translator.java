@@ -294,7 +294,7 @@ public class Translator {
     }
 
     private void visitDivision(Operand left, Operand right, Register res) {
-        addMove(rax(), left);
+        addMove(rax, left);
         add("cqo");
         if (right instanceof Address)
             ((Address) right).setShowSize(true);
@@ -356,7 +356,8 @@ public class Translator {
     }
 
     private void visitCompare(Operand left, Operand right) {
-        if (left.isRegister() || right.isRegister()) {  // cmp reg, x  cmp x, reg
+        if ((left.isDirect() || right.isDirect()) &&
+                !(!left.isRegister() && !right.isRegister())) {  // cmp reg, x  cmp x, reg
             add("cmp", left, right);
         } else {                                        // cmp mem, mem
             addMove(rax(), left);
@@ -384,9 +385,16 @@ public class Translator {
             case LE: set = "setle"; break;
             case LT: set = "setl";  break;
         }
-        add(set + " al");
-        add("movzx " +  "rax" + ", " + "al");
-        add("mov", left, rax());
+
+        if (Option.enableGlobalRegisterAllocation) {
+            Register reg = ((Reference)left).reg();
+            add(set + " " + reg.lowName());
+            add("movzx " + reg.name() + ", " + reg.lowName());
+        } else {
+            add(set + " al");
+            add("movzx " + "rax" + ", " + "al");
+            add("mov", left, rax());
+        }
     }
 
     private int simplifyAddress(Address addr, Register reg1, Register reg2) {
@@ -508,20 +516,28 @@ public class Translator {
 
     public void visit(CJump ins) {
         if (ins.type() == CJump.Type.BOOL) {
-            if (ins.cond().isRegister()) {
-                add("test", ins.cond(), ins.cond());
+            if (ins.cond() instanceof  Immediate) {
+                if (((Immediate) ins.cond()).value() != 0) {
+                    addJump(ins.trueLabel().name());
+                } else {
+                    addJump(ins.falseLabel().name());
+                }
             } else {
-                addMove(rax(), ins.cond());
-                add("test", rax(), rax());
-            }
+                if (ins.cond().isRegister()) {
+                    add("test", ins.cond(), ins.cond());
+                } else {
+                    addMove(rax(), ins.cond());
+                    add("test", rax(), rax());
+                }
 
-            if (ins.fallThrough() == ins.trueLabel()) {
-                add("jz " + ins.falseLabel().name());
-            } else if (ins.fallThrough() == ins.falseLabel()) {
-                add("jnz " + ins.trueLabel().name());
-            } else {
-                add("jnz " + ins.trueLabel().name());
-                addJump(ins.falseLabel().name());
+                if (ins.fallThrough() == ins.trueLabel()) {
+                    add("jz " + ins.falseLabel().name());
+                } else if (ins.fallThrough() == ins.falseLabel()) {
+                    add("jnz " + ins.trueLabel().name());
+                } else {
+                    add("jnz " + ins.trueLabel().name());
+                    addJump(ins.falseLabel().name());
+                }
             }
         } else {
             String name = ins.name();
@@ -578,6 +594,8 @@ public class Translator {
      * register getter
      */
     private Register rax() {
+        if (Option.enableGlobalRegisterAllocation)
+            throwUnhandledCase("rax");
         return rax;
     }
     private Register rcx() {
