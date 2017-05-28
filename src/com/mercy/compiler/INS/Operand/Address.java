@@ -107,7 +107,12 @@ public class Address extends Operand {
         } if (index == null) {
             return base.isRegister();
         } else
-            return index.isRegister() && base().isRegister();
+            return index.isRegister() && base.isRegister();
+    }
+
+    @Override
+    public boolean isAddress() {
+        return true;
     }
 
     @Override

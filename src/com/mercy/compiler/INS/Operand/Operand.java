@@ -21,4 +21,8 @@ abstract public class Operand {
     public boolean isDirect() {
         return false;
     }
+
+    public boolean isAddress() {
+        return false;
+    }
 }

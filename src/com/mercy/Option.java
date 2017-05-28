@@ -30,7 +30,7 @@ public class Option {
     public static boolean printGlobalAllocationInfo = false;
 
     // OPTIMIZATION
-    public static boolean enableGlobalRegisterAllocation = false;
+    public static boolean enableGlobalRegisterAllocation = true;
 
     public static boolean enableInstructionSelection        = true;
     public static boolean enableInlineFunction              = true;
@@ -39,7 +39,7 @@ public class Option {
     public static boolean enableControlFlowOptimization     = true;
 
     public static boolean enableLeafFunctionOptimization    = true;
-    public static boolean enableOutputIrrelevantElimination = false;
+    public static boolean enableOutputIrrelevantElimination = true;
 
 
     // STEADY

@@ -253,9 +253,9 @@ public class Translator {
         right= ins.right();
         name = ins.name();
 
-        if (left.isRegister() || (left.isDirect() && leftCanBeMemory(name))) {
+        if (left.isRegister() || (left.isDirect() && leftCanBeMemory(name) && !right.isAddress())) { // the second case is for 'add [rbp - 4], 2'
             if (right.isDirect()) {
-                if (!left.isRegister() && !right.isRegister()) {  // add [regl], [regr]
+                if (left.isAddress() && right.isAddress()) {  // add [regl], [regr]
                     addMove(rax(), right);
                     add(name, left, rax());
                 } else {                                      // add regl, regr | [reg] | mem
@@ -356,8 +356,8 @@ public class Translator {
     }
 
     private void visitCompare(Operand left, Operand right) {
-        if ((left.isDirect() || right.isDirect()) &&
-                !(!left.isRegister() && !right.isRegister())) {  // cmp reg, x  cmp x, reg
+        if ((left.isDirect() && right.isDirect()) &&
+                !(left.isAddress() && right.isAddress())) {  // cmp reg, x  cmp x, reg
             add("cmp", left, right);
         } else {                                        // cmp mem, mem
             addMove(rax(), left);
@@ -446,12 +446,7 @@ public class Translator {
         boolean isAddrRight = isAddress(ins.src());
 
         if (Option.enableGlobalRegisterAllocation) {
-            if (isAddrLeft && isAddrRight) {
-                add("mov", rax(), ins.src());
-                add("mov", ins.dest(), rax());
-            } else {
-                add("mov", ins.dest(), ins.src());
-            }
+            add("mov", ins.dest(), ins.src());
         } else {
             if (isAddrLeft && isAddrRight) {
                 if (ins.src() instanceof Address)

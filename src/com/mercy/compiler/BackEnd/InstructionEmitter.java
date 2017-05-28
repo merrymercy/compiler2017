@@ -284,16 +284,6 @@ public class InstructionEmitter {
         throw new InternalError("cannot happen in instruction emitter Addr ir");
     }
 
-    private boolean isAddress(Operand operand) {
-        if (operand instanceof Address) {
-            return true;
-        } else if (operand instanceof Reference) {
-            return ((Reference) operand).type() == Reference.Type.GLOBAL;
-        } else {
-            return false;
-        }
-    }
-
     public Operand visit(com.mercy.compiler.IR.Assign ir) {
         Operand dest = null;
 
@@ -309,7 +299,7 @@ public class InstructionEmitter {
         Operand rhs = visitExpr(ir.right());
         exprDepth--;
 
-        if (isAddress(dest) && isAddress(rhs)) {
+        if (dest.isAddress() && rhs.isAddress()) {
             Reference tmp = getTmp();
             ins.add(new Move(tmp, rhs));
             ins.add(new Move(dest, tmp));

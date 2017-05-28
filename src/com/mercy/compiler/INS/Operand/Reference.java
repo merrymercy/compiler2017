@@ -174,6 +174,11 @@ public class Reference extends Operand {
     }
 
     @Override
+    public boolean isAddress() {
+        return type == GLOBAL || type == OFFSET;
+    }
+
+    @Override
     public String toNASM() {
         try {
             switch (type) {

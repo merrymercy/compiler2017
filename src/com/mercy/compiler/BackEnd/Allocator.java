@@ -689,10 +689,15 @@ public class Allocator {
                                 ins.replaceDef(use, tmp);
                                 stores.add(new Move(new Address(rbp, null, 1, use.offset()), tmp));
                             } else {
-                                Reference tmp = new Reference("spill_" + use.name() + "_" + spilledCounter++, Reference.Type.UNKNOWN);
-                                newTemp.add(tmp);
-                                newIns.add(new Move(tmp, new Address(rbp, null, 1, use.offset())));
-                                ins.replaceUse(use, tmp);
+                                if (ins instanceof Move && !(((Move) ins).dest()).isAddress() && ((Move) ins).src() == use) {
+                                    // optimization for move
+                                    ins = new Move(((Move) ins).dest(), new Address(rbp, null, 1, use.offset()));
+                                } else {
+                                    Reference tmp = new Reference("spill_" + use.name() + "_" + spilledCounter++, Reference.Type.UNKNOWN);
+                                    newTemp.add(tmp);
+                                    newIns.add(new Move(tmp, new Address(rbp, null, 1, use.offset())));
+                                    ins.replaceUse(use, tmp);
+                               }
                             }
                         }
                     }
@@ -701,10 +706,15 @@ public class Allocator {
                             if (insUse.contains(def)) {
                                 ; //already done in previous step
                             } else {
-                                Reference tmp = new Reference("spill_" + def.name() + "_" +  spilledCounter++, Reference.Type.UNKNOWN);
-                                newTemp.add(tmp);
-                                ins.replaceDef(def, tmp);   // improve replace to be able to replace operand
-                                stores.add(new Move(new Address(rbp, null, 1, def.offset()), tmp));
+                                if (ins instanceof Move && !(((Move) ins).src()).isAddress() && ((Move) ins).dest() == def) {
+                                    // optimization for move
+                                    ins = new Move(new Address(rbp, null, 1, def.offset()), ((Move) ins).src());
+                                } else {
+                                    Reference tmp = new Reference("spill_" + def.name() + "_" + spilledCounter++, Reference.Type.UNKNOWN);
+                                    newTemp.add(tmp);
+                                    ins.replaceDef(def, tmp);   // improve replace to be able to replace operand
+                                    stores.add(new Move(new Address(rbp, null, 1, def.offset()), tmp));
+                                }
                             }
                         }
                     }
@@ -882,7 +892,7 @@ public class Allocator {
     }
 
     private void transCompare(List<Instruction> newIns, Instruction raw, Operand left, Operand right) {
-        if (isAddress(left) && isAddress(right)) {
+        if (left.isAddress() && right.isAddress()) {
             Reference tmp = new Reference("tmp_cmp", Reference.Type.UNKNOWN);
             newIns.add(new Move(tmp, left));
             if (raw instanceof Cmp) {
@@ -895,16 +905,6 @@ public class Allocator {
             }
         } else {
             newIns.add(raw);
-        }
-    }
-
-    private boolean isAddress(Operand operand) {
-        if (operand instanceof Address) {
-            return true;
-        } else if (operand instanceof Reference) {
-            return ((Reference) operand).type() == Reference.Type.GLOBAL;
-        } else {
-            return false;
         }
     }
 
@@ -985,5 +985,13 @@ public class Allocator {
         } else {
             return find;
         }
+    }
+
+    public int log2(int x) {
+        for (int i = 0; i < 30; i++) {
+            if (x == (1 << i))
+                return i;
+        }
+        return -1;
     }
 }
