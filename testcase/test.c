@@ -1,22 +1,37 @@
-int cd(int d, string a, string b, string c, int sum) {
-    if (d == 1) {
-        //println("move " + a + " --> " + c);
-        sum++;
-    } else {
-        sum = cd(d - 1, a, c, b, sum);
-        //println("move " + a + " --> " + c);
-        sum = cd(d - 1, b, a, c, sum);
-        sum++;
-    }
-    return sum;
+class C2 {
+    int x;
+    int y;
+    bool b;
+    int z;
 }
 
 int main() {
-    string a = "A";
-	string b = "B";
-	string c = "C";
-    int d = getInt();
-    int sum = cd(d, a, b, c, 0);
-    println(toString(sum));
-    return 0;
+    C2 obj = new C2;
+    obj.x = 10;
+    obj.y = 20;
+    obj.b = obj.x > obj.y;
+    if (obj.b) obj.z = 40;
+    else obj.z = 80;
+    return obj.x + obj.y + obj.z;
 }
+
+
+
+/*!! metadata:
+=== comment ===
+struct3.mx
+=== assert ===
+exitcode
+=== timeout ===
+0.1
+=== input ===
+
+=== phase ===
+codegen pretest
+=== is_public ===
+True
+=== exitcode ===
+110
+
+!!*/
+

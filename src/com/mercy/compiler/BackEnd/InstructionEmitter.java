@@ -411,18 +411,26 @@ public class InstructionEmitter {
                     throw new InternalError("invalid compare operator");
             }
 
+            if (left.isAddress()) {
+                Reference tmp = getTmp();
+                left = tmp;
+            }
             ins.add(new CJump(left, right, type, getLabel(ir.trueLabel().name()),
                     getLabel(ir.falseLabel().name())));
         } else {
-            Operand tmp = visitExpr(ir.cond());
-            if (tmp instanceof Immediate) {
-                if (((Immediate) tmp).value() != 0) {
+            Operand cond = visitExpr(ir.cond());
+            if (cond instanceof Immediate) {
+                if (((Immediate) cond).value() != 0) {
                     ins.add(new Jmp(getLabel(ir.trueLabel().name())));
                 } else {
                     ins.add(new Jmp(getLabel(ir.falseLabel().name())));
                 }
             } else {
-                ins.add(new CJump(tmp, getLabel(ir.trueLabel().name()),
+                if (cond.isAddress()) {
+                    Reference tmp = getTmp();
+                    cond = tmp;
+                }
+                ins.add(new CJump(cond, getLabel(ir.trueLabel().name()),
                     getLabel(ir.falseLabel().name())));
             }
         }
