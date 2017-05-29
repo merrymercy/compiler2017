@@ -1,83 +1,225 @@
-int[][] make;
-int[] color = new int[10];
-int[] count = new int[1];
-int i;
-int j;
+int counter = 0;
+class ConstructorTester {
+    int ct;
+    ConstructorTester() {
+        ct = counter++;
+        println("Constructed - " + toString(this.ct));
+    }
+}
+void testConstructor() {
+    ConstructorTester a = new ConstructorTester;
+    ConstructorTester[] b = new ConstructorTester[5];
+    ConstructorTester[][] c = new ConstructorTester[4][4];
+    ConstructorTester[][][] d = new ConstructorTester[3][3][3];
+    ConstructorTester[][][][] e = new ConstructorTester[2][2][2][];
 
-void origin(int N)
-{
-	make = new int[N][];
-    for (i = 0; i < N; i ++ ) {
-		make[i] = new int[N];
-        for (j = 0; j < N; j ++ )
-        make[i][j] = 0;
+    int i; int j; int k;
+    for (i = 0; i < e.size(); i++) {
+        for (j = 0; j < e[i].size(); j++) {
+            for (k = 0; k < e[j].size(); k++) {
+                e[i][j][k] = new ConstructorTester[1];
+            }
+        }
     }
 }
 
-int search(int x, int y, int z)
-{
-	int s;
-	int i;
-	int j;
-    if ((y > 0 || y < 0) || x == 0 || make[x-1][0] + make[x-1][1] + make[x-1][2] == 15)
-    {
-        if (x == 2 && y == 2) {
-            make[2][2] = 45 - z;
-            s = make[0][0] + make[0][1] + make[0][2];
-            if  (make[1][0] + make[1][1] + make[1][2] == s &&
-                    make[2][0] + make[2][1] + make[2][2] == s &&
-                    make[0][0] + make[1][0] + make[2][0] == s &&
-                    make[0][1] + make[1][1] + make[2][1] == s &&
-                    make[0][2] + make[1][2] + make[2][2] == s &&
-                    make[0][0] + make[1][1] + make[2][2] == s &&
-                    make[2][0] + make[1][1] + make[0][2] == s)
-            {
-                count[0] = count[0] + 1;
-                for (i = 0;i <= 2;i ++)
-                {
-                	for (j = 0;j <= 2;j ++)
-                    {
-                        print(toString(make[i][j]));
-                        print(" ");
-                    }
-                    print("\n");
-                }
-               print("\n");
-            }
-       }
-       else {
-            if (y == 2) {
-                make[x][y] = 15 - make[x][0] - make[x][1];
-                if (make[x][y] > 0 && make[x][y] < 10 && color[make[x][y]] == 0) {
-                    color[make[x][y]] = 1;
-                    if (y == 2)
-                        search(x + 1, 0, z+make[x][y]);
-                    else
-                        search(x, y+1, z+make[x][y]);
-                    color[make[x][y]] = 0;
-            	}
-            }
-            else {
-                for (i = 1;i <= 9;i ++) {
-                    if (color[i] == 0) {
-                        color[i] = 1;
-                        make[x][y] = i;
-                        if (y == 2)
-                            search(x + 1, 0, z+i);
-                        else
-                            search(x, y+1, z+i);
-                        make[x][y] = 0;
-                        color[i] = 0;
-                    }
-                }
-            }
-    	}
+class SideEffectTester {
+    int ct;
+
+    SideEffectTester() {
+        ct = 0;
+    }
+
+    SideEffectTester getSelf() {
+        ct++;
+        return this;
     }
 }
-int main()
-{
-	origin(3);
-    search(0, 0, 0);
-    println(toString(count[0]));
+void testSideEffect() {
+    SideEffectTester a = new SideEffectTester;
+
+    println(toString(a.ct));
+    a.getSelf();
+    println(toString(a.ct));
+    a.getSelf().ct++;
+    println(toString(a.ct));
+    ++a.getSelf().ct;
+    println(toString(a.ct));
+    println(toString(++a.getSelf().ct));
+    println(toString(a.getSelf().ct++));
+    println(toString(a.ct));
+}
+
+bool error() {
+    println("ERROR!");
+}
+void testManyLogic(int n) {
+    int i;
+    bool a = (getInt() == 1);
+    bool b = (getInt() == 1);
+
+    for (i = 0; i < n; i++) {
+        if (a && a && a && a && a && a && a && a && a && a && a && a && a && a && a && a &&
+            a && a && a && a && a && a && a && a && a && a && a && a && a && a && a && a) {
+            println("1 - true");
+        } else {
+            println("1 - false");
+        }
+
+        if (b || b || b || b || b || b || b || b || b || b || b || b || b || b || b || b ||
+            b || b || b || b || b || b || b || b || b || b || b || b || b || b || b || b ) {
+            println("2 - true");
+        } else {
+            println("2 - false");
+        }
+
+        if (!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!a) {
+            println("3 - true");
+        } else {
+            println("3 - false");
+        }
+    }
+
+    // short cut
+    if (a || error()) {
+        println("4 - true");
+    } else {
+        println("4 - false");
+    }
+
+    if (b && error()) {
+        println("5 - true");
+    } else {
+        println("5 - false");
+    }
+}
+
+int [][][][][][][][][][] a = new int[2][2][2][2][2][2][2][2][2][2];
+
+void testArray(int n) {
+    int i; int i1; int i2; int i3; int i4; int i5; int i6; int i7; int i8; int i9; int i10;
+            int s = 0;
+    for (i = 0; i < n; i++) {
+        for (i1 = 0; i1 < a.size(); i1++)
+            for (i2 = 0; i2 < a.size(); i2++)
+            for (i3 = 0; i3 < a.size(); i3++)
+            for (i4 = 0; i4 < a.size(); i4++)
+            for (i5 = 0; i5 < a.size(); i5++)
+            for (i6 = 0; i6 < a.size(); i6++)
+            for (i7 = 0; i7 < a.size(); i7++)
+            for (i8 = 0; i8 < a.size(); i8++)
+            for (i9 = 0; i9 < a.size(); i9++)
+            for (i10 = 0; i10 < a.size(); i10++)
+                a[i1][i2][i3][i4][i5][i6][i7][i8][i9][i10] =
+                        (~i1 + i2 - i3 * i4 / (i5+93) % (i6+93) & i7 | i8 ^ i9 + i10) & ((1<<30) - 1);
+
+        for (i1 = 0; i1 < a.size(); i1++)
+            for (i2 = 0; i2 < a.size(); i2++)
+            for (i3 = 0; i3 < a.size(); i3++)
+            for (i4 = 0; i4 < a.size(); i4++)
+            for (i5 = 0; i5 < a.size(); i5++)
+            for (i6 = 0; i6 < a.size(); i6++)
+            for (i7 = 0; i7 < a.size(); i7++)
+            for (i8 = 0; i8 < a.size(); i8++)
+            for (i9 = 0; i9 < a.size(); i9++)
+            for (i10 = 0; i10 < a.size(); i10++)
+                s = (a[i1][i2][i3][i4][i5][i6][i7][i8][i9][i10] + a[i1][i2][i3][i4][i5][i6][i7][i8][i9][i10])
+                                                                                        & ((1<<30) - 1);
+        s = s + i;
+    }
+    println("test array: " + toString(s));
+}
+
+class MemberTester {
+    MemberTester next1;
+    int x;
+    int y;
+    MemberTester next2;
+}
+
+void testMember(int n) {
+    MemberTester root = new MemberTester;
+    MemberTester now = root;
+    int i;
+    for (i = 0; i < n; i++) {
+        now.next2 = new MemberTester;
+        now = now.next2;
+    }
+
+    root.next2.next2.next2.next2.next2.next2.x = 197;
+    root.next2.next2.next2.x = 297;
+
+    println("test member: " + toString(root.next2.next2.next2.x + root.next2.next2.next2.next2.next2.next2.x));
+}
+
+int testInstructionSelection(int n) {
+    int i; int k;
+    int [] a = new int [n];
+    int [] b = new int [n];
+    int [] c = new int [n];
+
+    int res = 0;
+    for (k = 0; k < 1200;k ++) {
+        a[0] = 1; a[1] = 2;
+        b[0] = 2; b[1] = 1;
+        c[0] = 0; c[1] = 0;
+        for (i = 2; i < n; i++) {
+            a[i] = (a[i-1] * 4 + a[i-2] + 2) & ((1 << 20) - 1);
+            b[i] = (3 + b[i-1] * 8 + a[i-2]) & ((1 << 20) - 1);
+            c[i] = (a[i] + b[i] * 2) & ((1 << 20) - 1);
+            a[i] = c[i] * 5;
+        }
+
+        int sum = 0;
+        for (i = 0; i < n; i++) {
+            sum = (a[i] + b[i] * 2 + c[i] + 9)  & ((1 << 20) - 1);;
+        }
+        res = (sum + res + k) & ((1 << 20) - 1);
+    }
+
+    println("test instruction selection: " + toString(res));
+
+    return res;
+}
+
+int add(int x, int y) { return x + y; }
+int mul(int x, int y) { return x * y; }
+int mod(int x, int y) { return x % y; }
+
+void testConstantPropogation(int n) {
+    int i; int j;
+
+    int sum = 0;
+    for (i = 0; i < n; i++)
+        for (j = 0; j < n; j++) {
+            int a = 1;
+            int b = 2;
+            int c = 3;
+            int d = a + b * c;
+            int e = a - b * d % c + 3;
+            int f = b * 3 / a - 23;
+            int g = d * 12 / f % e;
+            int h = c + f;
+
+            a = mod(mul(a,b)+3, add(c, d));
+            b = mod(mul(e,f)+3, add(g, h));
+            c = mod(mul(g,h)+3, add(a, b));
+
+            sum = (sum + i + j + c) & ((1 << 20) - 1);
+        }
+
+    println("test constant: " + toString(sum));
+}
+
+int main() {
+    testConstructor();
+    testSideEffect();
+    testManyLogic(10);
+    testArray(10000);
+    testMember(10);
+    testInstructionSelection(100000);
+    testConstantPropogation(4000);
+
+
     return 0;
 }

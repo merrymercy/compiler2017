@@ -94,15 +94,7 @@ Constructed - 56
 3 - false
 4 - true
 5 - false
-0 -2176
-1 -2176
-2 -2176
-3 -2176
-4 -2176
-5 -2176
-6 -2176
-7 -2176
-8 -2176
-9 -2176
-494
-973680
+test array: 10005
+test member: 494
+test instruction selection: 651896
+test constant: 163840

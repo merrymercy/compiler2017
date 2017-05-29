@@ -25,4 +25,8 @@ abstract public class Operand {
     public boolean isAddress() {
         return false;
     }
+
+    public boolean isConstInt() {
+        return  false;
+    }
 }

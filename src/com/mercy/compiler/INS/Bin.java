@@ -22,6 +22,13 @@ abstract public class Bin extends Instruction {
         return right;
     }
 
+    public void setLeft(Operand left) {
+        this.left = left;
+    }
+    public void setRight(Operand right) {
+        this.right = right;
+    }
+
     @Override
     public void replaceUse(Reference from, Reference to) {
         right = right.replace(from, to);

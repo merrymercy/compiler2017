@@ -17,9 +17,15 @@ public class Move extends Instruction {
     public Operand dest() {
         return dest;
     }
-
     public Operand src() {
         return src;
+    }
+
+    public void setDest(Operand dest) {
+        this.dest = dest;
+    }
+    public void setSrc(Operand src) {
+        this.src = src;
     }
 
     public boolean isRefMove() {

@@ -123,7 +123,6 @@ public class Allocator {
         edgeEdgeHashMap  = new HashMap<>();
         edgeSet          = new LinkedHashSet<>();
         simplifiedEdge   = new LinkedHashSet<>();
-        visited          = new HashSet<>();
 
         // node set (disjoint)
         simplifyWorklist = new LinkedHashSet<>();
@@ -143,15 +142,7 @@ public class Allocator {
         worklistMoves    = new LinkedHashSet<>();
         activeMoves      = new LinkedHashSet<>();
 
-        // sort blocks to boost iteration, iterate in reverse
-        sorted = new LinkedList<>();
-        ListIterator li = entity.bbs().listIterator(entity.bbs().size());
-        while (li.hasPrevious()) {
-            BasicBlock pre = (BasicBlock) li.previous();
-            if (!visited.contains(pre))
-                dfsSort(pre);
-        }
-
+        initLivenessAnalysis(entity);
         // for spilled node
         localOffset = 0;
     }
@@ -222,6 +213,19 @@ public class Allocator {
             }
         }
     }
+
+    void initLivenessAnalysis(FunctionEntity entity) {
+        // sort blocks to boost iteration, iterate in reverse
+        sorted = new LinkedList<>();
+        visited = new HashSet<>();
+        ListIterator li = entity.bbs().listIterator(entity.bbs().size());
+        while (li.hasPrevious()) {
+            BasicBlock pre = (BasicBlock) li.previous();
+            if (!visited.contains(pre))
+                dfsSort(pre);
+        }
+    }
+
     private void livenessAnalysis(FunctionEntity entity) {
         // print Def and Use
         if (Option.printGlobalAllocationInfo) {

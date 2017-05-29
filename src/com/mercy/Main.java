@@ -3,9 +3,11 @@ package com.mercy;
 import com.mercy.compiler.AST.AST;
 import com.mercy.compiler.BackEnd.*;
 import com.mercy.compiler.Entity.Entity;
+import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.FrontEnd.ASTBuilder;
 import com.mercy.compiler.FrontEnd.ParserErrorListener;
+import com.mercy.compiler.INS.Instruction;
 import com.mercy.compiler.Parser.MalicLexer;
 import com.mercy.compiler.Parser.MalicParser;
 import com.mercy.compiler.Type.Type;
@@ -26,6 +28,7 @@ import java.util.List;
 
 import static com.mercy.compiler.Type.Type.*;
 import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
+import static java.lang.System.err;
 import static java.lang.System.exit;
 
 public class Main {
@@ -41,13 +44,13 @@ public class Main {
                     break;
                 case "-in":
                     if (i + 1 >= args.length)
-                        System.err.println("invalid argument for input file, use default setting instead");
+                        err.println("invalid argument for input file, use default setting instead");
                     else
                         Option.inFile = args[++i];
                     break;
                 case "-out":
                     if (i + 1 >= args.length)
-                        System.err.println("invalid argument for output file, use default setting instead");
+                        err.println("invalid argument for output file, use default setting instead");
                     else
                         Option.outFile = args[++i];
                     break;
@@ -64,10 +67,10 @@ public class Main {
         try {
             compile(is, os);
         } catch (SemanticError error) {
-            System.err.println(error.getMessage());
+            err.println(error.getMessage());
             exit(1);
         } catch (InternalError error) {
-            System.err.println(error.getMessage());
+            err.println(error.getMessage());
             exit(1);
         } catch (Exception e) {
             e.printStackTrace();
@@ -109,14 +112,21 @@ public class Main {
         // emit instructions
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
-        if (Option.printInsturction)
-            emitter.printSelf(System.err);
 
         // build control flow graph
         ControlFlowAnalyzer cfgBuilder = new ControlFlowAnalyzer(emitter);
         cfgBuilder.buildControlFlow();
         if (Option.printBasicBlocks)
-            cfgBuilder.printSelf(System.err);
+            cfgBuilder.printSelf(err);
+
+        // dataflow analysis
+        DataFlowAnalyzer dataFlowAnalyzer = new DataFlowAnalyzer(emitter);
+        if (Option.enableDataFlowOptimization)
+            dataFlowAnalyzer.transform();
+
+        if (Option.printInsturction) {
+            printInstructions(emitter.functionEntities());
+        }
 
         // allocate register
         RegisterConfig registerConfig = new RegisterConfig();
@@ -156,5 +166,17 @@ public class Main {
         ret.add(new VariableEntity(null, nullType, "null", null));
 
         return ret;
+    }
+
+    private static void printInstructions(List<FunctionEntity> functionEntities) {
+        for (FunctionEntity entity : functionEntities) {
+            if (entity.bbs() == null)
+                continue;
+            for (BasicBlock basicBlock : entity.bbs()) {
+                for (Instruction ins : basicBlock.ins()) {
+                    err.println(ins.toString());
+                }
+            }
+        }
     }
 }

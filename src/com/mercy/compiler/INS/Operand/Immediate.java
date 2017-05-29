@@ -52,6 +52,11 @@ public class Immediate extends Operand {
     }
 
     @Override
+    public boolean isConstInt() {
+        return type == Type.INTEGER;
+    }
+
+    @Override
     public Set<Reference> getAllRef() {
         return new HashSet<>();
     }
