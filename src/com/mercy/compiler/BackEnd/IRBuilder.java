@@ -369,15 +369,12 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     private boolean notuseTmp = false;
-    private boolean replaceMem = false;
     @Override
     public Expr visit(AssignNode node) {
         int backupSize = stmts.size();
 
-
         Expr lhs = visitExpr(node.lhs());
         Expr rhs = null;
-
 
         /***** OPTIMIZATION BEGIN *****/
         // output irrelevant elimination
@@ -415,9 +412,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         // cannot find common expr, build normally
         if (rhs == null) {
-            notuseTmp = true;    replaceMem = true;
+            notuseTmp = true;
             rhs = visitExpr(node.rhs());
-            notuseTmp = false;   replaceMem = false;
+            notuseTmp = false;
         }
 
         addAssign(lhs, rhs);
@@ -1152,17 +1149,6 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         } else if (expr instanceof Var || expr instanceof  IntConst) {
             return expr;
         } else if (expr instanceof Mem) {
-            if (replaceMem) {
-                if (info.replaced) {
-                    if (info.var == null) {
-                        Var tmp = newIntTemp();
-                        info.var = tmp;
-                        addAssign(tmp, info.expr);
-                    }
-                    return info.var;
-                }
-            }
-
             Expr base = replaceSubtree(((Mem) expr).expr());
             return new Mem(base);
         }

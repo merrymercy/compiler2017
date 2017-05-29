@@ -40,8 +40,8 @@ public class Option {
     public static boolean enableControlFlowOptimization     = true;
     public static boolean enableDataFlowOptimization        = true;
 
-    public static boolean enableLeafFunctionOptimization    = false;
-    public static boolean enableOutputIrrelevantElimination = false;
+    public static boolean enableLeafFunctionOptimization    = true;
+    public static boolean enableOutputIrrelevantElimination = true;
 
 
     // STEADY

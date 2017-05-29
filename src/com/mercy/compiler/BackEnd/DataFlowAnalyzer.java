@@ -6,6 +6,7 @@ import com.mercy.compiler.INS.Bin;
 import com.mercy.compiler.INS.Instruction;
 import com.mercy.compiler.INS.Label;
 import com.mercy.compiler.INS.Move;
+import com.mercy.compiler.INS.Operand.Address;
 import com.mercy.compiler.INS.Operand.Immediate;
 import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
@@ -29,6 +30,9 @@ public class DataFlowAnalyzer {
         for (FunctionEntity functionEntity : functionEntities) {
             if (functionEntity.isInlined())
                 continue;
+            for (BasicBlock basicBlock : functionEntity.bbs()) {
+                commonSubexpresionElimination(basicBlock);
+            }
 
             for (BasicBlock basicBlock : functionEntity.bbs()) {
                 constantPropagation(basicBlock);
@@ -43,7 +47,7 @@ public class DataFlowAnalyzer {
             }
             refreshDefAndUse(functionEntity);
         }
-        err.println("!!!!! dead code !!! " + ct);
+        err.println("dead code : " + ct);
     }
 
     private void refreshDefAndUse(FunctionEntity entity) {
@@ -51,6 +55,71 @@ public class DataFlowAnalyzer {
             for (Instruction ins : basicBlock.ins()) {
                 ins.initDefAndUse();
                 ins.calcDefAndUse();
+            }
+        }
+    }
+
+    int hashOperand(Operand operand) {
+        if (operand instanceof Address) {
+            int hash = 1;
+            Address addr = (Address)operand;
+            if (addr.base() != null)
+                hash *= addr.base().hashCode();
+            if (addr.index() != null)
+                hash += addr.index().hashCode();
+            hash = hash * addr.mul() + addr.add();
+            return hash;
+        } else {
+            return operand.hashCode();
+        }
+    }
+    Map<Integer, Reference> exprTable = new HashMap<>();
+    Reference getReference(Operand operand) {
+        if (operand instanceof Address) {
+            Reference ret = exprTable.get(new Integer(hashOperand(operand)));
+            return ret;
+        } else {
+            return null;
+        }
+    }
+    private void commonSubexpresionElimination(BasicBlock basicBlock) {
+        exprTable = new HashMap<>();
+        for (Instruction ins : basicBlock.ins()) {
+            if (ins instanceof Move) {
+                Reference ret = getReference(((Move) ins).src());
+                if (ret != null) // replace
+                    ((Move) ins).setSrc(ret);
+
+                // refresh table
+                if (((Move) ins).dest().isAddress()) {
+                    exprTable.clear();
+                } else {
+                    Reference dest = (Reference)((Move) ins).dest();
+                    // remove old
+                    for (Map.Entry<Integer, Reference> entry : exprTable.entrySet()) {
+                        if (entry.getValue() == dest) {
+                            exprTable.remove(entry.getKey());
+                            break;
+                        }
+                    }
+                    // insert new
+                    exprTable.put(hashOperand(((Move) ins).src()), dest);
+                }
+            } else if (ins instanceof Bin) {
+                if (((Bin) ins).left().isAddress()) {
+                    exprTable.clear();
+                } else {
+                    Reference dest = (Reference) ((Bin) ins).left();
+                    // remove old
+                    for (Map.Entry<Integer, Reference> entry : exprTable.entrySet()) {
+                        if (entry.getValue() == dest) {
+                            exprTable.remove(entry.getKey());
+                            break;
+                        }
+                    }
+                }
+            } else {
+                exprTable.clear();
             }
         }
     }
