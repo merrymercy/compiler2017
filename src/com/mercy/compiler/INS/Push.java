@@ -3,7 +3,6 @@ package com.mercy.compiler.INS;
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
-import com.mercy.compiler.INS.Operand.Register;
 
 /**
  * Created by mercy on 17-5-26.
@@ -21,17 +20,17 @@ public class Push extends Instruction {
 
     @Override
     public void replaceUse(Reference from, Reference to) {
-        operand = (Register)operand.replace(from, to);
+        operand = operand.replace(from, to);
     }
 
     @Override
     public void replaceDef(Reference from, Reference to) {
-        operand = (Register)operand.replace(from, to);
+        operand = operand.replace(from, to);
     }
 
     @Override
     public void replaceAll(Reference from, Reference to) {
-        operand = (Register)operand.replace(from, to);
+        operand = operand.replace(from, to);
     }
 
 
