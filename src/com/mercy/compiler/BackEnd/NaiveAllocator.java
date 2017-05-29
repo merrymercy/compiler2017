@@ -45,7 +45,7 @@ public class NaiveAllocator  {
     }
 
     private void allocateFunction(FunctionEntity entity){
-        if (Option.enableInlineFunction && entity.canbeInlined())
+        if (entity.isInlined())
             return;
 
         /*************************************************/

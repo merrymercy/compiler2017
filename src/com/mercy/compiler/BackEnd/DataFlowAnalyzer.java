@@ -27,7 +27,7 @@ public class DataFlowAnalyzer {
 
     public void transform() {
         for (FunctionEntity functionEntity : functionEntities) {
-            if (Option.enableInlineFunction && functionEntity.canbeInlined())
+            if (functionEntity.isInlined())
                 continue;
 
             for (BasicBlock basicBlock : functionEntity.bbs()) {

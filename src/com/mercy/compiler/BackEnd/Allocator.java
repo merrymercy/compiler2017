@@ -87,7 +87,7 @@ public class Allocator {
 
     public void allocate() {
         for (FunctionEntity functionEntity : functionEntities) {
-            if (Option.enableInlineFunction && functionEntity.canbeInlined())
+            if (functionEntity.isInlined())
                 continue;
             init(functionEntity);
             loadPrecolord(functionEntity);
@@ -816,6 +816,11 @@ public class Allocator {
                                 paraRegUsed.add(paraRegisterRef.get(i));
                                 newIns.add(new Move(paraRegisterRef.get(i), operand));
                             } else {
+                                if (operand instanceof Immediate) {
+                                    Reference tmp = new Reference("tmp_push", Reference.Type.UNKNOWN);
+                                    newIns.add(new Move(tmp, operand));
+                                    operand = tmp;
+                                }
                                 newIns.add(new Push(operand));
                                 pushCt++;
                             }

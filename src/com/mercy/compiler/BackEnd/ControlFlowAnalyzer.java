@@ -23,7 +23,7 @@ public class ControlFlowAnalyzer {
 
     public void buildControlFlow() {
         for (FunctionEntity functionEntity : functionEntities) {
-            if (Option.enableInlineFunction && functionEntity.canbeInlined())
+            if (functionEntity.isInlined())
                 continue;
             buildBasicBlock(functionEntity);
             buildControFlowGraph(functionEntity);
@@ -251,7 +251,7 @@ public class ControlFlowAnalyzer {
     public void printSelf(PrintStream out) {
         for (FunctionEntity functionEntity : functionEntities) {
             out.println("========== " + functionEntity.name() + " ==========");
-            if (Option.enableInlineFunction && functionEntity.canbeInlined()) {
+            if (functionEntity.isInlined()) {
                 out.println("BE INLINED");
                 continue;
             }

@@ -71,13 +71,13 @@ public class InstructionEmitter {
     Set<Entity> usedGlobal;
 
     public List<Instruction> emitFunction(FunctionEntity entity) {
-        if (Option.enableInlineFunction && entity.canbeInlined())
+        if (entity.isInlined())
             return null;
 
         // leaf function optimization
         int callSize = entity.calls().size();
         for (FunctionEntity called : entity.calls()) {
-            if ((Option.enableInlineFunction && called.canbeInlined()) || called.isLibFunction())
+            if (called.isInlined() || called.isLibFunction())
                 callSize--;
         }
         if (Option.enableLeafFunctionOptimization && callSize == 0) {
@@ -610,7 +610,7 @@ public class InstructionEmitter {
     /***** DEBUG TOOL *****/
     private void printFunction(PrintStream out, FunctionEntity entity) {
         out.println("========== INS " + entity.name() + " ==========");
-        if (Option.enableInlineFunction && entity.canbeInlined()) {
+        if (entity.isInlined()) {
             out.println("BE INLINED");
             return;
         }

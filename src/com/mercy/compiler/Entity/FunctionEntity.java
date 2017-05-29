@@ -1,9 +1,7 @@
 package com.mercy.compiler.Entity;
 
 import com.mercy.Option;
-import com.mercy.compiler.AST.BlockNode;
-import com.mercy.compiler.AST.Location;
-import com.mercy.compiler.AST.StmtNode;
+import com.mercy.compiler.AST.*;
 import com.mercy.compiler.BackEnd.BasicBlock;
 import com.mercy.compiler.INS.Instruction;
 import com.mercy.compiler.INS.Label;
@@ -27,7 +25,7 @@ public class FunctionEntity extends Entity {
     private boolean isConstructor = false;
     private boolean isLibFunction = false;
 
-    private boolean canbeInlined = false;
+    private boolean isInlined = false;
     private Set<FunctionEntity> calls = new HashSet<>();
     
     private com.mercy.compiler.IR.Label beginLabelIR, endLabelIR;
@@ -61,26 +59,47 @@ public class FunctionEntity extends Entity {
 
     // check whether can be inlined
     private Map<FunctionEntity, Boolean> visited;
+    private int stmtSize;
     public void checkInlinable() {
         if (name.equals("main")) {
-            canbeInlined = false;
+            isInlined = false;
         } else {
             visited = new Hashtable<>();
-            canbeInlined = !findLoop(this, this);
-            if (stmtSize(body) > 4)
-                canbeInlined = false;
-            if (canbeInlined && Option.enableInlineFunction && Option.printInlineInfo)
+            isInlined = !findLoop(this, this);
+            stmtSize = stmtSize(body);
+            if (stmtSize > 8)
+                isInlined = false;
+            if (isInlined && Option.enableInlineFunction && Option.printInlineInfo)
                 System.err.println(name() + " is inlined");
         }
     }
 
-    private int stmtSize(BlockNode node) {
+    public boolean canbeSelfInline(int depth) {
+        if (depth >= 3)
+            return false;
+        int pow = 1;
+        for (int i = 0; i < depth + 1; i++)
+            pow *= stmtSize;
+        return pow < 40;
+    }
+
+    private int stmtSize(StmtNode node) {
         int ct = 0;
-        for (StmtNode stmtNode : node.stmts()) {
-            if (stmtNode instanceof  BlockNode)
-                ct += stmtSize((BlockNode)stmtNode);
-            else
-                ct++;
+        if (node == null)
+            return 0;
+        if (node instanceof BlockNode) {
+            for (StmtNode stmtNode : ((BlockNode) node).stmts()) {
+                if (stmtNode instanceof  BlockNode)
+                    ct += stmtSize(stmtNode);
+                else if (stmtNode instanceof ForNode)
+                    ct += 3 + stmtSize(((ForNode) stmtNode).body());
+                else if (stmtNode instanceof IfNode)
+                    ct += 1 + stmtSize(((IfNode) stmtNode).elseBody()) + stmtSize(((IfNode) stmtNode).thenBody());
+                else
+                    ct++;
+            }
+        } else {
+            return 1;
         }
         return ct;
     }
@@ -172,8 +191,8 @@ public class FunctionEntity extends Entity {
         calls.add(entity);
     }
 
-    public boolean canbeInlined() {
-        return canbeInlined;
+    public boolean isInlined() {
+        return isInlined;
     }
 
 

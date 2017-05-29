@@ -170,6 +170,7 @@ public class Main {
 
     private static void printInstructions(List<FunctionEntity> functionEntities) {
         for (FunctionEntity entity : functionEntities) {
+            err.println("==== " + entity.name()  + " ====");
             if (entity.bbs() == null)
                 continue;
             for (BasicBlock basicBlock : entity.bbs()) {

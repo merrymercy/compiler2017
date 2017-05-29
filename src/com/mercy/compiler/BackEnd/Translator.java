@@ -86,7 +86,7 @@ public class Translator {
         // translate functions
         add("section .text");
         for (FunctionEntity entity : functionEntities) {
-            if (Option.enableInlineFunction && entity.canbeInlined())
+            if (entity.isInlined())
                 continue;
             //currentFunction = entity;
             locateFrame(entity);

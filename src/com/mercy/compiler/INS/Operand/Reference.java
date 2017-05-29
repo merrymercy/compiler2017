@@ -175,7 +175,7 @@ public class Reference extends Operand {
 
     @Override
     public boolean isAddress() {
-        return type == GLOBAL || type == OFFSET;
+        return type == GLOBAL || type == OFFSET || type == CANNOT_COLOR;
     }
 
     @Override

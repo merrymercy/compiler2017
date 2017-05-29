@@ -63,7 +63,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             }
             for (ClassEntity entity : ast.classEntitsies()) {
                 for (FunctionDefNode node : entity.memberFuncs()) {
-                    ;//node.entity().checkInlinable();
+                    //node.entity().checkInlinable();
                 }
             }
         }
@@ -97,7 +97,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     public void compileFunction(FunctionEntity entity) {
-        if (Option.enableInlineFunction && entity.canbeInlined())
+        if (entity.isInlined())
             return;
         Label begin = new Label();
         Label end = new Label();
@@ -575,7 +575,10 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             args.add(visitExpr(exprNode));
 
         // make call
-        if (Option.enableInlineFunction && entity.canbeInlined()) {
+        if (Option.enableInlineFunction && entity.isInlined() ||
+                (Option.enableSelfInline && entity == currentFunction && entity.canbeSelfInline(inlineMode))) {
+            if (Option.printInlineInfo && entity == currentFunction)
+                err.println(entity.name() + " is self expanded");
             if (needReturn()) {
                 Var tmp = newIntTemp();
                 inlineFunction(entity, tmp, args);
