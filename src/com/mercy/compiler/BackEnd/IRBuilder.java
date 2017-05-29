@@ -64,6 +64,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             for (ClassEntity entity : ast.classEntitsies()) {
                 for (FunctionDefNode node : entity.memberFuncs()) {
                     //node.entity().checkInlinable();
+                    // some bugs here, so do not inline member functions
                 }
             }
         }
@@ -368,16 +369,29 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     private boolean notuseTmp = false;
+    private boolean replaceMem = false;
     @Override
     public Expr visit(AssignNode node) {
+        int backupSize = stmts.size();
+
+
         Expr lhs = visitExpr(node.lhs());
         Expr rhs = null;
 
+
         /***** OPTIMIZATION BEGIN *****/
+        // output irrelevant elimination
         if (!needReturn() && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
                 err.println("remove assign " + node.location());
             return null;
+        }
+
+        // common expr elimination
+        if (Option.enableCommonExpressionElimination) { // visit left first to build common expr info
+            while (stmts.size() > backupSize) // remove side-effect
+                stmts.remove(backupSize);
+            lhs = visitExpr(node.lhs());
         }
 
         // common assign elimination
@@ -401,9 +415,9 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
         // cannot find common expr, build normally
         if (rhs == null) {
-            notuseTmp = true;
+            notuseTmp = true;    replaceMem = true;
             rhs = visitExpr(node.rhs());
-            notuseTmp = false;
+            notuseTmp = false;   replaceMem = false;
         }
 
         addAssign(lhs, rhs);
@@ -1051,7 +1065,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
 
         /*for (Map.Entry<ExprTuple, CommonExprInfo> entry : commonExprMap.entrySet()) {
-            System.err.println(entry.getKey().hashCode() + "   " + entry.getValue() + "  " + entry.getValue().ref + " " + entry.getValue().depth);
+            err.println(entry.getKey().hashCode() + "   " + entry.getValue() + "   ref: " + entry.getValue().ref + "  dep: " + entry.getValue().depth);
         }*/
 
         for (CommonExprInfo info : commonExprMap.values()) {
@@ -1122,16 +1136,13 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
     private Expr replaceSubtree(Expr expr) {
         CommonExprInfo info = expr.commonExprInfo();
-        if (info.replaced) {
-            if (info.var == null) {
-                Var tmp = newIntTemp();
-                info.var = tmp;
-                addAssign(tmp, info.expr);
-            }
-        }
-
         if (expr instanceof Binary) {
             if (info.replaced) {
+                if (info.var == null) {
+                    Var tmp = newIntTemp();
+                    info.var = tmp;
+                    addAssign(tmp, info.expr);
+                }
                 return info.var;
             }
             Expr left = replaceSubtree(((Binary) expr).left());
@@ -1141,8 +1152,16 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         } else if (expr instanceof Var || expr instanceof  IntConst) {
             return expr;
         } else if (expr instanceof Mem) {
-            if (info.replaced)
-                return info.var;
+            if (replaceMem) {
+                if (info.replaced) {
+                    if (info.var == null) {
+                        Var tmp = newIntTemp();
+                        info.var = tmp;
+                        addAssign(tmp, info.expr);
+                    }
+                    return info.var;
+                }
+            }
 
             Expr base = replaceSubtree(((Mem) expr).expr());
             return new Mem(base);

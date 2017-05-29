@@ -1,55 +1,9 @@
-int gcd(int x, int y, int j0 , int j1 , int j2 , int j3 , int j4 , int j5 , int j6 , int j7 , int j8 , int j9 , int j10 , int j11 , int j12 , int j13 , int j14 , int j15 , int j16 , int j17 , int j18 , int j19 , int j20 , int j21 , int j22 , int j23 , int j24 , int j25 , int j26 , int j27 , int j28 , int j29) {
-  int i;
-  int j;
-  for(i = 0; i<= 10; ++i)
-    j = (j0 +j1 +j2 +j3 +j4 +j5 +j6 +j7 +j8 +j9 +j10 +j11 +j12 +j13 +j14 +j15 +j16 +j17 +j18 +j19 +j20 +j21 +j22 +j23 +j24 +j25 +j26 +j27 +j28 +j29) % 100;
-  if (x%y == 0) return y;
-  else return gcd1(y, x%y,j ,gcd(10,68, 0 , 2 , 4 , 6 , 8 , 10 , 12 , 14 , 16 , 18 , 20 , 22 , 24 , 26 , 28 , 30 , 32 , 34 , 36 , 38 , 40 , 42 , 44 , 46 , 48 , 50 , 52 , 54 , 56 , 58) ,j2 ,j3 ,j4 ,j5 ,j6 ,j7 ,j8 ,j9 ,j10 ,j11 ,j12 ,j13 ,j14 ,j15 ,j16 ,j17 ,j18 ,j19 ,j20 ,j21 ,j22 ,j23 ,j24 ,j25 ,j26 ,j27 ,j28 ,j29);
-}
-
-
-
-int gcd1(int x, int y, int j0 , int j1 , int j2 , int j3 , int j4 , int j5 , int j6 , int j7 , int j8 , int j9 , int j10 , int j11 , int j12 , int j13 , int j14 , int j15 , int j16 , int j17 , int j18 , int j19 , int j20 , int j21 , int j22 , int j23 , int j24 , int j25 , int j26 , int j27 , int j28 , int j29) {
-  int j;
-  j = (j0 +j1 +j2 +j3 +j4 +j5 +j6 +j7 +j8 +j9 +j10 +j11 +j12 +j13 +j14 +j15 +j16 +j17 +j18 +j19 +j20 +j21 +j22 +j23 +j24 +j25 +j26 +j27 +j28 +j29) % 100;
-  if (x%y == 0) return y;
-  else return gcd2(y, x%y,j ,j1 ,j2 ,j3 ,j4 ,j5 ,j6 ,j7 ,j8 ,j9 ,j10 ,j11 ,j12 ,j13 ,j14 ,j15 ,j16 ,j17 ,j18 ,j19 ,j20 ,j21 ,j22 ,j23 ,j24 ,j25 ,j26 ,j27 ,j28 ,j29);
-}
-
-
-
-int gcd2(int x, int y, int j0 , int j1 , int j2 , int j3 , int j4 , int j5 , int j6 , int j7 , int j8 , int j9 , int j10 , int j11 , int j12 , int j13 , int j14 , int j15 , int j16 , int j17 , int j18 , int j19 , int j20 , int j21 , int j22 , int j23 , int j24 , int j25 , int j26 , int j27 , int j28 , int j29) {
-  int j;
-  j = (j0 +j1 +j2 +j3 +j4 +j5 +j6 +j7 +j8 +j9 +j10 +j11 +j12 +j13 +j14 +j15 +j16 +j17 +j18 +j19 +j20 +j21 +j22 +j23 +j24 +j25 +j26 +j27 +j28 +j29) % 100;
-  if (x%y == 0) return y;
-  else return gcd(y, x%y,j0 ,j1 ,j2 ,j3 ,j4 ,j5 ,j6 ,j7 ,j8 ,j9 ,j10 ,j11 ,j12 ,j13 ,j14 ,j15 ,j16 ,j17 ,j18 ,j19 ,j20 ,j21 ,j22 ,j23 ,j24 ,j25 ,j26 ,j27 ,j28 ,j29);
-}
-
-
-
-
 int main() {
-    println(toString(gcd(10,1, 0 , 2 , 4 , 6 , 8 , 10 , 12 , 14 , 16 , 18 , 20 , 22 , 24 , 26 , 28 , 30 , 32 , 34 , 36 , 38 , 40 , 42 , 44 , 46 , 48 , 50 , 52 , 54 , 56 , 58) + 1024));
+    int [][]a;
 
-    return 0;
+    int i; int j;
+
+    a[i][j] = 2;
+
+    a[i][j]  = 3;
 }
-
-/*!! metadata:
-=== comment ===
-optim2-5140309569-xushichao.txt
-gcd_modified
-=== input ===
-
-=== assert ===
-output
-=== timeout ===
-1.0
-=== output ===
-1025
-=== phase ===
-optim pretest
-=== is_public ===
-True
-
-!!*/
-
