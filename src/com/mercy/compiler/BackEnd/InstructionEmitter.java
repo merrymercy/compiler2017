@@ -413,6 +413,7 @@ public class InstructionEmitter {
 
             if (left.isAddress()) {
                 Reference tmp = getTmp();
+                ins.add(new Move(tmp, left));
                 left = tmp;
             }
             ins.add(new CJump(left, right, type, getLabel(ir.trueLabel().name()),
@@ -428,6 +429,7 @@ public class InstructionEmitter {
             } else {
                 if (cond.isAddress()) {
                     Reference tmp = getTmp();
+                    ins.add(new Move(tmp, cond));
                     cond = tmp;
                 }
                 ins.add(new CJump(cond, getLabel(ir.trueLabel().name()),
