@@ -138,6 +138,26 @@ public class Address extends Operand {
     }
 
     @Override
+    public int hashCode() {
+        int hash = 0x93;
+        if (base != null)
+            hash *= base.hashCode();
+        if (index!= null)
+            hash += index.hashCode();
+        hash = hash * mul + add;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Address) {
+            return base == ((Address) o).base() && index == ((Address) o).index()
+                    && mul == ((Address) o).mul() && add == ((Address) o).add();
+        }
+        return false;
+    }
+
+    @Override
     public String toString() {
         String str = "";
 

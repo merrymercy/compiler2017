@@ -10,12 +10,14 @@ import com.mercy.compiler.INS.Operand.Address;
 import com.mercy.compiler.INS.Operand.Immediate;
 import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
+import com.mercy.compiler.IR.Expr;
 import com.mercy.compiler.Utility.InternalError;
 import com.mercy.compiler.Utility.Pair;
 
 import java.util.*;
 
 import static java.lang.System.err;
+import static java.lang.System.out;
 
 /**
  * Created by mercy on 17-5-29.
@@ -31,8 +33,9 @@ public class DataFlowAnalyzer {
             if (functionEntity.isInlined())
                 continue;
             for (BasicBlock basicBlock : functionEntity.bbs()) {
-                commonSubexpresionElimination(basicBlock);
+                commonSubexpressionElimination(basicBlock);
             }
+
 
             for (BasicBlock basicBlock : functionEntity.bbs()) {
                 constantPropagation(basicBlock);
@@ -59,69 +62,128 @@ public class DataFlowAnalyzer {
         }
     }
 
-    int hashOperand(Operand operand) {
-        if (operand instanceof Address) {
-            int hash = 1;
-            Address addr = (Address)operand;
-            if (addr.base() != null)
-                hash *= addr.base().hashCode();
-            if (addr.index() != null)
-                hash += addr.index().hashCode();
-            hash = hash * addr.mul() + addr.add();
+    class Expression {
+        public String name;
+        public Operand left;
+        public Operand right;
+
+        public Expression(String name, Operand left, Operand right) {
+            this.name = name;
+            this.left = left;
+            this.right = right;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = name.hashCode();
+            if (left != null)
+                hash *= left.hashCode();
+            if (right != null)
+                hash *= right.hashCode();
             return hash;
-        } else {
-            return operand.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o instanceof Expression) {
+                boolean first = name.equals(((Expression) o).name)
+                        && left.equals(((Expression) o).left)
+                        && ((right == null && ((Expression) o).right == null) || right.equals(((Expression) o).right));
+                return first;
+            }
+            return  false;
         }
     }
-    Map<Integer, Reference> exprTable = new HashMap<>();
-    Reference getReference(Operand operand) {
-        if (operand instanceof Address) {
-            Reference ret = exprTable.get(new Integer(hashOperand(operand)));
-            return ret;
-        } else {
-            return null;
+
+    Map<Reference, Reference>  copyTable = new HashMap<>();
+    Map<Expression, Reference> exprTable = new HashMap<>();
+
+    private void removeKey(Reference toremove) {
+        // remove in expr table
+        for (Map.Entry<Expression, Reference> entry : exprTable.entrySet()) {
+            if (entry.getValue() == toremove) {
+                exprTable.remove(entry.getKey());
+                break;
+            }
+        }
+
+        // remove in copy table
+        copyTable.remove(toremove);
+        List<Reference> toremoveKeys = new LinkedList<>();
+        for (Map.Entry<Reference, Reference> entry : copyTable.entrySet()) {
+            if (entry.getValue() == toremove) {
+                toremoveKeys.add(entry.getKey());
+            }
+        }
+        for (Reference toremoveKey : toremoveKeys) {
+            copyTable.remove(toremoveKey);
         }
     }
-    private void commonSubexpresionElimination(BasicBlock basicBlock) {
+    private void putExpr(Reference res, Expression expr) {  // put this expression into exprTable
+        removeKey(res);
+        exprTable.put(expr, res);
+    }
+    private void putCopy(Reference dest, Reference src) {
+        err.println("copy " + dest.name() + " = " + src.name());
+        copyTable.put(dest, src);
+    }
+    private Operand replaceCopy(Operand operand) {
+        for (Map.Entry<Reference, Reference> entry : copyTable.entrySet()) {
+            Reference from = entry.getKey();
+            Reference to = entry.getValue();
+            operand = operand.replace(from, to);
+        }
+        return operand;
+    }
+
+    private void commonSubexpressionElimination(BasicBlock basicBlock) {
         exprTable = new HashMap<>();
+        copyTable = new HashMap<>();
+        List<Instruction> newIns = new LinkedList<>();
         for (Instruction ins : basicBlock.ins()) {
             if (ins instanceof Move) {
-                Reference ret = getReference(((Move) ins).src());
-                if (ret != null) // replace
-                    ((Move) ins).setSrc(ret);
-
-                // refresh table
-                if (((Move) ins).dest().isAddress()) {
-                    exprTable.clear();
-                } else {
-                    Reference dest = (Reference)((Move) ins).dest();
-                    // remove old
-                    for (Map.Entry<Integer, Reference> entry : exprTable.entrySet()) {
-                        if (entry.getValue() == dest) {
-                            exprTable.remove(entry.getKey());
-                            break;
-                        }
+                if (((Move) ins).dest().isAddress()) {        // store
+                    copyTable.clear(); exprTable.clear();
+                } else if (((Move) ins).isRefMove()) {        // move ref1, ref2 (copy propagation
+                    Reference dest = (Reference) ((Move) ins).dest();
+                    Reference src = (Reference) ((Move) ins).src();
+                    src = (Reference)replaceCopy(src);
+                    putCopy(dest, src);
+                } else {                                     //  move ref1, expr
+                    Operand src = replaceCopy(((Move) ins).src());
+                    Expression exprSrc = new Expression("unary", src, null);
+                    Reference res = exprTable.get(exprSrc);
+                    if (res == null) {
+                        putExpr((Reference) ((Move) ins).dest(), exprSrc);
+                    } else {
+                        putCopy((Reference)((Move) ins).dest(), res);
+                        ((Move) ins).setSrc(res);
                     }
-                    // insert new
-                    exprTable.put(hashOperand(((Move) ins).src()), dest);
                 }
             } else if (ins instanceof Bin) {
-                if (((Bin) ins).left().isAddress()) {
-                    exprTable.clear();
-                } else {
-                    Reference dest = (Reference) ((Bin) ins).left();
-                    // remove old
-                    for (Map.Entry<Integer, Reference> entry : exprTable.entrySet()) {
-                        if (entry.getValue() == dest) {
-                            exprTable.remove(entry.getKey());
-                            break;
-                        }
+                if (((Bin) ins).left().isAddress()) {          // add [ref1], ref2
+                    copyTable.clear(); exprTable.clear();
+                } else {                                       // add ref1, 12
+                    Reference dest  = (Reference) ((Bin) ins).left();
+                    Reference src1 = (Reference)replaceCopy(dest);
+
+                    Operand src2 = replaceCopy(((Bin) ins).right());
+
+                    Expression expr = new Expression(((Bin) ins).name(), src1, src2);
+
+                    Reference res = exprTable.get(expr);
+                    if (res == null) {
+                        putExpr(dest, expr);
+                    } else {
+                        ins = new Move(dest, res);
                     }
                 }
             } else {
                 exprTable.clear();
             }
+            newIns.add(ins);
         }
+        basicBlock.setIns(newIns);
     }
 
     /**
