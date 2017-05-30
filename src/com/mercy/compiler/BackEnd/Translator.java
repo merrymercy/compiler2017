@@ -206,12 +206,27 @@ public class Translator {
 
     private void add(String op, Operand l, Operand r) {
         if (op.equals("mov") && l.toNASM().equals(r.toNASM()))
-            ;
+            ; // ignore useless move
         else
             asm.add("\t" + op + " " + l.toNASM() + ", " + r.toNASM());
     }
     private void add(String op, Operand l) {
-        asm.add("\t" + op + " " + l.toNASM());
+        if (op.equals("idiv")) { // use 32 bit division here, a peepholes optimization
+            String str = l.toNASM();
+            if (l.isAddress()) {
+                str = str.replace("qword", "dword");
+            } else {
+                switch (str) {
+                    case "rax": case "rbx": case "rcx": case "rdx":
+                    case "rsi": case "rdi": case "rsp": case "rbp":
+                        str = str.replace("r", "e"); break;
+                    default:
+                        str = str + "d"; break;
+                }
+            }
+            asm.add("\t" + op + " " + str);
+        } else
+            asm.add("\t" + op + " " + l.toNASM());
     }
     private void add(String op) {
         asm.add("\t" + op);
@@ -295,7 +310,7 @@ public class Translator {
 
     private void visitDivision(Operand left, Operand right, Register res) {
         addMove(rax, left);
-        add("cqo");
+        add("cdq");
         if (right instanceof Address)
             ((Address) right).setShowSize(true);
 
