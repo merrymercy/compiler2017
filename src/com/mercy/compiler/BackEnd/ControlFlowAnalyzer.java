@@ -15,7 +15,7 @@ import java.util.*;
  * Created by mercy on 17-5-23.
  */
 public class ControlFlowAnalyzer {
-    List<FunctionEntity> functionEntities;
+    private List<FunctionEntity> functionEntities;
 
     public ControlFlowAnalyzer(InstructionEmitter emitter) {
         functionEntities = emitter.functionEntities();
@@ -34,7 +34,7 @@ public class ControlFlowAnalyzer {
         }
     }
 
-    int ct = 0;
+    private int ct = 0;
     private void buildBasicBlock(FunctionEntity entity) {
         List<BasicBlock> bbs = new LinkedList<>();
 
@@ -116,7 +116,7 @@ public class ControlFlowAnalyzer {
         }
     }
 
-    void Optimize(FunctionEntity entity) {
+    private void Optimize(FunctionEntity entity) {
         Set<BasicBlock> toMerge = new HashSet<>();
 
         boolean modified = true;
@@ -211,7 +211,7 @@ public class ControlFlowAnalyzer {
         }
     }
 
-    void layoutFunction(FunctionEntity entity) {
+    private void layoutFunction(FunctionEntity entity) {
         List<BasicBlock> bbs = entity.bbs();
         Queue<BasicBlock> queue = new ArrayDeque<>();
 

@@ -149,6 +149,12 @@ public class Translator {
         int startPos = asm.size();
 
         /***** body *****/
+        // delete last useless jump
+        BasicBlock lastBasicBlock = entity.bbs().get(entity.bbs().size() - 1);
+        Instruction lastIns = lastBasicBlock.ins().get(lastBasicBlock.ins().size() - 1);
+        if (lastIns instanceof Jmp && ((Jmp) lastIns).dest() == entity.endLabelINS())
+            lastBasicBlock.ins().remove(lastBasicBlock.ins().size()-1);
+        // translate body
         for (BasicBlock bb : entity.bbs()) {
             for (Instruction ins : bb.ins()) {
                 ins.accept(this);
@@ -169,7 +175,7 @@ public class Translator {
         // set rbp and rsp
         if (entity.regUsed().contains(rbp))
             add("mov", rbp(), rsp());
-        if (entity.calls().size() != 0)   // leaf function optimization
+        if (entity.calls().size() != 0 && entity.frameSize() != 0)  // leaf function optimization
             add("sub", rsp(), new Immediate(entity.frameSize()));
 
         // store parameters
@@ -189,9 +195,9 @@ public class Translator {
         asm.addAll(startPos, prologue);
 
         /***** epilogue *****/
-        // restore rsp
         addLabel(entity.endLabelINS().name());
-        if (entity.calls().size() != 0)   // leaf function optimization
+        // restore rsp
+        if (entity.calls().size() != 0 && entity.frameSize() != 0)  // leaf function optimization
             add("add", rsp(), new Immediate((entity.frameSize())));
 
         // pop callee-save regs

@@ -148,31 +148,31 @@ public class Allocator {
     }
 
     // global
-    Set<Edge> edgeSet;
-    Set<Edge> simplifiedEdge;
-    int K;
-    int localOffset;
+    private Set<Edge> edgeSet;
+    private Set<Edge> simplifiedEdge;
+    private int K;
+    private int localOffset;
 
     // node set (disjoint)
-    Set<Reference> precolored;
-    Set<Reference> initial;
-    Set<Reference> simplifyWorklist;
-    Set<Reference> freezeWorklist;
-    Set<Reference> spillWorklist;
-    Set<Reference> spilledNodes;
-    Set<Reference> coalescedNodes;
-    Set<Reference> coloredNodes;
-    Set<Reference> selectWorklist;
-    Stack<Reference> selectStack;
+    private Set<Reference> precolored;
+    private Set<Reference> initial;
+    private Set<Reference> simplifyWorklist;
+    private Set<Reference> freezeWorklist;
+    private Set<Reference> spillWorklist;
+    private Set<Reference> spilledNodes;
+    private Set<Reference> coalescedNodes;
+    private Set<Reference> coloredNodes;
+    private Set<Reference> selectWorklist;
+    private Stack<Reference> selectStack;
 
     // move set (disjoint)
-    Set<Move> coalescedMoves;
-    Set<Move> constrainedMoves;
-    Set<Move> frozenMoves;
-    Set<Move> worklistMoves;
-    Set<Move> activeMoves;
+    private Set<Move> coalescedMoves;
+    private Set<Move> constrainedMoves;
+    private Set<Move> frozenMoves;
+    private Set<Move> worklistMoves;
+    private Set<Move> activeMoves;
 
-    int iter;
+    private int iter;
     public void allocateFunction(FunctionEntity entity) {
         err.println("allocate for " + entity.name());
         boolean finish = false;
@@ -202,8 +202,8 @@ public class Allocator {
         } while (!finish);
     }
 
-    List<BasicBlock> sorted;
-    Set<BasicBlock> visited;
+    private List<BasicBlock> sorted;
+    private Set<BasicBlock> visited;
     private void dfsSort(BasicBlock bb) {
         sorted.add(bb);
         visited.add(bb);
@@ -214,7 +214,7 @@ public class Allocator {
         }
     }
 
-    void initLivenessAnalysis(FunctionEntity entity) {
+    private void initLivenessAnalysis(FunctionEntity entity) {
         // sort blocks to boost iteration, iterate in reverse
         sorted = new LinkedList<>();
         visited = new HashSet<>();
@@ -294,7 +294,6 @@ public class Allocator {
         }
     }
 
-    Set<Reference> tmp;
     private void build(FunctionEntity entity) {
         // init edge and degree
         simplifiedEdge.clear();
@@ -314,6 +313,7 @@ public class Allocator {
             // generate an iterator. Start just after the last element.
             ListIterator li = basicBlock.ins().listIterator(basicBlock.ins().size());
             while (li.hasPrevious()) {
+                Set<Reference> tmp;
                 Instruction ins = (Instruction) li.previous();
 
                 for (Reference ref : live) {
@@ -564,7 +564,7 @@ public class Allocator {
         }
     }
 
-    Set<String> protect = new HashSet<>();
+    private Set<String> protect = new HashSet<>();
 
     private void selectSpill() {
         // SPILL HEURISTIC HERE
@@ -575,13 +575,6 @@ public class Allocator {
         while ((protect.contains(toSpill.name()) || toSpill.name().contains("spill")) && iter.hasNext()) {
             toSpill = iter.next();
         }
-
-        /*for (Reference ref : spillWorklist) {
-            if (ref.name().equals("tmp2")) {
-                toSpill = ref;
-                break;
-            }
-        }*/
 
         move(toSpill, spillWorklist, simplifyWorklist);
         freezeMoves(toSpill);
@@ -600,7 +593,6 @@ public class Allocator {
         }
     }
 
-    LinkedList<Register> okColors = new LinkedList<>();
     private void assignColors(FunctionEntity entity) {
         // restore simplified edges
         for (Edge edge : simplifiedEdge) {
@@ -608,6 +600,7 @@ public class Allocator {
         }
 
         // start assign
+        LinkedList<Register> okColors = new LinkedList<>();
         while(!selectStack.empty()) {
             Reference n = selectStack.pop();
             okColors.clear();
@@ -656,7 +649,7 @@ public class Allocator {
         }
     }
 
-    int spilledCounter = 0;
+    private int spilledCounter = 0;
     private void rewriteProgram(FunctionEntity entity) {
         Set<Reference> newTemp = new HashSet<>();
         List<Instruction> newIns;
@@ -773,11 +766,12 @@ public class Allocator {
 
     private boolean inlineLibraryFunction(List<Instruction> newIns, Call raw) {
         if (true)
-            return false;
+            return  false;
         if (raw.entity().asmName().equals(LIB_PREFIX + "str_length")) {
             newIns.add(new Move(rrdi, raw.operands().get(0)));
             if (raw.ret() != null) {
                 newIns.add(new Move(rdi, rrdi));
+                newIns.add(new Move(rrax, rax));
                 newIns.add(new Move(new Reference("eax", Reference.Type.SPECIAL),
                         new Reference("dword [rdi-4]", Reference.Type.SPECIAL)));
                 newIns.add(new Move(raw.ret(), rrax));
@@ -789,7 +783,7 @@ public class Allocator {
             if (raw.ret() != null) {
                 newIns.add(new Move(rdi, rrdi));
                 newIns.add(new Move(rsi, rrsi));
-                newIns.add(new Xor(rrax, rrax));
+                newIns.add(new Move(rrax, new Immediate(0)));
                 newIns.add(new Move(new Reference("al", Reference.Type.SPECIAL),
                         new Reference("byte [rdi+rsi]", Reference.Type.SPECIAL)));
                 newIns.add(new Move(raw.ret(), rrax));
@@ -984,7 +978,7 @@ public class Allocator {
         }
     }
 
-    HashMap<Edge, Edge> edgeEdgeHashMap;
+    private HashMap<Edge, Edge> edgeEdgeHashMap;
     private Edge getEdge(Reference u, Reference v) {
         Edge tempEdge = new Edge(u, v);
         Edge find = edgeEdgeHashMap.get(tempEdge);
@@ -994,13 +988,5 @@ public class Allocator {
         } else {
             return find;
         }
-    }
-
-    public int log2(int x) {
-        for (int i = 0; i < 30; i++) {
-            if (x == (1 << i))
-                return i;
-        }
-        return -1;
     }
 }

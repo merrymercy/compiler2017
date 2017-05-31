@@ -56,7 +56,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         }
 
         // check all functions whether inlined
-        if (Option.enableInlineFunction) {
+        if (Option.enableFunctionInline) {
             for (FunctionEntity entity : ast.functionEntities()) {
                 entity.checkInlinable();
             }
@@ -557,7 +557,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         FunctionEntity entity = node.functionType().entity();
 
         // expand print (optimization)
-        if (Option.enablePrintExpand) {
+        if (Option.enablePrintExpanding) {
             if (entity.name().equals("print")) {
                 expandPrint(node.args().get(0), false, true);
                 return null;
@@ -573,7 +573,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
             args.add(visitExpr(exprNode));
 
         // make call
-        if (Option.enableInlineFunction && entity.isInlined() ||
+        if (Option.enableFunctionInline && entity.isInlined() ||
                 (Option.enableSelfInline && entity == currentFunction && entity.canbeSelfInline(inlineMode))) {
             if (Option.printInlineInfo && entity == currentFunction)
                 err.println(entity.name() + " is self expanded");

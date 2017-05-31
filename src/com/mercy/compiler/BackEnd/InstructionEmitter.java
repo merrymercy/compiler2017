@@ -507,7 +507,11 @@ public class InstructionEmitter {
     }
 
     public Operand visit(com.mercy.compiler.IR.Var ir) {
-        return transEntity(ir.entity()).reference();
+        if (ir.entity().name().equals("null")){
+            return new Immediate(0);
+        } else {
+            return transEntity(ir.entity()).reference();
+        }
     }
 
     /*

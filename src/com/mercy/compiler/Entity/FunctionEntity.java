@@ -69,7 +69,7 @@ public class FunctionEntity extends Entity {
             stmtSize = stmtSize(body);
             if (stmtSize > 8)
                 isInlined = false;
-            if (isInlined && Option.enableInlineFunction && Option.printInlineInfo)
+            if (isInlined && Option.enableFunctionInline && Option.printInlineInfo)
                 System.err.println(name() + " is inlined");
         }
     }

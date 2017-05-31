@@ -34,8 +34,8 @@ public class Option {
     public static boolean enableGlobalRegisterAllocation = true;
 
     // ast-ir level
-    public static boolean enablePrintExpand                 = true;
-    public static boolean enableInlineFunction              = true;
+    public static boolean enablePrintExpanding              = true;
+    public static boolean enableFunctionInline              = true;
     public static boolean enableSelfInline                  = true;
     public static boolean enableCommonAssignElimination     = true;
     public static boolean enableInstructionSelection        = true;
