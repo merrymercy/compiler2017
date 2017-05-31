@@ -51,5 +51,5 @@ public class Option {
 
     // other
     public static boolean enableLeafFunctionOptimization    = true;
-    public static boolean enableOutputIrrelevantElimination = false;
+    public static boolean enableOutputIrrelevantElimination = true;
 }
