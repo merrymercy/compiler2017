@@ -37,7 +37,7 @@ public class Main {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--print-ins":
-                    Option.printInsturction = true;
+                    Option.printInstruction = true;
                     break;
                 case "--print-remove":
                     Option.printRemoveInfo = true;
@@ -124,9 +124,8 @@ public class Main {
         if (Option.enableDataFlowOptimization)
             dataFlowAnalyzer.transform();
 
-        if (Option.printInsturction) {
+        if (Option.printInstruction)
             printInstructions(emitter.functionEntities());
-        }
 
         // allocate register
         RegisterConfig registerConfig = new RegisterConfig();

@@ -2,7 +2,6 @@ package com.mercy.compiler.INS;
 
 import com.mercy.compiler.BackEnd.Translator;
 import com.mercy.compiler.INS.Operand.Address;
-import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
 
 /**
@@ -17,7 +16,7 @@ public class Lea extends Instruction {
         this.addr = addr;
     }
 
-    public Operand dest() {
+    public Reference dest() {
         return dest;
     }
 

@@ -1,6 +1,5 @@
 package com.mercy.compiler.INS.Operand;
 
-import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.util.HashSet;
@@ -10,13 +9,12 @@ import java.util.Set;
  * Created by mercy on 17-5-4.
  */
 public class Address extends Operand {
-    Entity entity;
-    Operand base = null, index = null;  // however, these two member can only be register/reference, cannot be address!
-    int mul = 1, add = 0;
+    private Operand base = null, index = null;  // however, these two member can only be register/reference, cannot be address!
+    private int mul = 1, add = 0;
 
-    boolean showSize = true;
+    private boolean showSize = true;
 
-    Operand baseNasm, indexNasm;
+    private Operand baseNasm, indexNasm;
 
     public Address(Operand base) {
         this.base = base;
@@ -56,26 +54,32 @@ public class Address extends Operand {
     }
 
     /*
-         * getter and setter
-         */
+     * getter and setter
+     */
     public Operand base() {
         return base;
     }
-
     public Operand index() {
         return index;
     }
-
     public int mul() {
         return mul;
     }
-
     public int add() {
         return add;
     }
 
-    public Entity entity() {
-        return entity;
+    public void setBase(Operand base) {
+        this.base = base;
+    }
+    public void setIndex(Operand index) {
+        this.index = index;
+    }
+    public void setMul(int mul) {
+        this.mul = mul;
+    }
+    public void setAdd(int add) {
+        this.add = add;
     }
 
     public Operand baseNasm() {

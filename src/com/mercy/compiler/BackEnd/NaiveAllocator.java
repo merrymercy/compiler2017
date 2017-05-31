@@ -51,14 +51,16 @@ public class NaiveAllocator  {
         /*************************************************/
         // count times and sort
         Set<Reference> allRef = entity.allReference();
-        for (Instruction ins : entity.INS()) {
-            for (Reference ref : ins.use()) {
-                ref.addRefTime();
-                allRef.add(ref);
-            }
-            for (Reference ref : ins.def()) {
-                ref.addRefTime();
-                allRef.add(ref);
+        for (BasicBlock basicBlock : entity.bbs()) {
+            for (Instruction ins : basicBlock.ins()) {
+                for (Reference ref : ins.use()) {
+                    ref.addRefTime();
+                    allRef.add(ref);
+                }
+                for (Reference ref : ins.def()) {
+                    ref.addRefTime();
+                    allRef.add(ref);
+                }
             }
         }
         List<Reference> tosort = new ArrayList<>(allRef);
@@ -116,9 +118,10 @@ public class NaiveAllocator  {
         List<Reference> tmpStack = entity.tmpStack();
         savedTempBase = stackBase;
         for (int i = 0; i < tmpStack.size(); i++) {
-            if (tmpStack.get(i).isUnknown()) {
+            Reference tmp = tmpStack.get(i);
+            if (tmp.isUnknown()) {
                 savedTempBase += REG_SIZE;
-                tmpStack.get(i).setOffset(-savedTempBase, rbp);
+                tmp.setOffset(-savedTempBase, rbp);
             }
         }
 

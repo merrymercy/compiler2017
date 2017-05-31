@@ -244,7 +244,7 @@ public class ControlFlowAnalyzer {
         }
 
         entity.setBbs(newBBs);
-        entity.setINS(newIns);
+        entity.setINS(null);
     }
 
     /********** DEBUG TOOL **********/
