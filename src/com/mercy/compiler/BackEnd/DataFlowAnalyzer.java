@@ -107,7 +107,7 @@ public class DataFlowAnalyzer {
             copyTable = new HashMap<>();
             List<Instruction> newIns = new LinkedList<>();
             for (Instruction ins : basicBlock.ins()) {
-                err.println(ins.toString());
+                //err.println(ins.toString());
                 List<Instruction> toadd = new LinkedList<>();
                 if (ins instanceof Move) {
                     if (((Move) ins).dest().isAddress()) {        // store
@@ -197,6 +197,7 @@ public class DataFlowAnalyzer {
         exprTable.put(expr, res);
     }
     private void putCopy(Reference dest, Reference src) {
+        removeKey(dest);
         copyTable.put(dest, src);
     }
     private Operand replaceCopy(Operand operand) {         // replace all the copies in a specific operand

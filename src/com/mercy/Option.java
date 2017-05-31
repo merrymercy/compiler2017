@@ -48,7 +48,6 @@ public class Option {
     public static boolean enableCommonExpressionElimination = true;
     public static boolean enableConstantPropagation         = true;
     public static boolean enableDeadcodeElimination         = true;
-    public static boolean enableCopyPropagation             = true;
 
     // other
     public static boolean enableLeafFunctionOptimization    = true;
