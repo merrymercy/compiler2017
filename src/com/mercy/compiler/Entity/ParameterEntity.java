@@ -20,9 +20,4 @@ public class ParameterEntity extends Entity {
     public void setSource(Reference source) {
         this.source = source;
     }
-
-    @Override
-    public <T> T accept(EntityVisitor<T> visitor) {
-        return visitor.visit(this);
-    }
 }

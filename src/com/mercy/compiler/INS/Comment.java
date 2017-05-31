@@ -7,7 +7,7 @@ import com.mercy.compiler.INS.Operand.Reference;
  * Created by mercy on 17-5-4.
  */
 public class Comment extends Instruction {
-    String comment;
+    private String comment;
 
     public Comment(String comment) {
         this.comment = comment;

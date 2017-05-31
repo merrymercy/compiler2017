@@ -13,11 +13,11 @@ import java.util.Set;
  * Created by mercy on 17-4-25.
  */
 public class CJump extends Instruction {
-    Operand cond;
-    Label trueLabel, falseLabel;
-    Label fallThrough;
-    Operand left, right;
-    Set<Reference> bringOut;
+    private Operand cond;
+    private Label trueLabel, falseLabel;
+    private Label fallThrough;
+    private Operand left, right;
+    private Set<Reference> bringOut;
 
     public enum Type {
         EQ, NE, GT, GE, LT, LE, BOOL

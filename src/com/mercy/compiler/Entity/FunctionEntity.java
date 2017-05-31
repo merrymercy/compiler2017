@@ -260,11 +260,6 @@ public class FunctionEntity extends Entity {
     }
 
     @Override
-    public <T> T accept(EntityVisitor<T> visitor) {
-        return visitor.visit(this);
-    }
-
-    @Override
     public String toString() {
         return "function entity : " + name;
     }

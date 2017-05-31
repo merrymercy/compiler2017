@@ -76,6 +76,4 @@ abstract public class Entity {
     public void addDependence(Entity entity) {
         dependence.add(entity);
     }
-
-    abstract public <T> T accept(EntityVisitor<T> visitor);
 }

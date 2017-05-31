@@ -11,9 +11,9 @@ import java.util.Set;
  * Created by mercy on 17-4-26.
  */
 public class Label extends Instruction {
-    String name;
-    BasicBlock basicBlock;
-    Set<Reference> bringUse = new HashSet<>();
+    private String name;
+    private BasicBlock basicBlock;
+    private Set<Reference> bringUse = new HashSet<>();
 
     public Label(String name) {
         this.name = name;

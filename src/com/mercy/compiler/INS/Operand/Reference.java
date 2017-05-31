@@ -18,14 +18,16 @@ public class Reference extends Operand {
         GLOBAL, OFFSET, REG, UNKNOWN, UNUSED, CANNOT_COLOR, SPECIAL
     }
 
-    Type type;
-    String name;
-    int offset;
-    Register reg;
-    Entity entity;
-    int refTimes;
+    private Type type;
+    private String name;
+    private Register reg;
+    private int offset;
+    private Entity entity;
 
-    // for allocator, speed
+    // for naive allocator
+    private int refTimes;
+
+    // for global allocator, public for speed (maybe wrong)
     public Set<Reference> adjList = new HashSet<>();
     public Set<Reference> originalAdjList = new HashSet<>();
     public int degree;
@@ -65,7 +67,7 @@ public class Reference extends Operand {
             color = null;
             degree = 0;
         } else {
-            degree = 999999;
+            degree = Integer.MAX_VALUE;
         }
         alias = null;
         isSpilled = false;
@@ -81,52 +83,47 @@ public class Reference extends Operand {
     public String name() {
         return name;
     }
-
     public void setName(String name) {
         this.name = name;
     }
 
+    public int offset() {
+        return offset;
+    }
     public void setOffset(int offset, Register reg) {
         this.offset = offset;
         this.reg = reg;
         this.type = OFFSET;
     }
 
+    public Register reg() {
+        return reg;
+    }
     public void setRegister(Register reg) {
         this.reg = reg;
         this.type = REG;
     }
 
-    public Register reg() {
-        return reg;
-    }
-
     public Type type() {
         return type;
     }
-
     public void setType(Type type) {
         this.type = type;
-    }
-
-    public int offset() {
-        return offset;
-    }
-
-    public Entity entity() {
-        return entity;
     }
 
     public boolean isUnknown() {
         return type == UNKNOWN && color == null;
     }
 
-    public void addRefTime() {
-        refTimes++;
+    public Entity entity() {
+        return entity;
     }
 
     public int refTimes() {
         return refTimes;
+    }
+    public void addRefTime() {
+        refTimes++;
     }
 
     @Override

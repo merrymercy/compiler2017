@@ -14,11 +14,11 @@ import java.util.Set;
  * Created by mercy on 17-4-25.
  */
 public class Call extends Instruction {
-    FunctionEntity entity;
-    List<Operand> operands;
-    Operand ret;
-    Set<Reference> callorsave;
-    Set<Reference> usedParameterRegister;
+    private FunctionEntity entity;
+    private List<Operand> operands;
+    private Operand ret;
+    private Set<Reference> callorsave;
+    private Set<Reference> usedParameterRegister;
 
     public Call(FunctionEntity entity, List<Operand> operands) {
         this.entity = entity;

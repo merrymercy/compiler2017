@@ -8,8 +8,8 @@ import com.mercy.compiler.INS.Operand.Reference;
  * Created by mercy on 17-4-25.
  */
 public class Lea extends Instruction {
-    Reference dest;
-    Address addr;
+    private Reference dest;
+    private Address addr;
 
     public Lea (Reference dest, Address addr) {
         this.dest = dest;

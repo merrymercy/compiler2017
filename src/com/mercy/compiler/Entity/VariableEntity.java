@@ -29,9 +29,4 @@ public class VariableEntity extends Entity {
     public String toString() {
         return "variable entity : " + name;
     }
-
-    @Override
-    public <T> T accept(EntityVisitor<T> visitor) {
-        return visitor.visit(this);
-    }
 }

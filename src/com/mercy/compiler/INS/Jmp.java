@@ -7,7 +7,7 @@ import com.mercy.compiler.INS.Operand.Reference;
  * Created by mercy on 17-4-25.
  */
 public class Jmp extends Instruction {
-    Label dest;
+    private Label dest;
     public Jmp(Label dest) {
         this.dest = dest;
     }
