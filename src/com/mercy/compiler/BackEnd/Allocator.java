@@ -571,17 +571,17 @@ public class Allocator {
         Iterator<Reference> iter = spillWorklist.iterator();
         Reference toSpill = iter.next();
 
-        protect.add("i"); protect.add("j"); protect.add("g_chunks");
+        protect.add("i"); protect.add("j"); protect.add("tmp2"); protect.add("g_chunks");
         while ((protect.contains(toSpill.name()) || toSpill.name().contains("spill")) && iter.hasNext()) {
             toSpill = iter.next();
         }
 
-        for (Reference ref : spillWorklist) {
+        /*for (Reference ref : spillWorklist) {
             if (ref.name().equals("tmp2")) {
                 toSpill = ref;
                 break;
             }
-        }
+        }*/
 
         move(toSpill, spillWorklist, simplifyWorklist);
         freezeMoves(toSpill);
