@@ -12,7 +12,8 @@ import java.util.List;
  */
 public class LibFunction {
     public static final String LIB_PREFIX = "__lib_";
-    FunctionEntity entity;
+
+    private FunctionEntity entity;
 
     public LibFunction(Type returnType, String name, Type [] paramTypes) {
         List<ParameterEntity> paramEntities = new LinkedList<>();

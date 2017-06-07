@@ -27,9 +27,8 @@ public class Reference extends Operand {
     // for naive allocator
     private int refTimes;
 
-    // for global allocator, public for speed (maybe wrong)
+    // for global allocator, public for convenient
     public Set<Reference> adjList = new HashSet<>();
-    public Set<Reference> originalAdjList = new HashSet<>();
     public int degree;
     public Reference alias;
     public Register color;
@@ -62,7 +61,6 @@ public class Reference extends Operand {
         refTimes = 0;
         moveList = new HashSet<>();
         adjList = new HashSet<>();
-        originalAdjList = new HashSet<>();
         if (!isPrecolored) {
             color = null;
             degree = 0;

@@ -17,7 +17,6 @@ public class Assign extends IR {
     public Expr left() {
         return left;
     }
-
     public Expr right() {
         return right;
     }

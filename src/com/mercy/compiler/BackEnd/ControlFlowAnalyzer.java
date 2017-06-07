@@ -10,6 +10,7 @@ import com.mercy.compiler.INS.Label;
 import java.io.PrintStream;
 import java.util.*;
 
+import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-5-23.
@@ -30,8 +31,11 @@ public class ControlFlowAnalyzer {
             if (Option.enableControlFlowOptimization) {
                 Optimize(functionEntity);
             }
-            layoutFunction(functionEntity);
+            layoutBasicBlock(functionEntity);
         }
+
+        if (Option.printBasicBlocks)
+            printSelf(err);
     }
 
     private int ct = 0;
@@ -90,7 +94,7 @@ public class ControlFlowAnalyzer {
 
     private void buildControFlowGraph(FunctionEntity entity) {
         for (BasicBlock basicBlock : entity.bbs()) {
-            // inside bb
+            // inside BB
             List<Instruction> ins = basicBlock.ins();
             Iterator<Instruction> iter = ins.iterator();
             if (iter.hasNext()) {
@@ -103,12 +107,11 @@ public class ControlFlowAnalyzer {
                 }
             }
 
-            // between two bb
+            // between two BBs
             Instruction first = ins.get(0);
             for (BasicBlock pre : basicBlock.predecessor()) {
                 pre.ins().get(pre.ins().size()-1).sucessor().add(first);
             }
-
             Instruction last = ins.get(ins.size()-1);
             for (BasicBlock suc : basicBlock.successor()) {
                 suc.ins().get(0).predessor().add(last);
@@ -117,19 +120,15 @@ public class ControlFlowAnalyzer {
     }
 
     private void Optimize(FunctionEntity entity) {
-        Set<BasicBlock> toMerge = new HashSet<>();
-
         boolean modified = true;
         while(modified) {
             modified = false;
 
-            toMerge.clear();
-
+            // merge two blocks A and B such that A is the only predecessor of B and B is the only successor of A.
             BasicBlock now;
-            // merge
             for (BasicBlock basicBlock : entity.bbs()) {
                 if (basicBlock.successor().size() == 1 && basicBlock.successor().get(0).predecessor().size() == 1
-                        && basicBlock.ins().get(basicBlock.ins().size() - 1) instanceof Jmp) { // suc_size == 1 may happen when func_end is a branch of Cjump, so ignore this case
+                        && basicBlock.ins().get(basicBlock.ins().size() - 1) instanceof Jmp) { // suc_size == 1 may happen when func_end is a destination of CJump, so add this condition
                     now = basicBlock;
                     BasicBlock next = now.successor().get(0);
                     if (next.successor().size() != 0) {
@@ -153,19 +152,12 @@ public class ControlFlowAnalyzer {
                 }
             }
 
-            // same branch
-            for (BasicBlock basicBlock : entity.bbs()) {
-                if (basicBlock.successor().size() == 2 && basicBlock.successor().get(0) == basicBlock.successor().get(1)) {
-                    ;
-                }
-            }
-
-            // only jump block
+            // remove blocks that contain only one jump instruction
             List<BasicBlock> uselessBasicBlock = new LinkedList<>();
             for (BasicBlock toremove : entity.bbs()) {
                 Instruction last = toremove.ins().get(1);
                 if (toremove.ins().size() == 2 && last instanceof Jmp) {
-                    //err.println("transform jump " + toremove.label() + " -> " + ((Jmp) last).dest());
+                    //err.println("optimize jump " + toremove.label() + " -> " + ((Jmp) last).dest());
                     List<BasicBlock> backup = new LinkedList<>(toremove.predecessor());
                     for (BasicBlock pre : backup) {
                         Instruction jump = pre.ins().get(pre.ins().size() - 1);
@@ -200,6 +192,7 @@ public class ControlFlowAnalyzer {
                 }
             }
 
+            // remove unreachable blocks
             for (BasicBlock basicBlock : entity.bbs()) {
                 if (basicBlock.predecessor().size() == 0 && basicBlock.label() != entity.beginLabelINS()) {
                     modified = true;
@@ -207,19 +200,26 @@ public class ControlFlowAnalyzer {
                 }
             }
 
+            // replace CJump that has the same false label and true label, by an unconditional Jump
+            for (BasicBlock basicBlock : entity.bbs()) {
+                if (basicBlock.successor().size() == 2 && basicBlock.successor().get(0) == basicBlock.successor().get(1)) {
+                    ; // haven't write the code yet.
+                }
+            }
+
             entity.bbs().removeAll(uselessBasicBlock);
         }
     }
 
-    private void layoutFunction(FunctionEntity entity) {
+
+    private void layoutBasicBlock(FunctionEntity entity) {
         List<BasicBlock> bbs = entity.bbs();
         Queue<BasicBlock> queue = new ArrayDeque<>();
 
         queue.addAll(bbs);
 
         List<BasicBlock> newBBs = new LinkedList<>();
-        List<Instruction> newIns = new LinkedList<>();
-
+        // greedy layout, to remove fall through jumps
         while(!queue.isEmpty()) {
             BasicBlock bb = queue.remove();
             while(bb != null && !bb.layouted()) {
@@ -238,7 +238,6 @@ public class ControlFlowAnalyzer {
                 }
                 bb.setLayouted(true);
                 newBBs.add(bb);
-                newIns.addAll(bb.ins());
                 bb = next;
             }
         }

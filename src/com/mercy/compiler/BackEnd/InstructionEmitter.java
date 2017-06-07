@@ -16,7 +16,6 @@ import com.mercy.compiler.IR.*;
 import com.mercy.compiler.Utility.InternalError;
 import com.mercy.compiler.Utility.Triple;
 
-import java.io.PrintStream;
 import java.util.*;
 
 import static com.mercy.compiler.INS.Operand.Reference.Type.*;
@@ -619,23 +618,5 @@ public class InstructionEmitter {
 
     public List<IR> globalInitializer() {
         return globalInitializer;
-    }
-
-    /***** DEBUG TOOL *****/
-    private void printFunction(PrintStream out, FunctionEntity entity) {
-        out.println("========== INS " + entity.name() + " ==========");
-        if (entity.isInlined()) {
-            out.println("BE INLINED");
-            return;
-        }
-        for (Instruction instruction : entity.INS()) {
-            out.println(instruction.toString());
-        }
-    }
-
-    public void printSelf(PrintStream out) {
-        for (FunctionEntity functionEntity : functionEntities) {
-            printFunction(out, functionEntity);
-        }
     }
 }

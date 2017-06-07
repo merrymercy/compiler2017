@@ -7,7 +7,7 @@ import com.mercy.compiler.INS.Operand.Operand;
  * Created by mercy on 17-3-30.
  */
 public class Label extends IR {
-    String name;
+    private String name;
 
     public Label(String name) {
         this.name = name;
@@ -20,7 +20,6 @@ public class Label extends IR {
     public String name() {
         return name;
     }
-
 
     public void setName(String name) {
         this.name = name;

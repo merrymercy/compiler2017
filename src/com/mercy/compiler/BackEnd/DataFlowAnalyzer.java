@@ -12,19 +12,17 @@ import com.mercy.compiler.Utility.Pair;
 
 import java.util.*;
 
-import static java.lang.System.err;
-
 /**
  * Created by mercy on 17-5-29.
  */
 public class DataFlowAnalyzer {
-    List<FunctionEntity> functionEntities;
-    FunctionEntity currentFunction;
+    private List<FunctionEntity> functionEntities;
+    private FunctionEntity currentFunction;
     public DataFlowAnalyzer(InstructionEmitter emitter) {
         functionEntities = emitter.functionEntities();
     }
 
-    public void transform() {
+    public void optimize() {
         for (FunctionEntity functionEntity : functionEntities) {
             if (functionEntity.isInlined())
                 continue;
@@ -50,7 +48,7 @@ public class DataFlowAnalyzer {
                 }
             }
         }
-        err.println("dead code : " + deadcodeCt);
+        //err.println("dead code : " + deadcodeCt);
     }
 
     private void refreshDefAndUse(FunctionEntity entity) {
@@ -208,7 +206,7 @@ public class DataFlowAnalyzer {
         }
         return operand;
     }
-    // It's a trick here. transform 2-address instruction into 3-address instruction
+    // It's a trick here. optimize 2-address instruction into 3-address instruction
     private void transformMove(Reference dest, Reference src, List<Instruction> toadd) {
         Reference copy = new Reference("tmp_copy_" + tmpCt++, Reference.Type.UNKNOWN);
         putCopy(copy, src);

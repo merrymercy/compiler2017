@@ -14,14 +14,7 @@ public class Option {
     public static String inFile = "testcase/test.c";
     public static String outFile = "out.asm";
 
-    public static final int TEST_LEVEL_DEVELOP = 0;
-    public static final int TEST_LEVEL_EASY    = 1;
-    public static final int TEST_LEVEL_FULL    = 2;
-    public static final int TEST_LEVEL_STRICT  = 3;
-
     /***** DEBUG *****/
-    public static int testLevel = TEST_LEVEL_DEVELOP;
-
     public static boolean printRemoveInfo = true;
     public static boolean printInlineInfo = true;
     public static boolean printInstruction = false;
@@ -44,7 +37,6 @@ public class Option {
     public static boolean enableControlFlowOptimization     = true;
 
     // data flow
-    public static boolean enableDataFlowOptimization        = true;
     public static boolean enableCommonExpressionElimination = true;
     public static boolean enableConstantPropagation         = true;
     public static boolean enableDeadcodeElimination         = true;

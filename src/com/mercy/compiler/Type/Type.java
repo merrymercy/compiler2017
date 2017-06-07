@@ -4,8 +4,6 @@ package com.mercy.compiler.Type;
  * Created by mercy on 17-3-18.
  */
 abstract public class Type {
-    static final public long sizeUnknown = -1;
-
     static public BoolType boolType = new BoolType();
     static public IntegerType integerType = new IntegerType();
     static public VoidType voidType = new VoidType();

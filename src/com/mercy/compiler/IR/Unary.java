@@ -23,7 +23,6 @@ public class Unary extends Expr {
     public Expr expr() {
         return expr;
     }
-
     public void setExpr(Expr expr) {
         this.expr = expr;
     }
@@ -31,7 +30,6 @@ public class Unary extends Expr {
     public UnaryOp operator() {
         return operator;
     }
-
     public void setOperator(UnaryOp operator) {
         this.operator = operator;
     }

@@ -666,7 +666,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     private void expandCreator(List<ExprNode> exprs, Expr base, int now, Type type, FunctionEntity constructor) {
         Var tmpS = newIntTemp();
         Var tmpI = newIntTemp();
-        // new int a[5][4][];
+        // new int a[s][s2][];
         /* s = expr[now];
          * p = malloc(s * pointerSize + lengthSize);
          * *p = s;

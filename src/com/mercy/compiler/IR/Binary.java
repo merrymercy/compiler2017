@@ -26,11 +26,9 @@ public class Binary extends Expr {
     public Expr left() {
         return left;
     }
-
     public Expr right() {
         return right;
     }
-
     public BinaryOp operator() {
         return operator;
     }

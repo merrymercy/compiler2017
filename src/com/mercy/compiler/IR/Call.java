@@ -21,7 +21,6 @@ public class Call extends Expr {
     public FunctionEntity entity() {
         return entity;
     }
-
     public List<Expr> args() {
         return args;
     }

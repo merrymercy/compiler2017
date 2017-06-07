@@ -19,11 +19,9 @@ public class CJump extends IR {
     public Expr cond() {
         return cond;
     }
-
     public Label trueLabel() {
         return trueLabel;
     }
-
     public Label falseLabel() {
         return falseLabel;
     }

@@ -58,7 +58,7 @@ public class FinalTest {
         compile(is, os);
 
         // run test
-        Process spim = new ProcessBuilder("./asm.bash","out")
+        Process run = new ProcessBuilder("./asm.bash","out")
                 .redirectInput(ProcessBuilder.Redirect.PIPE)
                 .redirectOutput(ProcessBuilder.Redirect.PIPE)
                 .redirectError(ProcessBuilder.Redirect.PIPE)
@@ -66,16 +66,16 @@ public class FinalTest {
 
         if (inFile != null) {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
-            PrintStream spimOut = new PrintStream(spim.getOutputStream());
+            PrintStream runOut = new PrintStream(run.getOutputStream());
             String line;
             while ((line = br.readLine()) != null)
-                spimOut.println(line);
-            spimOut.close();
+                runOut.println(line);
+            runOut.close();
         }
-        spim.waitFor();
+        run.waitFor();
 
         BufferedReader brAns = new BufferedReader(new FileReader(ansFile));
-        BufferedReader brOut = new BufferedReader(new InputStreamReader(spim.getInputStream()));
+        BufferedReader brOut = new BufferedReader(new InputStreamReader(run.getInputStream()));
         boolean correct = true;
         System.out.println("===== PROGRAM OUTPUT:");
         while (true) {
@@ -90,29 +90,15 @@ public class FinalTest {
             }
         }
 
-        BufferedReader brErr = new BufferedReader(new InputStreamReader(spim.getErrorStream()));
+        BufferedReader brErr = new BufferedReader(new InputStreamReader(run.getErrorStream()));
         System.out.println("===== STDERR:");
         String line;
         while ((line = brErr.readLine()) != null) {
             System.out.println(line);
         }
 
-
         System.out.println("########## " + srcFile + " ##########" );
         System.out.flush();
         assertTrue(correct);
-    }
-
-    static private void outputAsm(String filename, List<String> asm) {
-        File f = new File(filename);
-        try {
-            BufferedWriter fout = new BufferedWriter(new FileWriter(f));
-            for (String s : asm) {
-                fout.write(s + "\n");
-            }
-            fout.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

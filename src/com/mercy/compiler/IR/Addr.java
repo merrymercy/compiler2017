@@ -8,7 +8,7 @@ import com.mercy.compiler.INS.Operand.Operand;
  * Created by mercy on 17-3-30.
  */
 public class Addr extends Expr {
-    Entity entity;
+    private Entity entity;
 
     public Addr(Entity entity) {
         super();

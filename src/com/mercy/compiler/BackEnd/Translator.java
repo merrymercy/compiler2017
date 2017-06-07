@@ -10,7 +10,6 @@ import com.mercy.compiler.Utility.InternalError;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.PrintStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -99,14 +98,7 @@ public class Translator {
         return asm;
     }
 
-    // virtual stack
-    // local variable
-    // parameter
-    // ----------------- <- bp
-    // saved regs
-    // return address
-
-    public void locateFrame(FunctionEntity entity) {
+    private void locateFrame(FunctionEntity entity) {
         // calc number of callee-save register
         int savedRegNum = 0;
         for (Register register : entity.regUsed()) {
@@ -144,7 +136,7 @@ public class Translator {
         entity.setFrameSize(total);
     }
 
-    public void translateFunction(FunctionEntity entity) {
+    private void translateFunction(FunctionEntity entity) {
         addLabel(entity.asmName());
         int startPos = asm.size();
 
@@ -216,8 +208,9 @@ public class Translator {
         else
             asm.add("\t" + op + " " + l.toNASM() + ", " + r.toNASM());
     }
+
     private void add(String op, Operand l) {
-        if (op.equals("idiv")) { // use 32 bit division here, a peepholes optimization
+        if (op.equals("idiv")) { // use 32 bit division here, a peephole optimization
             String str = l.toNASM();
             if (l.isAddress()) {
                 str = str.replace("qword", "dword");
@@ -234,18 +227,23 @@ public class Translator {
         } else
             asm.add("\t" + op + " " + l.toNASM());
     }
+
     private void add(String op) {
         asm.add("\t" + op);
     }
+
     private void addLabel(String name) {
         asm.add(name + ":");
     }
+
     private void addJump(String name) {
         asm.add("\tjmp" + " " + name);
     }
+
     private void addComment(String comment) {
         asm.add("\t;" + comment);
     }
+
     private int addMove(Register reg, Operand operand) {
         if (operand.isDirect()) {
             add("mov", reg, operand);
@@ -267,7 +265,7 @@ public class Translator {
     /*
      * INS visitor
      */
-    public void visitBin(Bin ins) {
+    private void visitBin(Bin ins) {
         Operand left, right;
         String name;
         left = ins.left();
@@ -643,24 +641,9 @@ public class Translator {
         return registers.get(i);
     }
 
-    /********** DEBUG TOOL **********/
-    private void printFunction(PrintStream out, FunctionEntity entity) {
-        out.println("========== OFFSET ==========");
-        for (ParameterEntity parameterEntity : entity.params()) {
-            out.println(parameterEntity.name() + " " + parameterEntity.offset());
-        }
-
-        for (VariableEntity variableEntity : entity.allLocalVariables()) {
-            out.println(variableEntity.name() + " " + variableEntity.offset());
-        }
-    }
-
-    public void printSelf(PrintStream out) {
-        for (FunctionEntity functionEntity : functionEntities) {
-            printFunction(out, functionEntity);
-        }
-    }
-
+    /*
+     * Library function
+     */
     private void pasteLibfunction() {
         asm.add("\n;========== LIB BEGIN ==========");
         File f = new File("lib.s");

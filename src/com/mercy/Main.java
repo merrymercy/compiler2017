@@ -32,8 +32,7 @@ import static java.lang.System.err;
 import static java.lang.System.exit;
 
 public class Main {
-
-    public static void parseOption(String []args) {
+    private static void parseOption(String []args) {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--print-ins":
@@ -90,24 +89,26 @@ public class Main {
         ParseTreeWalker walker = new ParseTreeWalker();
         ASTBuilder listener = new ASTBuilder();
 
-        walker.walk(listener, tree);  // 0th pass, CST -> AST
+        walker.walk(listener, tree);   // 0th pass, CST -> AST
 
         AST ast  = listener.getAST();
-        ast.loadLibrary(getLibrary());// load library function
+        ast.loadLibrary(getLibrary()); // load library function
         Type.initializeBuiltinType();
 
-        ast.resolveSymbol();                          // extract info of class and function
-        ast.checkType();                              // check type
-        if (Option.enableOutputIrrelevantElimination) // eliminate output-irrelevant code
+        ast.resolveSymbol();                          // 1st pass, extract info of class and function
+        ast.checkType();                              // 2nd pass, check type
+        if (Option.enableOutputIrrelevantElimination) // 3rd pass, eliminate output-irrelevant code
             ast.eliminateOutputIrrelevantNode();
 
+        // disable global allocation when the number of entities is too large (to satisfy the time and memory limit)
         boolean backupSettingForTest = Option.enableGlobalRegisterAllocation;
-        if (ast.scope().allLocalVariables().size() > 256) { // disable global allocation when the number of entities is too large
+        if (ast.scope().allLocalVariables().size() > 256) {
             Option.enableGlobalRegisterAllocation = false;
         }
 
+        // generate IR
         IRBuilder irBuilder = new IRBuilder(ast);
-        irBuilder.generateIR();                      // generate IR, do simple constant folding
+        irBuilder.generateIR();
 
         // emit instructions
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
@@ -116,20 +117,16 @@ public class Main {
         // build control flow graph
         ControlFlowAnalyzer cfgBuilder = new ControlFlowAnalyzer(emitter);
         cfgBuilder.buildControlFlow();
-        if (Option.printBasicBlocks)
-            cfgBuilder.printSelf(err);
 
-        // dataflow analysis
+        // optimize data flow
         DataFlowAnalyzer dataFlowAnalyzer = new DataFlowAnalyzer(emitter);
-        if (Option.enableDataFlowOptimization)
-            dataFlowAnalyzer.transform();
+        dataFlowAnalyzer.optimize();
 
-        if (Option.printInstruction)
+        if (Option.printInstruction)        // for debug
             printInstructions(emitter.functionEntities());
 
         // allocate register
         RegisterConfig registerConfig = new RegisterConfig();
-
         if (Option.enableGlobalRegisterAllocation) {
             Allocator allocator = new Allocator(emitter, registerConfig);
             allocator.allocate();
@@ -141,7 +138,6 @@ public class Main {
         // translate to x86 nasm
         Translator translator = new Translator(emitter, registerConfig);
         List<String> asm = translator.translate();
-
         for (String s : asm) {
             asmCode.println(s);
         }

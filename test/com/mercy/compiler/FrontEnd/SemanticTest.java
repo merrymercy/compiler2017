@@ -18,7 +18,7 @@ import static junit.framework.TestCase.fail;
  * Created by mercy on 17-3-26.
  */
 @RunWith(Parameterized.class)
-public class TypeCheckerTest {
+public class SemanticTest {
     @Parameterized.Parameters
     public static Collection<Object[]> testcase() {
         Collection<Object[]> files = new ArrayList<>();
@@ -39,7 +39,7 @@ public class TypeCheckerTest {
     private String filename;
     private boolean shouldPass;
 
-    public TypeCheckerTest(String filename, boolean shouldPass) {
+    public SemanticTest(String filename, boolean shouldPass) {
         this.filename = filename;
         this.shouldPass = shouldPass;
     }

@@ -17,7 +17,6 @@ public class Var extends Expr {
     public Entity entity() {
         return entity;
     }
-
     public void setEntity(Entity entity) {
         this.entity = entity;
     }

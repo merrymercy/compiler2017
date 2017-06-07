@@ -20,7 +20,7 @@ import static java.lang.System.err;
  * Created by mercy on 17-5-24.
  */
 public class NaiveAllocator  {
-    List<FunctionEntity> functionEntities;
+    private List<FunctionEntity> functionEntities;
 
     private Register rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
     private List<Register> registers;
@@ -91,6 +91,14 @@ public class NaiveAllocator  {
         }
         entity.regUsed().add(rbp);
         /*************************************************/
+
+        // === Frame Layout ===
+        // virtual stack
+        // local variable
+        // parameter
+        // ----------------- <- bp
+        // saved regs
+        // return address
 
         // locate parameters
         int lvarBase, stackBase, savedTempBase;

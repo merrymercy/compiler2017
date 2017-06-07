@@ -10,12 +10,13 @@ import com.mercy.compiler.Utility.InternalError;
 
 import java.util.*;
 
-import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
 import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-5-23.
  */
+
+// George, Lal; Appel, Andrew W. (May 1996). "Iterated Register Coalescing"
 public class Allocator {
     private List<FunctionEntity> functionEntities;
     private List<Register> registers;
@@ -173,11 +174,10 @@ public class Allocator {
     private Set<Move> activeMoves;
 
     private int iter;
-    public void allocateFunction(FunctionEntity entity) {
+    private void allocateFunction(FunctionEntity entity) {
         err.println("allocate for " + entity.name());
-        boolean finish = false;
+        boolean finish;
         iter = 0;
-        // begin allocation iteration
         do {
             err.println(" === iter " + iter + " ===");
 
@@ -306,7 +306,7 @@ public class Allocator {
             ref.reset();
         }
 
-        // make inference graph
+        // build inference graph
         for (BasicBlock basicBlock : entity.bbs()) {
             HashSet<Reference> live = new HashSet<>(basicBlock.liveOut());
 
@@ -323,7 +323,6 @@ public class Allocator {
                 tmp= new HashSet<>(); tmp.addAll(live); ins.setOut(tmp);
 
                 if (ins instanceof Move && ((Move) ins).isRefMove()) {
-                   // System.out.println(ins.toString());
                     live.removeAll(ins.use());
                     for (Reference ref : ins.def())
                         ref.moveList.add((Move)ins);
@@ -343,10 +342,6 @@ public class Allocator {
 
                 tmp= new HashSet<>(); tmp.addAll(live); ins.setIn(tmp);
             }
-        }
-
-        for (Reference ref : initial) {
-            ref.originalAdjList.addAll(ref.adjList);
         }
 
         if (Option.printGlobalAllocationInfo) {
@@ -523,14 +518,12 @@ public class Allocator {
             addWorkList(v);
         } else if (precolored.contains(u) && OK(u, v) ||
                 !precolored.contains(u) && conservative(u, v)) {
-
             coalescedMoves.add(move);
             combine(u,v);
             addWorkList(u);
         } else {
             activeMoves.add(move);
         }
-
     }
 
     private void freeze() {
@@ -567,10 +560,10 @@ public class Allocator {
     private Set<String> protect = new HashSet<>();
 
     private void selectSpill() {
-        // SPILL HEURISTIC HERE
         Iterator<Reference> iter = spillWorklist.iterator();
         Reference toSpill = iter.next();
 
+        // SPILL HEURISTIC HERE
         protect.add("i"); protect.add("j"); protect.add("tmp2"); protect.add("g_chunks");
         while ((protect.contains(toSpill.name()) || toSpill.name().contains("spill")) && iter.hasNext()) {
             toSpill = iter.next();
@@ -599,7 +592,7 @@ public class Allocator {
             addEdge(getAlias(edge.u), getAlias(edge.v));
         }
 
-        // start assign
+        // begin assign
         LinkedList<Register> okColors = new LinkedList<>();
         while(!selectStack.empty()) {
             Reference n = selectStack.pop();
@@ -621,7 +614,7 @@ public class Allocator {
                 n.color = null;
             } else {
                 Register color = okColors.iterator().next();
-               // err.println("assign " + n.name() + " -> " + color.name());
+                //err.println("assign " + n.name() + " -> " + color.name());
                 move(n, selectWorklist, coloredNodes);
                 n.color = color;
             }
@@ -682,8 +675,7 @@ public class Allocator {
                                 Reference tmp = new Reference("spill_" + use.name() + "_" + spilledCounter++, Reference.Type.UNKNOWN);
                                 newTemp.add(tmp);
                                 newIns.add(new Move(tmp, new Address(rbp, null, 1, use.offset())));
-                                ins.replaceUse(use, tmp);
-                                ins.replaceDef(use, tmp);
+                                ins.replaceAll(use, tmp);
                                 stores.add(new Move(new Address(rbp, null, 1, use.offset()), tmp));
                             } else {
                                 if (ins instanceof Move && !(((Move) ins).dest()).isAddress() && ((Move) ins).src() == use) {
@@ -698,6 +690,7 @@ public class Allocator {
                             }
                         }
                     }
+
                     for (Reference def : insDef) {
                         if (def.isSpilled) {
                             if (insUse.contains(def)) {
@@ -709,7 +702,7 @@ public class Allocator {
                                 } else {
                                     Reference tmp = new Reference("spill_" + def.name() + "_" + spilledCounter++, Reference.Type.UNKNOWN);
                                     newTemp.add(tmp);
-                                    ins.replaceDef(def, tmp);   // improve replace to be able to replace operand
+                                    ins.replaceDef(def, tmp);
                                     stores.add(new Move(new Address(rbp, null, 1, def.offset()), tmp));
                                 }
                             }
@@ -725,7 +718,7 @@ public class Allocator {
                 ins.initDefAndUse();
                 ins.calcDefAndUse();
                 if (ins instanceof Move && ((Move) ins).isRefMove() && ((Move) ins).dest() == ((Move) ins).src())
-                    ;
+                    ; // ignore redundant move
                 else
                     newIns.add(ins);
                 newIns.addAll(stores);
@@ -763,73 +756,39 @@ public class Allocator {
         coalescedNodes.clear();
     }
 
-
-    private boolean inlineLibraryFunction(List<Instruction> newIns, Call raw) {
-        if (true)
-            return  false;
-        if (raw.entity().asmName().equals(LIB_PREFIX + "str_length")) {
-            newIns.add(new Move(rrdi, raw.operands().get(0)));
-            if (raw.ret() != null) {
-                newIns.add(new Move(rdi, rrdi));
-                newIns.add(new Move(rrax, rax));
-                newIns.add(new Move(new Reference("eax", Reference.Type.SPECIAL),
-                        new Reference("dword [rdi-4]", Reference.Type.SPECIAL)));
-                newIns.add(new Move(raw.ret(), rrax));
-            }
-            return true;
-        } else if (raw.entity().asmName().equals(LIB_PREFIX + "str_ord")) {
-            newIns.add(new Move(rrdi, raw.operands().get(0)));
-            newIns.add(new Move(rrsi, raw.operands().get(1)));
-            if (raw.ret() != null) {
-                newIns.add(new Move(rdi, rrdi));
-                newIns.add(new Move(rsi, rrsi));
-                newIns.add(new Move(rrax, new Immediate(0)));
-                newIns.add(new Move(new Reference("al", Reference.Type.SPECIAL),
-                        new Reference("byte [rdi+rsi]", Reference.Type.SPECIAL)));
-                newIns.add(new Move(raw.ret(), rrax));
-            }
-            return true;
-        }
-        return false;
-    }
-
-    // inject machine related register information into instruction
+    // rewrite instructions to satisfy the machine-relevant requirement
     private void loadPrecolord(FunctionEntity entity) {
         for (BasicBlock basicBlock : entity.bbs()) {
             List<Instruction> newIns = new LinkedList<>();
             for (Instruction raw : basicBlock.ins()) {
                 if (raw instanceof Call) {
-                    if (inlineLibraryFunction(newIns, (Call)raw)) {
-                        ; // done in above function
-                    } else {
-                        Set<Reference> paraRegUsed = new HashSet<>();
-                        Call ins = (Call) raw;
-                        int i = 0, pushCt = 0;
-                        for (Operand operand : ins.operands()) {
-                            if (i < paraRegisterRef.size()) {
-                                paraRegUsed.add(paraRegisterRef.get(i));
-                                newIns.add(new Move(paraRegisterRef.get(i), operand));
-                            } else {
-                                if (operand instanceof Immediate) {
-                                    Reference tmp = new Reference("tmp_push", Reference.Type.UNKNOWN);
-                                    newIns.add(new Move(tmp, operand));
-                                    operand = tmp;
-                                }
-                                newIns.add(new Push(operand));
-                                pushCt++;
+                    Set<Reference> paraRegUsed = new HashSet<>();
+                    Call ins = (Call) raw;
+                    int i = 0, pushCt = 0;
+                    for (Operand operand : ins.operands()) {
+                        if (i < paraRegisterRef.size()) {
+                            paraRegUsed.add(paraRegisterRef.get(i));
+                            newIns.add(new Move(paraRegisterRef.get(i), operand));
+                        } else {
+                            if (operand instanceof Immediate) {
+                                Reference tmp = new Reference("tmp_push", Reference.Type.UNKNOWN);
+                                newIns.add(new Move(tmp, operand));
+                                operand = tmp;
                             }
-                            i++;
+                            newIns.add(new Push(operand));
+                            pushCt++;
                         }
-                        Call newCall = new Call(ins.entity(), new LinkedList<>());
-                        newCall.setCallorsave(callerSaveRegRef);
-                        newCall.setUsedParameterRegister(paraRegUsed);
-                        newIns.add(newCall);
-                        if (pushCt > 0) {
-                            newIns.add(new Add(rsp, new Immediate(pushCt * Option.REG_SIZE)));
-                        }
-                        if (ins.ret() != null) {
-                            newIns.add(new Move(ins.ret(), rrax));
-                        }
+                        i++;
+                    }
+                    Call newCall = new Call(ins.entity(), new LinkedList<>());
+                    newCall.setCallorsave(callerSaveRegRef);
+                    newCall.setUsedParameterRegister(paraRegUsed);
+                    newIns.add(newCall);
+                    if (pushCt > 0) {
+                        newIns.add(new Add(rsp, new Immediate(pushCt * Option.REG_SIZE)));
+                    }
+                    if (ins.ret() != null) {
+                        newIns.add(new Move(ins.ret(), rrax));
                     }
                 } else if (raw instanceof Div || raw instanceof Mod) {
                     newIns.add(new Move(rrax, ((Bin)raw).left()));
@@ -911,11 +870,13 @@ public class Allocator {
         }
     }
 
-    /* small utility */
+    /*
+     * utility
+     */
     private class Edge {
-        public Reference u, v;
+        Reference u, v;
 
-        public Edge(Reference u, Reference v) {
+        Edge(Reference u, Reference v) {
             this.u = u;
             this.v = v;
         }
@@ -934,6 +895,25 @@ public class Allocator {
         public boolean equals(Object o) {
             Edge edge = (Edge)o;
             return u == edge.u && v == edge.v;
+        }
+    }
+
+    private void addEdge(Reference u, Reference v) {
+        if (u == v)
+            return;
+        Edge edge = getEdge(u, v);
+        if (!edgeSet.contains(edge)) {
+            // err.println("add edge " + u.name() + "  " + v.name());
+            edgeSet.add(edge);
+            edgeSet.add(getEdge(v, u));
+            if (!u.isPrecolored) {
+                u.adjList.add(v);
+                u.degree++;
+            }
+            if (!v.isPrecolored) {
+                v.adjList.add(u);
+                v.degree++;
+            }
         }
     }
 
@@ -957,25 +937,6 @@ public class Allocator {
         v.adjList.remove(u);
         decreaseDegree(u);
         decreaseDegree(v);
-    }
-
-    private void addEdge(Reference u, Reference v) {
-        if (u == v)
-            return;
-        Edge edge = getEdge(u, v);
-        if (!edgeSet.contains(edge)) {
-           // err.println("add edge " + u.name() + "  " + v.name());
-            edgeSet.add(edge);
-            edgeSet.add(getEdge(v, u));
-            if (!u.isPrecolored) {
-                u.adjList.add(v);
-                u.degree++;
-            }
-            if (!v.isPrecolored) {
-                v.adjList.add(u);
-                v.degree++;
-            }
-        }
     }
 
     private HashMap<Edge, Edge> edgeEdgeHashMap;
