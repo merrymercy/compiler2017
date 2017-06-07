@@ -195,7 +195,6 @@ public class FunctionEntity extends Entity {
         return isInlined;
     }
 
-
     public com.mercy.compiler.IR.Label beginLabelIR() {
         return beginLabelIR;
     }
@@ -206,7 +205,6 @@ public class FunctionEntity extends Entity {
         this.beginLabelIR = begin;
         this.endLabelIR   = end;
     }
-
 
     public Label beginLabelINS() {
         return beginLabelINS;

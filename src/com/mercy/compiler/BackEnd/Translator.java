@@ -141,15 +141,25 @@ public class Translator {
         int startPos = asm.size();
 
         /***** body *****/
-        // delete last useless jump
-        BasicBlock lastBasicBlock = entity.bbs().get(entity.bbs().size() - 1);
-        Instruction lastIns = lastBasicBlock.ins().get(lastBasicBlock.ins().size() - 1);
-        if (lastIns instanceof Jmp && ((Jmp) lastIns).dest() == entity.endLabelINS())
-            lastBasicBlock.ins().remove(lastBasicBlock.ins().size()-1);
         // translate body
         for (BasicBlock bb : entity.bbs()) {
             for (Instruction ins : bb.ins()) {
                 ins.accept(this);
+            }
+            if (bb.label() == entity.endLabelINS()) {
+                /***** epilogue *****/
+                // restore rsp
+                if (entity.calls().size() != 0 && entity.frameSize() != 0)  // leaf function optimization
+                    add("add", rsp(), new Immediate((entity.frameSize())));
+
+                // pop callee-save regs
+                ListIterator iter = entity.regUsed().listIterator(entity.regUsed().size());
+                while (iter.hasPrevious()) {
+                    Register reg = (Register) iter.previous();
+                    if (reg.isCalleeSave())
+                        add("pop", reg);
+                }
+                add("ret");
             }
         }
 
@@ -185,21 +195,6 @@ public class Translator {
         prologue = asm;
         asm = backup;
         asm.addAll(startPos, prologue);
-
-        /***** epilogue *****/
-        addLabel(entity.endLabelINS().name());
-        // restore rsp
-        if (entity.calls().size() != 0 && entity.frameSize() != 0)  // leaf function optimization
-            add("add", rsp(), new Immediate((entity.frameSize())));
-
-        // pop callee-save regs
-        ListIterator iter = entity.regUsed().listIterator(entity.regUsed().size());
-        while (iter.hasPrevious()) {
-            Register reg = (Register) iter.previous();
-            if (reg.isCalleeSave())
-               add("pop", reg);
-        }
-        add("ret");
     }
 
     private void add(String op, Operand l, Operand r) {

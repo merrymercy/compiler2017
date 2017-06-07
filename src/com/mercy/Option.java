@@ -15,10 +15,11 @@ public class Option {
     public static String outFile = "out.asm";
 
     /***** DEBUG *****/
-    public static boolean printRemoveInfo = true;
-    public static boolean printInlineInfo = true;
-    public static boolean printInstruction = false;
-    public static boolean printBasicBlocks = false;
+    public static boolean printRemoveInfo         = true;
+    public static boolean printInlineInfo         = true;
+    public static boolean printIrrelevantMarkInfo = false;
+    public static boolean printInstruction        = false;
+    public static boolean printBasicBlocks        = false;
 
     public static boolean printNaiveAllocatorInfo = true;
     public static boolean printGlobalAllocationInfo = false;
@@ -27,11 +28,11 @@ public class Option {
     public static boolean enableGlobalRegisterAllocation = true;
 
     // ast-ir level
-    public static boolean enablePrintExpanding              = true;
     public static boolean enableFunctionInline              = true;
     public static boolean enableSelfInline                  = true;
-    public static boolean enableCommonAssignElimination     = true;
     public static boolean enableInstructionSelection        = true;
+    public static boolean enableCommonAssignElimination     = true;
+    public static boolean enablePrintExpanding              = true;
 
     // control flow
     public static boolean enableControlFlowOptimization     = true;
@@ -42,6 +43,9 @@ public class Option {
     public static boolean enableDeadcodeElimination         = true;
 
     // other
-    public static boolean enableLeafFunctionOptimization    = true;  // TODO: has bug when inline is false (bulgarian.mx)
     public static boolean enableOutputIrrelevantElimination = true;
+    public static boolean enableLeafFunctionOptimization    = true;
+
+    // incorrect buf faster
+    public static boolean enableDisableShortCut             = false;
 }

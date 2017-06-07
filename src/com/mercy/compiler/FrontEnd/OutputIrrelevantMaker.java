@@ -1,5 +1,6 @@
 package com.mercy.compiler.FrontEnd;
 
+import com.mercy.Option;
 import com.mercy.compiler.AST.*;
 import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.Type.ArrayType;
@@ -10,6 +11,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
+
+import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-5-22.
@@ -25,13 +28,17 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.FrontEnd.Visitor {
     private Stack<Entity>      assignDependenceStack = new Stack<>();
     private Stack<Set<Entity>> controlDependenceStack = new Stack<>();
     private FunctionEntity     currentFunction;
+    private FunctionEntity     mainFunction;
 
     public OutputIrrelevantMaker(AST ast) {
         globalScope = ast.scope();
         for (Entity entity : ast.scope().entities().values()) {
             if (entity instanceof VariableEntity)
                 globalVariables.add(entity);
+            if (entity instanceof FunctionEntity && entity.name().equals("main"))
+                mainFunction = (FunctionEntity)entity;
         }
+        currentFunction = mainFunction;
     }
 
     /*
@@ -82,6 +89,7 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.FrontEnd.Visitor {
         // init
         globalScope.lookup("print").setOutputIrrelevant(false);
         globalScope.lookup("println").setOutputIrrelevant(false);
+        mainFunction.setOutputIrrelevant(false);
 
         // begin iteration
         int before = 0, after = -1;
@@ -99,25 +107,29 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.FrontEnd.Visitor {
                     after++;
             }
 
+        }
+        // final iteration to confirm irrelevant information of node
+        for (DefinitionNode definitionNode : defs)
+            visitDefinition(definitionNode);
+        visited.clear();
+
+        if (Option.printIrrelevantMarkInfo) {
             // print dependence edge
-            /*err.println("========== EDGE ==========");
+            err.println("========== EDGE ==========");
             for (Entity entity : allEntity) {
                 err.print(entity.name() + " :");
                 for (Entity rely : entity.dependence()) {
                     err.print("    " + rely.name());
                 }
                 err.println();
-            }*/
-        }
-        // final iteration to confirm irrelevant information of node
-        for (DefinitionNode definitionNode : defs)
-            visitDefinition(definitionNode);
+            }
 
-        // print result
-        /*err.println("========== RES ==========");
-        for (Entity entity : allEntity) {
-            err.println(entity.name() + ": " + entity.outputIrrelevant());
-        }*/
+            // print result
+            err.println("========== RES ==========");
+            for (Entity entity : allEntity) {
+                err.println(entity.name() + ": " + entity.outputIrrelevant());
+            }
+        }
     }
 
     /*
@@ -139,9 +151,7 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.FrontEnd.Visitor {
         }
 
         visitStmt(currentFunction.body());
-
-        if (currentFunction.name().equals("main"))
-            currentFunction.setOutputIrrelevant(false);
+        currentFunction = mainFunction;
         return null;
     }
 

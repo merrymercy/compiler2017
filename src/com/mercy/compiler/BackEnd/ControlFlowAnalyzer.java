@@ -74,15 +74,12 @@ public class ControlFlowAnalyzer {
         }
 
         if (bb != null) { // handle the case that a function ends without "return"
-            bb.jumpTo().add(entity.endLabelINS());
             bbs.add(bb);
         }
 
         // link edge
         for (BasicBlock basicBlock : bbs) {
             for (Label label : basicBlock.jumpTo()) {
-                if (label == entity.endLabelINS())
-                    continue;
                 basicBlock.successor().add(label.basicBlock());
                 label.basicBlock().predecessor().add(basicBlock);
             }
@@ -127,8 +124,7 @@ public class ControlFlowAnalyzer {
             // merge two blocks A and B such that A is the only predecessor of B and B is the only successor of A.
             BasicBlock now;
             for (BasicBlock basicBlock : entity.bbs()) {
-                if (basicBlock.successor().size() == 1 && basicBlock.successor().get(0).predecessor().size() == 1
-                        && basicBlock.ins().get(basicBlock.ins().size() - 1) instanceof Jmp) { // suc_size == 1 may happen when func_end is a destination of CJump, so add this condition
+                if (basicBlock.successor().size() == 1 && basicBlock.successor().get(0).predecessor().size() == 1) {
                     now = basicBlock;
                     BasicBlock next = now.successor().get(0);
                     if (next.successor().size() != 0) {
@@ -155,6 +151,8 @@ public class ControlFlowAnalyzer {
             // remove blocks that contain only one jump instruction
             List<BasicBlock> uselessBasicBlock = new LinkedList<>();
             for (BasicBlock toremove : entity.bbs()) {
+                if (toremove.ins().size() < 2)
+                    continue;
                 Instruction last = toremove.ins().get(1);
                 if (toremove.ins().size() == 2 && last instanceof Jmp) {
                     //err.println("optimize jump " + toremove.label() + " -> " + ((Jmp) last).dest());
@@ -196,6 +194,7 @@ public class ControlFlowAnalyzer {
             for (BasicBlock basicBlock : entity.bbs()) {
                 if (basicBlock.predecessor().size() == 0 && basicBlock.label() != entity.beginLabelINS()) {
                     modified = true;
+                    //err.println("remove unreachable block: " + basicBlock.label());
                     uselessBasicBlock.add(basicBlock);
                 }
             }
@@ -203,7 +202,7 @@ public class ControlFlowAnalyzer {
             // replace CJump that has the same false label and true label, by an unconditional Jump
             for (BasicBlock basicBlock : entity.bbs()) {
                 if (basicBlock.successor().size() == 2 && basicBlock.successor().get(0) == basicBlock.successor().get(1)) {
-                    ; // haven't write the code yet.
+                    err.println("find redundant Cjump"); // haven't write the code yet.
                 }
             }
 
@@ -224,6 +223,7 @@ public class ControlFlowAnalyzer {
             BasicBlock bb = queue.remove();
             while(bb != null && !bb.layouted()) {
                 BasicBlock next = null;
+                bb.setLayouted(true);
                 for (BasicBlock suc : bb.successor()) {
                     if (!suc.layouted()) {
                         Instruction last = bb.ins().get(bb.ins().size()-1);
@@ -236,7 +236,6 @@ public class ControlFlowAnalyzer {
                         break;
                     }
                 }
-                bb.setLayouted(true);
                 newBBs.add(bb);
                 bb = next;
             }

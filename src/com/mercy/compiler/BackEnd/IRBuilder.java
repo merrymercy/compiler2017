@@ -119,10 +119,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (!(stmts.get(stmts.size()-1) instanceof Jump)) {  // add return
             stmts.add(new Jump(end));
         }
-        entity.setIR(fetchStmts());
-
         addLabel(end, entity.name() + "_end");
-        fetchStmts(); // discard end label
+        entity.setIR(fetchStmts());
     }
 
     @Override
@@ -140,7 +138,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         if (init != null) {
             if (Option.enableOutputIrrelevantElimination && node.entity().outputIrrelevant()) {
                 if (Option.printRemoveInfo)
-                    err.println("remove init " + node.location());
+                    err.println("! remove init " + node.location());
             }
             else {
                 ExprStmtNode assign = new ExprStmtNode(node.location(),
@@ -264,7 +262,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Void visit(WhileNode node) {
         if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
-                System.out.println("remove while " + node.location());
+                System.out.println("! remove while " + node.location());
             return null;
         }
         visitLoop(null, node.cond(), null, node.body());
@@ -275,7 +273,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     public Void visit(ForNode node) {
         if (Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
-                err.println("remove for " + node.location());
+                err.println("! remove for " + node.location());
             return null;
         }
         visitLoop(node.init(), node.cond(), node.incr(), node.body());
@@ -325,7 +323,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     private Pair<Boolean, Integer> ExprHashing(ExprNode node) {
-        if (node instanceof BinaryOpNode || node instanceof LogicalAndNode || node instanceof LogicalOrNode) {
+        if (node instanceof BinaryOpNode) {
             Pair<Boolean, Integer> left = ExprHashing(((BinaryOpNode) node).left());
             Pair<Boolean, Integer> right = ExprHashing(((BinaryOpNode) node).right());
             if (left.first && right.first) {
@@ -347,7 +345,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     private Set<Entity> getDependency(ExprNode node) {
         Set<Entity> ret = new HashSet<>();
-        if (node instanceof BinaryOpNode || node instanceof LogicalAndNode || node instanceof LogicalOrNode) {
+        if (node instanceof BinaryOpNode) {
             ret.addAll(getDependency(((BinaryOpNode)node).left()));
             ret.addAll(getDependency(((BinaryOpNode)node).right()));
         } else if (node instanceof VariableNode) {
@@ -373,7 +371,7 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
         // output irrelevant elimination
         if (!needReturn() && Option.enableOutputIrrelevantElimination && node.outputIrrelevant()) {
             if (Option.printRemoveInfo)
-                err.println("remove assign " + node.location());
+                err.println("! remove assign " + node.location());
             return null;
         }
 
@@ -507,8 +505,8 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
                 case BIT_AND: op = BIT_AND; break;
                 case BIT_XOR: op = BIT_XOR; break;
                 case BIT_OR:  op = BIT_OR;  break;
-                case LOGIC_AND: op = LOGIC_AND; break;
-                case LOGIC_OR:  op = LOGIC_OR;  break;
+                case LOGIC_AND: op = BIT_AND; break;
+                case LOGIC_OR:  op = BIT_OR;  break;
                 case GT: op = GT; break;
                 case LT: op = LT; break;
                 case GE: op = GE; break;
@@ -525,30 +523,40 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Expr visit(LogicalAndNode node) {
-        Label goon = new Label();
-        Label end = new Label();
+        if (Option.enableDisableShortCut) {
+            Expr lhs = visitExpr(node.left()), rhs = visitExpr(node.right());
+            return new Binary(lhs, BIT_AND, rhs);
+        } else {
+            Label goon = new Label();
+            Label end = new Label();
 
-        Var tmp = newIntTemp();
-        addAssign(tmp, visitExpr(node.left()));
-        stmts.add(new CJump(tmp, goon, end));
-        addLabel(goon, "goon");
-        addAssign(tmp, visitExpr(node.right()));
-        addLabel(end, "end");
-        return needReturn() ? tmp : null;
+            Var tmp = newIntTemp();
+            addAssign(tmp, visitExpr(node.left()));
+            stmts.add(new CJump(tmp, goon, end));
+            addLabel(goon, "goon");
+            addAssign(tmp, visitExpr(node.right()));
+            addLabel(end, "end");
+            return needReturn() ? tmp : null;
+        }
     }
 
     @Override
     public Expr visit(LogicalOrNode node) {
-        Label goon = new Label();
-        Label end = new Label();
+        if (Option.enableDisableShortCut) {
+            Expr lhs = visitExpr(node.left()), rhs = visitExpr(node.right());
+            return new Binary(lhs, BIT_OR, rhs);
+        } else {
+            Label goon = new Label();
+            Label end = new Label();
 
-        Var tmp = newIntTemp();
-        addAssign(tmp, visitExpr(node.left()));
-        stmts.add(new CJump(tmp, end, goon));
-        addLabel(goon, "goon");
-        addAssign(tmp, visitExpr(node.right()));
-        addLabel(end, "end");
-        return needReturn() ? tmp : null;
+            Var tmp = newIntTemp();
+            addAssign(tmp, visitExpr(node.left()));
+            stmts.add(new CJump(tmp, end, goon));
+            addLabel(goon, "goon");
+            addAssign(tmp, visitExpr(node.right()));
+            addLabel(end, "end");
+            return needReturn() ? tmp : null;
+        }
     }
 
     @Override

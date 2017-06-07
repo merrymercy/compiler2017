@@ -20,6 +20,7 @@ import java.util.*;
 
 import static com.mercy.compiler.INS.Operand.Reference.Type.*;
 import static com.mercy.compiler.IR.Binary.BinaryOp.*;
+import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-4-25.
@@ -78,9 +79,10 @@ public class InstructionEmitter {
             if (called.isInlined() || called.isLibFunction())
                 callSize--;
         }
+
         if (Option.enableLeafFunctionOptimization && callSize == 0) {
             isInLeaf = true;
-            //err.println(entity.name() + " is leaf");
+            err.println(entity.name() + " is leaf");
             usedGlobal = new HashSet<>();
             // make copy to local
             for (Entity global : globalScope.entities().values()) {
@@ -114,7 +116,7 @@ public class InstructionEmitter {
         if (isInLeaf) {
             for (Entity global : usedGlobal) {
                 ins.add(1, new Move(transEntity(global).reference(), global.reference()));
-                ins.add(ins.size() - 1, new Move(global.reference(), transEntity(global).reference()));
+                ins.add(ins.size(), new Move(global.reference(), transEntity(global).reference()));
             }
         }
         return ins;
@@ -466,7 +468,7 @@ public class InstructionEmitter {
             case BIT_NOT:
                 ins.add(new Not(ret)); break;
             case LOGIC_NOT:
-                ins.add(new Cmp(ret, new Immediate(0), Cmp.Operator.EQ));
+                ins.add(new Xor(ret, new Immediate(1)));
                 break;
             default:
                 throw new InternalError("invalid operator " + ir.operator());

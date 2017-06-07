@@ -100,16 +100,9 @@ public class Allocator {
 
             for (BasicBlock basicBlock : functionEntity.bbs()) {
                 for (Instruction ins : basicBlock.ins()) {
-                    for (Reference ref : ins.allref()) {
-                        allRef.add(ref);
-                        if (ref.color != null) {
-                            ref.setRegister(ref.color);
-                            regUsed.add(ref.color);
-                        }
-                    }
+                    replaceRegForIns(ins, allRef, regUsed);
                 }
             }
-
             functionEntity.setAllReference(allRef);
             LinkedList<Register> listRegUse = new LinkedList<>(regUsed);
             functionEntity.setRegUsed(listRegUse);
@@ -320,7 +313,7 @@ public class Allocator {
                     ref.addRefTime();
                 }
 
-                tmp= new HashSet<>(); tmp.addAll(live); ins.setOut(tmp);
+                tmp= new HashSet<>(live);  ins.setOut(tmp);
 
                 if (ins instanceof Move && ((Move) ins).isRefMove()) {
                     live.removeAll(ins.use());
@@ -340,7 +333,7 @@ public class Allocator {
                 live.removeAll(ins.def());
                 live.addAll(ins.use());
 
-                tmp= new HashSet<>(); tmp.addAll(live); ins.setIn(tmp);
+                tmp= new HashSet<>(live); ins.setIn(tmp);
             }
         }
 
@@ -422,7 +415,7 @@ public class Allocator {
     }
 
     private boolean isMoveRelated(Reference ref) {
-        for (Instruction ins : ref.moveList) {
+        for (Move ins : ref.moveList) {
             if (activeMoves.contains(ins) || worklistMoves.contains(ins))
                 return true;
         }
@@ -625,7 +618,7 @@ public class Allocator {
         }
 
         if (Option.printGlobalAllocationInfo) {
-            err.println("=== Assign Result ===");
+            err.printf("=== Assign Result === (%s %d)\n", entity.name(), iter);
             err.print("colored :");
             for (Reference ref : coloredNodes) {
                 err.print("  " + ref.name() + "(" + ref.color.name() + ")");
@@ -890,7 +883,6 @@ public class Allocator {
         public int hashCode() {
             return u.hashCode() + v.hashCode();
         }
-
         @Override
         public boolean equals(Object o) {
             Edge edge = (Edge)o;
@@ -948,6 +940,16 @@ public class Allocator {
             return tempEdge;
         } else {
             return find;
+        }
+    }
+
+    private void replaceRegForIns(Instruction ins, Set<Reference> allRef, Set<Register> regUsed) {
+        for (Reference ref : ins.allref()) {
+            allRef.add(ref);
+            if (ref.color != null) {
+                ref.setRegister(ref.color);
+                regUsed.add(ref.color);
+            }
         }
     }
 }
