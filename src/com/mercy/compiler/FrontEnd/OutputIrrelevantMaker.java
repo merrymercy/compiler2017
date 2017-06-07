@@ -1,25 +1,25 @@
 package com.mercy.compiler.FrontEnd;
 
 import com.mercy.compiler.AST.*;
-import com.mercy.compiler.Entity.Entity;
-import com.mercy.compiler.Entity.FunctionEntity;
-import com.mercy.compiler.Entity.ParameterEntity;
-import com.mercy.compiler.Entity.VariableEntity;
+import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.Type.ArrayType;
 import com.mercy.compiler.Type.ClassType;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 
 /**
  * Created by mercy on 17-5-22.
  */
-public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
+public class OutputIrrelevantMaker extends com.mercy.compiler.FrontEnd.Visitor {
+    private Scope globalScope;
+    private Set<Entity> globalVariables = new HashSet<>();
+
     // collect mode
     private Set<Entity> collectSet;
-    private Set<Entity> globalVariables = new HashSet<>();
 
     // dependency
     private Stack<Entity>      assignDependenceStack = new Stack<>();
@@ -27,14 +27,102 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
     private FunctionEntity     currentFunction;
 
     public OutputIrrelevantMaker(AST ast) {
+        globalScope = ast.scope();
         for (Entity entity : ast.scope().entities().values()) {
             if (entity instanceof VariableEntity)
                 globalVariables.add(entity);
         }
-        ast.scope().lookup("print").setOutputIrrelevant(false);
-        ast.scope().lookup("println").setOutputIrrelevant(false);
     }
 
+    /*
+     * Elimination Iteration
+     */
+    public class DependenceEdge {
+        Entity base, rely;
+        DependenceEdge (Entity base, Entity rely) {
+            this.base = base;
+            this.rely = rely;
+        }
+
+        @Override
+        public int hashCode() {
+            return base.hashCode() + rely.hashCode();
+        }
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof DependenceEdge
+                    && base == ((DependenceEdge)o).base
+                    && rely == ((DependenceEdge)o).rely;
+        }
+    }
+
+    private Set<DependenceEdge> visited = new HashSet<>();
+    private void propaOutputIrrelevant(Entity entity) {
+        if (entity.outputIrrelevant())
+            return;
+
+        for (Entity rely : entity.dependence()) {
+            DependenceEdge edge = new DependenceEdge(entity, rely);
+            if (!visited.contains(edge)) {
+                visited.add(edge);
+                rely.setOutputIrrelevant(false);
+                propaOutputIrrelevant(rely);
+            }
+        }
+    }
+
+    @Override
+    public void visitDefinitions(List<? extends DefinitionNode> defs) {
+        // gather all entity, mark irrelevant default
+        Set<Entity> allEntity = globalScope.gatherAll();
+        for (Entity entity : allEntity) {
+            entity.setOutputIrrelevant(true);
+        }
+
+        // init
+        globalScope.lookup("print").setOutputIrrelevant(false);
+        globalScope.lookup("println").setOutputIrrelevant(false);
+
+        // begin iteration
+        int before = 0, after = -1;
+        while (before != after) {
+            for (DefinitionNode definitionNode : defs)
+                visitDefinition(definitionNode);
+
+            before = after;
+            after = 0;
+            for (Entity entity : allEntity) {
+                propaOutputIrrelevant(entity);
+            }
+            for (Entity entity : allEntity) {
+                if (!entity.outputIrrelevant())
+                    after++;
+            }
+
+            // print dependence edge
+            /*err.println("========== EDGE ==========");
+            for (Entity entity : allEntity) {
+                err.print(entity.name() + " :");
+                for (Entity rely : entity.dependence()) {
+                    err.print("    " + rely.name());
+                }
+                err.println();
+            }*/
+        }
+        // final iteration to confirm irrelevant information of node
+        for (DefinitionNode definitionNode : defs)
+            visitDefinition(definitionNode);
+
+        // print result
+        /*err.println("========== RES ==========");
+        for (Entity entity : allEntity) {
+            err.println(entity.name() + ": " + entity.outputIrrelevant());
+        }*/
+    }
+
+    /*
+     * Visitors
+     */
     @Override
     public Void visit(ClassDefNode node) {
         visitStmts(node.entity().memberFuncs());
@@ -78,7 +166,8 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
                 for (Entity entity : fetchCollect()) {
                     entity.setOutputIrrelevant(false); // set source
                 }
-                currentFunction.setOutputIrrelevant(false);
+                if (currentFunction != null)
+                    currentFunction.setOutputIrrelevant(false);
             } else {
                 int backupSideEffect = sideEffect;
 
@@ -311,7 +400,6 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
         }
         throw new InternalError("something cannot happen happened in getBaseEntity " + node);
     }
-
 
     private void markNode(Node node, Set<Entity> controlVars) {
         if (controlVars.size() == 0) {      // case like while(true) ,whil

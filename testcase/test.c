@@ -1,36 +1,26 @@
-int func(int a, int b, int c)
-{
-	return a + b + c;
+string[] str_arr = null;
+
+int main() {
+    int la = getInt();
+    str_arr = new string[la];
+
+    int i;
+	int cnt = 0;
+    for (i = 0; i < la; i++) {
+ 		str_arr[i] = getString();
+		cnt = cnt + str_arr[i].length();
+	}
+
+	string str = "";
+	int sum = 0;
+    for (i = 0; i < la; ++i){
+		str = str + str_arr[i].substring(0, str_arr[i].length() - 1);
+		sum = sum + str_arr[i].ord(0);
+	}
+	println(str);
+	print(toString(sum));
+	if (cnt == str.length()) return 0;
+
+	else return 1;
 }
 
-int main()
-{
-	int n = getInt();
-	int[][] f = new int[n][n];
-	int[][] g = new int[n][n];
-	int[][] g_useless = new int[n][n];
-	int i; int j; int k;
-	for( i = 0; i < n; ++i)
-		for( j = 0; j < n; ++j)
-			f[i][j] = i + j;
-	for( i = 0; i < n; ++i)
-		for( j = 0; j < n; ++j)
-		{
-			for( k = 0; k < n; ++k)
-			{
-				if(j >= i)
-				{
-					g[i][j] = func(g[i][j], f[i][k], f[k][j]);
-					g_useless[i][j] = func(g[i][j], f[i][k], f[k][j]);
-					g_useless[i][j] = func(g[i][j], f[i][k], f[k][j]);
-					g_useless[i][j] = func(g[i][j], f[i][k], f[k][j]);
-				}
-			}
-		}
-	int sum = 0;
-	for( i = 0; i < n; ++i)
-		for( j = 0; j < n; ++j)
-			sum = sum + g[i][j];
-	print(toString(sum));
-	return 0;
-}

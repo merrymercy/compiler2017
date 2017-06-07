@@ -1,10 +1,10 @@
 package com.mercy;
 
-import com.mercy.compiler.AST.AST;
 import com.mercy.compiler.BackEnd.*;
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.Entity.VariableEntity;
+import com.mercy.compiler.FrontEnd.AST;
 import com.mercy.compiler.FrontEnd.ASTBuilder;
 import com.mercy.compiler.FrontEnd.ParserErrorListener;
 import com.mercy.compiler.INS.Instruction;

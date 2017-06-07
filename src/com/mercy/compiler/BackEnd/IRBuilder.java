@@ -3,6 +3,7 @@ package com.mercy.compiler.BackEnd;
 import com.mercy.Option;
 import com.mercy.compiler.AST.*;
 import com.mercy.compiler.Entity.*;
+import com.mercy.compiler.FrontEnd.AST;
 import com.mercy.compiler.FrontEnd.ASTVisitor;
 import com.mercy.compiler.IR.*;
 import com.mercy.compiler.Type.*;

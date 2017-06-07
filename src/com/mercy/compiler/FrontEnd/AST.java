@@ -1,16 +1,11 @@
-package com.mercy.compiler.AST;
+package com.mercy.compiler.FrontEnd;
 
+import com.mercy.compiler.AST.DefinitionNode;
+import com.mercy.compiler.AST.Location;
 import com.mercy.compiler.Entity.*;
-import com.mercy.compiler.FrontEnd.OutputIrrelevantMaker;
-import com.mercy.compiler.FrontEnd.SymbolResolver;
-import com.mercy.compiler.FrontEnd.TypeChecker;
 import com.mercy.compiler.Utility.SemanticError;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
-import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-3-18.
@@ -72,82 +67,13 @@ public class AST {
     /*
      * output irrelevant analyze
      */
-    public class DependenceEdge {
-        Entity base, rely;
-        DependenceEdge (Entity base, Entity rely) {
-            this.base = base;
-            this.rely = rely;
-        }
-
-        @Override
-        public int hashCode() {
-            return base.hashCode() + rely.hashCode();
-        }
-        @Override
-        public boolean equals(Object o) {
-            return o instanceof DependenceEdge
-                    && base == ((DependenceEdge)o).base
-                    && rely == ((DependenceEdge)o).rely;
-        }
-    }
-    private Set<DependenceEdge> visited = new HashSet<>();
-    private void propaOutputIrrelevant(Entity entity) {
-        if (entity.outputIrrelevant())
-            return;
-
-        for (Entity rely : entity.dependence()) {
-            DependenceEdge edge = new DependenceEdge(entity, rely);
-            if (!visited.contains(edge)) {
-                visited.add(edge);
-                rely.setOutputIrrelevant(false);
-                propaOutputIrrelevant(rely);
-            }
-        }
-    }
     public void eliminateOutputIrrelevantNode() {
         if (classEntitsies().size() != 0) {  // don't analyze class type
             return;
         }
 
-        // gather all entity, mark irrelevant default
-        Set<Entity> allEntity = scope.gatherAll();
-        for (Entity entity : allEntity) {
-            entity.setOutputIrrelevant(true);
-        }
-
-        // begin iteration
-        int before = 0, after = -1;
         OutputIrrelevantMaker analyzer = new OutputIrrelevantMaker(this);
-        while (before != after) {
-            analyzer.visitDefinitions(definitionNodes);
-
-            // print dependence edge
-            err.println("========== EDGE ==========");
-            for (Entity entity : allEntity) {
-                err.print(entity.name() + " :");
-                for (Entity rely : entity.dependence()) {
-                    err.print("    " + rely.name());
-                }
-                err.println();
-            }
-
-            before = after;
-            after = 0;
-            for (Entity entity : allEntity) {
-                propaOutputIrrelevant(entity);
-            }
-            for (Entity entity : allEntity) {
-                if (!entity.outputIrrelevant())
-                    after++;
-            }
-        }
         analyzer.visitDefinitions(definitionNodes);
-
-        // print result
-        err.println("========== RES ==========");
-        for (Entity entity : allEntity) {
-            err.println(entity.name() + ": " + entity.outputIrrelevant());
-        }
     }
 
     public Scope scope() {
