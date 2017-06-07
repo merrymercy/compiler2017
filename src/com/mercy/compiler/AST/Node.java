@@ -7,14 +7,13 @@ abstract public class Node {
     public Node() {
     }
 
-    protected boolean isOutputIrrevelant = false;
+    protected boolean isOutputIrrelevant = false;
 
     public boolean outputIrrelevant() {
-        return isOutputIrrevelant;
+        return isOutputIrrelevant;
     }
-
     public void setOutputIrrelevant(boolean outputIrrelevant) {
-        isOutputIrrevelant = outputIrrelevant;
+        isOutputIrrelevant = outputIrrelevant;
     }
 
     abstract public Location location();

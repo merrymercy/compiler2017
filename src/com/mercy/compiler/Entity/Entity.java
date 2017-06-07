@@ -74,6 +74,7 @@ abstract public class Entity {
         return dependence;
     }
     public void addDependence(Entity entity) {
-        dependence.add(entity);
+        if (entity != this)
+            dependence.add(entity);
     }
 }

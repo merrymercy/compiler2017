@@ -1,13 +1,12 @@
 package com.mercy.compiler.FrontEnd;
 
 import com.mercy.compiler.AST.*;
-import com.mercy.compiler.Entity.ClassEntity;
 import com.mercy.compiler.Entity.Entity;
 import com.mercy.compiler.Entity.FunctionEntity;
-import com.mercy.compiler.Entity.Scope;
+import com.mercy.compiler.Entity.ParameterEntity;
+import com.mercy.compiler.Entity.VariableEntity;
 import com.mercy.compiler.Type.ArrayType;
 import com.mercy.compiler.Type.ClassType;
-import com.mercy.compiler.Type.Type;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.util.HashSet;
@@ -18,11 +17,20 @@ import java.util.Stack;
  * Created by mercy on 17-5-22.
  */
 public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
-    private FunctionEntity currentFunction;
-    private Scope globalScope;
+    // collect mode
+    private Set<Entity> collectSet;
+    private Set<Entity> globalVariables = new HashSet<>();
+
+    // dependency
+    private Stack<Entity>      assignDependenceStack = new Stack<>();
+    private Stack<Set<Entity>> controlDependenceStack = new Stack<>();
+    private FunctionEntity     currentFunction;
 
     public OutputIrrelevantMaker(AST ast) {
-        globalScope = ast.scope();
+        for (Entity entity : ast.scope().entities().values()) {
+            if (entity instanceof VariableEntity)
+                globalVariables.add(entity);
+        }
         ast.scope().lookup("print").setOutputIrrelevant(false);
         ast.scope().lookup("println").setOutputIrrelevant(false);
     }
@@ -37,91 +45,15 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
     @Override
     public Void visit(FunctionDefNode node) {
         currentFunction = node.entity();
-        visitStmt(node.entity().body());
 
-        node.entity().setOutputIrrelevant(node.entity().body().outputIrrelevant());
-        node.setOutputIrrelevant(node.entity().body().outputIrrelevant());
+        for (ParameterEntity param : currentFunction.params()) {
+            currentFunction.addDependence(param);
+        }
+
+        visitStmt(currentFunction.body());
 
         if (currentFunction.name().equals("main"))
             currentFunction.setOutputIrrelevant(false);
-        return null;
-    }
-
-    Stack<Set<Entity>> collectSetStack = new Stack<>();
-
-    // for entity - entity dependency
-    Stack<Set<Entity>> reliedEntityStack = new Stack<>();
-
-    // for node - entity dependency
-    Stack<Boolean> irrelevantStack = new Stack<>();
-
-    @Override
-    public Void visit(BlockNode node) {
-        if (!collectSetStack.empty()) { // in collect mode
-            super.visit(node);
-        } else {
-            irrelevantStack.push(true);
-            visitStmts(node.stmts());
-            node.setOutputIrrelevant(irrelevantStack.peek());
-            irrelevantStack.pop();
-        }
-        return null;
-    }
-
-
-    private Entity getBaseEntity(ExprNode node) {
-        if (node instanceof ArefNode) {
-            return getBaseEntity(((ArefNode) node).baseExpr());
-        } else if (node instanceof MemberNode) {
-            return getBaseEntity(((MemberNode) node).expr());
-        } else if (node instanceof VariableNode) {
-            return ((VariableNode) node).entity();
-        }
-        throw new InternalError("something cannot happen happened in getBaseEntity " + node);
-    }
-
-    @Override
-    public Void visit(AssignNode node) {
-        node.setOutputIrrelevant(false);
-        if (!collectSetStack.empty()) { // in collect mode
-            super.visit(node);
-        } else {
-            ExprNode lhs = node.lhs();
-            if ((lhs.type() instanceof ArrayType || lhs.type() instanceof ClassType) && !(node.rhs() instanceof CreatorNode)) { // don't do
-                // mark all the entity to save
-                collectSetStack.push(new HashSet<>());
-
-                visitExpr(node.lhs());
-                visitExpr(node.rhs());
-
-                for (Entity entity : collectSetStack.peek()) {
-                    entity.setOutputIrrelevant(false);
-                }
-                collectSetStack.pop();
-
-                visitExpr(node.lhs());
-                visitExpr(node.rhs());
-            } else {
-                // add dependency edge
-                Entity base = getBaseEntity(lhs);
-
-                reliedEntityStack.push(new HashSet<>());
-                sideEffect = false;
-
-                visitExpr(node.lhs());
-                visitExpr(node.rhs());
-
-                for (Entity entity : reliedEntityStack.peek()) {
-                    base.addDependence(entity);
-                }
-
-                if (base.outputIrrelevant() && !sideEffect) {
-                    node.setOutputIrrelevant(true);
-                }
-
-                reliedEntityStack.pop();
-            }
-        }
         return null;
     }
 
@@ -134,63 +66,105 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
     }
 
     @Override
-    public Void visit(VariableNode node) {
-        if (currentFunction == null) // ignore global defs
-            return null;
-
-        if (!collectSetStack.empty()) {  // in collect mode
-            for (Set<Entity> entities : collectSetStack) {
-                entities.add(node.entity());
-            }
+    public Void visit(AssignNode node) {
+        if (isInCollectMode()) { // in collect mode
+            super.visit(node);
         } else {
-            // add entity-entity edge
-            if (!reliedEntityStack.empty()) {
-                Entity entity = node.entity();
-                if (globalScope.entities().values().contains(entity)) {
-                    currentFunction.addDependence(entity);
+            ExprNode lhs = node.lhs();
+            if ((lhs.type() instanceof ArrayType || lhs.type() instanceof ClassType) && !(node.rhs() instanceof CreatorNode)) {
+                beginCollect();
+                visitExpr(node.lhs());
+                visitExpr(node.rhs());
+                for (Entity entity : fetchCollect()) {
+                    entity.setOutputIrrelevant(false); // set source
                 }
-                for (Set<Entity> entities : reliedEntityStack) { // add to all above
-                    entities.add(entity);
+                currentFunction.setOutputIrrelevant(false);
+            } else {
+                int backupSideEffect = sideEffect;
+
+                Entity base = getBaseEntity(lhs);
+                assignDependenceStack.push(base);
+                visitExpr(node.lhs());
+                visitExpr(node.rhs());
+                assignDependenceStack.pop();
+
+                if (currentFunction != null && globalVariables.contains(base)) {
+                    base.addDependence(currentFunction);
                 }
-            }
-            // mark above node to save
-            if (!node.entity().outputIrrelevant()) {
-                for (int i = 0; i< irrelevantStack.size(); i++)
-                    irrelevantStack.set(i, false);
+
+                if (base.outputIrrelevant() && sideEffect == backupSideEffect)
+                    node.setOutputIrrelevant(true);
+                else
+                    node.setOutputIrrelevant(false);
+
+                sideEffect = backupSideEffect;
             }
         }
         return null;
     }
 
     @Override
-    public Void visit(MemberNode node) {
-        visitExpr(node.expr());
-        visitExpr(new VariableNode(node.entity()));
+    public Void visit(VariableNode node) {
+        if (isInCollectMode()) {  // in collect mode
+            collectSet.add(node.entity());
+        } else {
+            Entity entity = node.entity();
+            // add global dependency edge
+            if (currentFunction != null && globalVariables.contains(entity)) {
+                currentFunction.addDependence(entity);
+            }
+            // add assign dependency edge
+            for (Entity base : assignDependenceStack) { // add to all above
+                base.addDependence(entity);
+            }
+            // add control dependency edge
+            for (Entity control : getAllControlVars()) {
+                entity.addDependence(control);
+            }
+        }
         return null;
     }
 
     @Override
     public Void visit(FuncallNode node) {
-        if (!collectSetStack.empty()) { // in collect mode
+        if (isInCollectMode()) { // in collect mode
             super.visit(node);
         } else {
-            currentFunction.addDependence(node.functionType().entity()); // FIXME
             if (!node.functionType().entity().outputIrrelevant()) {
-                collectSetStack.push(new HashSet<>()); // collect source
+                beginCollect();
                 visitExpr(node.expr());
                 visitExprs(node.args());
 
-                for (Entity entity : collectSetStack.peek()) {
+                for (Entity entity : fetchCollect()) {
+                    entity.setOutputIrrelevant(false); // set source
+                }
+                for (Entity entity : getAllControlVars()) {
                     entity.setOutputIrrelevant(false);
                 }
-                collectSetStack.pop();
-
-                // mark above block to save
-                for (int i = 0; i< irrelevantStack.size(); i++)
-                    irrelevantStack.set(i, false);
+                currentFunction.setOutputIrrelevant(false);
             } else {
                 visitExpr(node.expr());
                 visitExprs(node.args());
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visit(ReturnNode node) {
+        if (isInCollectMode()) { // in collect mode
+            super.visit(node);
+        } else {
+            if (node.expr() != null) {
+                beginCollect();
+                visitExpr(node.expr());
+                for (Entity entity : fetchCollect()) {
+                    currentFunction.addDependence(entity);
+                }
+                for (Entity entity : getAllControlVars()) {
+                    currentFunction.addDependence(entity);
+                }
             }
         }
         return null;
@@ -198,9 +172,21 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
 
     @Override
     public Void visit(ForNode n) {
-        if (!collectSetStack.empty()) { // in collect mode
+        if (isInCollectMode()) { // in collect mode
             super.visit(n);
         } else {
+            beginCollect();
+            if (n.init() != null)
+                visitExpr(n.init());
+            if (n.cond() != null)
+                visitExpr(n.cond());
+            if (n.incr() != null)
+                visitExpr(n.incr());
+
+            Set<Entity> controlVars = new HashSet<>();
+            controlVars.addAll(fetchCollect());
+
+            controlDependenceStack.push(controlVars);
             if (n.init() != null)
                 visitExpr(n.init());
             if (n.cond() != null)
@@ -209,64 +195,47 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
                 visitExpr(n.incr());
             if (n.body() != null)
                 visitStmt(n.body());
+            controlDependenceStack.pop();
 
-            if (n.body() != null && !n.body().outputIrrelevant()) {  // node - entity iteration
-                collectSetStack.push(new HashSet<>());
-
-                if (n.init() != null)
-                    visitExpr(n.init());
-                if (n.cond() != null)
-                    visitExpr(n.cond());
-                if (n.incr() != null)
-                    visitExpr(n.incr());
-
-                for (Entity entity : collectSetStack.peek()) {
-                    entity.setOutputIrrelevant(false);
-                }
-
-                collectSetStack.pop();
-                n.setOutputIrrelevant(false);
-            } else {
-                n.setOutputIrrelevant(true);
-            }
+            markNode(n, controlVars);
         }
         return null;
     }
 
     @Override
     public Void visit(WhileNode n) {
-        if (!collectSetStack.empty()) { // in collect mode
+        if (isInCollectMode()) { // in collect mode
             super.visit(n);
         } else {
-            if (n.cond() != null)
-                visitExpr(n.cond());
+            beginCollect();
+            visitExpr(n.cond());
+
+            Set<Entity> controlVars = new HashSet<>();
+            controlVars.addAll(fetchCollect());
+
+            controlDependenceStack.push(controlVars);
+            visitExpr(n.cond());
             if (n.body() != null)
                 visitStmt(n.body());
+            controlDependenceStack.pop();
 
-            if (n.body() != null && !n.body().outputIrrelevant()) {  // node - entity iteration
-                collectSetStack.push(new HashSet<>());
-
-                if (n.cond() != null)
-                    visitExpr(n.cond());
-
-                for (Entity entity : collectSetStack.peek()) {
-                    entity.setOutputIrrelevant(false);
-                }
-
-                collectSetStack.pop();
-                n.setOutputIrrelevant(false);
-            } else {
-                n.setOutputIrrelevant(true);
-            }
+            markNode(n, controlVars);
         }
         return null;
     }
 
     @Override
     public Void visit(IfNode n) {
-        if (!collectSetStack.empty()) { // in collect mode
+        if (isInCollectMode()) { // in collect mode
             super.visit(n);
         } else {
+            beginCollect();
+            visitExpr(n.cond());
+            Set<Entity> controlVars = new HashSet<>();
+            controlVars.addAll(fetchCollect());
+
+
+            controlDependenceStack.push(controlVars);
             visitExpr(n.cond());
             if (n.thenBody() != null) {
                 visitStmt(n.thenBody());
@@ -274,77 +243,22 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
             if (n.elseBody() != null) {
                 visitStmt(n.elseBody());
             }
-            if ((n.thenBody() != null && !n.thenBody().outputIrrelevant()) ||
-                (n.elseBody() != null && !n.elseBody().outputIrrelevant())) { // node - entity iteration
-                collectSetStack.push(new HashSet<>());
+            controlDependenceStack.pop();
 
-                if (n.cond() != null)
-                    visitExpr(n.cond());
-                for (Entity entity : collectSetStack.peek()) {
-                    entity.setOutputIrrelevant(false);
-                }
-
-                collectSetStack.pop();
-                n.setOutputIrrelevant(false);
-            } else {
-                n.setOutputIrrelevant(true);
-            }
+            markNode(n, controlVars);
         }
         return null;
     }
 
-    @Override
-    public Void visit(ReturnNode node) {
-        if (!collectSetStack.empty()) { // in collect mode
-            super.visit(node);
-        } else {
-            if (node.expr() != null) {
-                collectSetStack.push(new HashSet<>());
-                visitExpr(node.expr());
-
-                for (Entity entity : collectSetStack.peek()) {
-                    currentFunction.addDependence(entity);
-                }
-
-                collectSetStack.pop();
-            }
-
-            for (int i = 0; i< irrelevantStack.size(); i++)
-                irrelevantStack.set(i, false);
-        }
-        return null;
-    }
-
-    @Override
-    public Void visit(CreatorNode node) {
-        FunctionEntity constructor = null;
-        if (node.type() instanceof ArrayType) {
-            Type deepType = ((ArrayType) node.type()).deepType();
-            if (node.exprs().size() == node.total() && deepType instanceof ClassType)
-                constructor = ((ClassType)deepType).entity().constructor();
-        } else {
-            ClassEntity entity = ((ClassType) node.type()).entity();
-            constructor = entity.constructor();
-        }
-
-        if (constructor != null) {
-            visitExpr(new VariableNode(constructor));
-        }
-
-        if (node.exprs() != null)
-            visitExprs(node.exprs());
-        return null;
-    }
-
-    boolean sideEffect;
+    private int sideEffect = 0;
     @Override
     public Void visit(PrefixOpNode node) {
-        if (!collectSetStack.empty()) {
+        if (isInCollectMode()) {
             return super.visit(node);
         } else {
             visitExpr(node.expr());
             if (node.operator() == UnaryOpNode.UnaryOp.PRE_DEC || node.operator() == UnaryOpNode.UnaryOp.PRE_INC) {
-                sideEffect = true;
+                sideEffect++;
             }
             return null;
         }
@@ -352,20 +266,63 @@ public class OutputIrrelevantMaker extends com.mercy.compiler.AST.Visitor {
 
     @Override
     public Void visit(SuffixOpNode node) {
-        if (!collectSetStack.empty()) {
+        if (isInCollectMode()) {
             return super.visit(node);
         } else {
             visitExpr(node.expr());
             if (node.operator() == UnaryOpNode.UnaryOp.SUF_DEC || node.operator() == UnaryOpNode.UnaryOp.SUF_INC) {
-                sideEffect = true;
+                sideEffect++;
             }
             return null;
         }
     }
 
+    /*
+     * Utility
+     */
+    private boolean isInCollectMode() {
+        return collectSet != null;
+    }
+    private void beginCollect() {
+        collectSet = new HashSet<>();
+    }
 
-    @Override
-    public void visitExpr(ExprNode node) {
-        node.accept(this);
+    private Set<Entity> fetchCollect() {
+        Set<Entity> ret = collectSet;
+        collectSet = null;
+        return ret;
+    }
+
+    private Set<Entity> getAllControlVars() {
+        Set<Entity> ret = new HashSet<>();
+        for (Set<Entity> entitySet : controlDependenceStack) {
+            ret.addAll(entitySet);
+        }
+        return ret;
+    }
+
+    private Entity getBaseEntity(ExprNode node) {
+        if (node instanceof ArefNode) {
+            return getBaseEntity(((ArefNode) node).baseExpr());
+        } else if (node instanceof MemberNode) {
+            return getBaseEntity(((MemberNode) node).expr());
+        } else if (node instanceof VariableNode) {
+            return ((VariableNode) node).entity();
+        }
+        throw new InternalError("something cannot happen happened in getBaseEntity " + node);
+    }
+
+
+    private void markNode(Node node, Set<Entity> controlVars) {
+        if (controlVars.size() == 0) {      // case like while(true) ,whil
+            node.setOutputIrrelevant(false);
+        } else {
+            boolean irrelevant = true;
+            for (Entity controlVar : controlVars) {
+                if (!controlVar.outputIrrelevant())
+                    irrelevant = false;
+            }
+            node.setOutputIrrelevant(irrelevant);
+        }
     }
 }

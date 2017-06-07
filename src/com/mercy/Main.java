@@ -102,9 +102,8 @@ public class Main {
 
         // disable global allocation when the number of entities is too large (to satisfy the time and memory limit)
         boolean backupSettingForTest = Option.enableGlobalRegisterAllocation;
-        if (ast.scope().allLocalVariables().size() > 256) {
+        if (ast.scope().allLocalVariables().size() > 256)
             Option.enableGlobalRegisterAllocation = false;
-        }
 
         // generate IR
         IRBuilder irBuilder = new IRBuilder(ast);
@@ -138,9 +137,8 @@ public class Main {
         // translate to x86 nasm
         Translator translator = new Translator(emitter, registerConfig);
         List<String> asm = translator.translate();
-        for (String s : asm) {
+        for (String s : asm)
             asmCode.println(s);
-        }
 
         Option.enableGlobalRegisterAllocation = backupSettingForTest;
     }

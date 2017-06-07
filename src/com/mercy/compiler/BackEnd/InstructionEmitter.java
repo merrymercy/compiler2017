@@ -20,7 +20,6 @@ import java.util.*;
 
 import static com.mercy.compiler.INS.Operand.Reference.Type.*;
 import static com.mercy.compiler.IR.Binary.BinaryOp.*;
-import static java.lang.System.err;
 
 /**
  * Created by mercy on 17-4-25.
@@ -31,8 +30,8 @@ public class InstructionEmitter {
     private List<IR> globalInitializer;
 
     private List<Instruction> ins;
-    FunctionEntity currentFunction;
-    boolean isInLeaf;
+    private FunctionEntity currentFunction;
+    private boolean isInLeaf;
 
     public InstructionEmitter(IRBuilder irBuilder) {
         this.globalScope = irBuilder.globalScope();
@@ -66,10 +65,10 @@ public class InstructionEmitter {
             functionEntity.setTmpStack(tmpStack);
         }
     }
-    Map<Entity, Entity> globalLocalMap = new HashMap<>();
-    Set<Entity> usedGlobal;
+    private Map<Entity, Entity> globalLocalMap = new HashMap<>();
+    private Set<Entity> usedGlobal;
 
-    public List<Instruction> emitFunction(FunctionEntity entity) {
+    private List<Instruction> emitFunction(FunctionEntity entity) {
         if (entity.isInlined())
             return null;
 
@@ -81,7 +80,7 @@ public class InstructionEmitter {
         }
         if (Option.enableLeafFunctionOptimization && callSize == 0) {
             isInLeaf = true;
-            err.println(entity.name() + " is leaf");
+            //err.println(entity.name() + " is leaf");
             usedGlobal = new HashSet<>();
             // make copy to local
             for (Entity global : globalScope.entities().values()) {
@@ -132,9 +131,9 @@ public class InstructionEmitter {
         return false;
     }
     private class AddressTuple {
-        public Expr base, index;
-        public int mul, add;
-        public AddressTuple(Expr base, Expr index, int mul, int add) {
+        Expr base, index;
+        int mul, add;
+        AddressTuple(Expr base, Expr index, int mul, int add) {
             this.base = base;
             this.index = index;
             this.mul = mul;
@@ -143,7 +142,7 @@ public class InstructionEmitter {
     }
 
     // only match [base + index * mul]
-    boolean matchSimpleAdd = false;  // whether to match [base + index]
+    private boolean matchSimpleAdd = false;  // whether to match [base + index]
     private Triple<Expr, Expr, Integer>  matchBaseIndexMul(Expr expr) {
         if (!(expr instanceof Binary))
             return null;
@@ -249,7 +248,7 @@ public class InstructionEmitter {
     /*
      * IR Visitor
      */
-    int exprDepth = 0;
+    private int exprDepth = 0;
     public Operand visitExpr(com.mercy.compiler.IR.Expr ir) {
         boolean matched = false;
         Operand ret = null;
@@ -571,13 +570,14 @@ public class InstructionEmitter {
     }
 
     // temp virtual register
-    List<Reference> tmpStack;
-    int tmpTop = 0;
-    int tmpCounter = 0;
+    private List<Reference> tmpStack;
+    private int tmpTop = 0;
+    private int tmpCounter = 0;
     public Reference getTmp() {
         if (Option.enableGlobalRegisterAllocation) {
             return new Reference("ref_" + tmpCounter++, UNKNOWN);
         } else {
+            // reuse temp register
             if (tmpTop >= tmpStack.size()) {
                 tmpStack.add(new Reference("ref_" + tmpCounter, UNKNOWN));
             }

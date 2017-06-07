@@ -175,11 +175,11 @@ public class Allocator {
 
     private int iter;
     private void allocateFunction(FunctionEntity entity) {
-        err.println("allocate for " + entity.name());
+        //err.println("allocate for " + entity.name());
         boolean finish;
         iter = 0;
         do {
-            err.println(" === iter " + iter + " ===");
+            //err.println(" === iter " + iter + " ===");
 
             livenessAnalysis(entity);
             build(entity);
@@ -624,7 +624,7 @@ public class Allocator {
             node.color = getAlias(node).color;
         }
 
-        if (true || Option.printGlobalAllocationInfo) {
+        if (Option.printGlobalAllocationInfo) {
             err.println("=== Assign Result ===");
             err.print("colored :");
             for (Reference ref : coloredNodes) {

@@ -42,6 +42,6 @@ public class Option {
     public static boolean enableDeadcodeElimination         = true;
 
     // other
-    public static boolean enableLeafFunctionOptimization    = true;
+    public static boolean enableLeafFunctionOptimization    = true;  // TODO: has bug when inline is false (bulgarian.mx)
     public static boolean enableOutputIrrelevantElimination = true;
 }

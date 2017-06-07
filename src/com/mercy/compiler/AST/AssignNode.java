@@ -13,7 +13,6 @@ public class AssignNode extends ExprNode {
         super();
         this.lhs = lhs;
         this.rhs = rhs;
-        this.isOutputIrrevelant = false;
     }
 
     public ExprNode lhs() {

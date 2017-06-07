@@ -10,6 +10,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static java.lang.System.err;
+
 /**
  * Created by mercy on 17-3-18.
  */
@@ -71,94 +73,80 @@ public class AST {
      * output irrelevant analyze
      */
     public class DependenceEdge {
-        public Entity base, rely;
-        public boolean visited = false;
-        public DependenceEdge (Entity base, Entity rely) {
+        Entity base, rely;
+        DependenceEdge (Entity base, Entity rely) {
             this.base = base;
             this.rely = rely;
         }
 
         @Override
-        public boolean equals(Object o) {
-            return hashCode() == o.hashCode();
-        }
-
-        @Override
         public int hashCode() {
-            return base.hashCode() ^ rely.hashCode() + base.hashCode() * rely.hashCode();
+            return base.hashCode() + rely.hashCode();
+        }
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof DependenceEdge
+                    && base == ((DependenceEdge)o).base
+                    && rely == ((DependenceEdge)o).rely;
         }
     }
-
     private Set<DependenceEdge> visited = new HashSet<>();
-    private void propaOutputIrrelevant(Entity entity, boolean flag) {
-        if (flag)
+    private void propaOutputIrrelevant(Entity entity) {
+        if (entity.outputIrrelevant())
             return;
-        DependenceEdge edge = new DependenceEdge(null, null);
-        entity.setOutputIrrelevant(false);
-        if (entity instanceof FunctionEntity) {
-            for (ParameterEntity parameterEntity : ((FunctionEntity) entity).params()) {
-                parameterEntity.setOutputIrrelevant(false);
-            }
-        }
-        for (Entity base : entity.dependence()) {
-            edge.base = base; edge.rely = entity;
+
+        for (Entity rely : entity.dependence()) {
+            DependenceEdge edge = new DependenceEdge(entity, rely);
             if (!visited.contains(edge)) {
-                visited.add(new DependenceEdge(base, entity));
-                propaOutputIrrelevant(base, false);
+                visited.add(edge);
+                rely.setOutputIrrelevant(false);
+                propaOutputIrrelevant(rely);
             }
         }
     }
-
     public void eliminateOutputIrrelevantNode() {
         if (classEntitsies().size() != 0) {  // don't analyze class type
             return;
-        } else {
-            OutputIrrelevantMaker analyzer = new OutputIrrelevantMaker(this);
+        }
+
+        // gather all entity, mark irrelevant default
+        Set<Entity> allEntity = scope.gatherAll();
+        for (Entity entity : allEntity) {
+            entity.setOutputIrrelevant(true);
+        }
+
+        // begin iteration
+        int before = 0, after = -1;
+        OutputIrrelevantMaker analyzer = new OutputIrrelevantMaker(this);
+        while (before != after) {
             analyzer.visitDefinitions(definitionNodes);
 
-            // gather all entity, mark irrelevant default
-            List<Entity> allEntity = scope.gatherAll();
+            // print dependence edge
+            err.println("========== EDGE ==========");
             for (Entity entity : allEntity) {
-                entity.setOutputIrrelevant(true);
+                err.print(entity.name() + " :");
+                for (Entity rely : entity.dependence()) {
+                    err.print("    " + rely.name());
+                }
+                err.println();
             }
 
-            // print dependence info
-            /*HashSet<Entity> printed = new HashSet<>();
-            for (DependenceEdge edge : analyzer.dependenceEdgeSet()) {
-                if (printed.contains(edge.base))
-                    continue;
-                printed.add(edge.base);
-                System.err.print(edge.base.name() + ": ");
-                for (Entity entity : edge.base.dependence()) {
-                    System.err.print("  " + entity.name());
-                }
-                System.err.println();
-            }*/
-
-            // begin iteration
-            int before = 0, after = -1;
-
-            while(before != after) {
-                analyzer.visitDefinitions(definitionNodes);
-                visited.clear();
-                before = after;
-                after = 0;
-                for (Entity entity : allEntity) {
-                    propaOutputIrrelevant(entity, entity.outputIrrelevant());
-                }
-                for (Entity entity : allEntity) {
-                    if (!entity.outputIrrelevant())
-                        after++;
-                }
+            before = after;
+            after = 0;
+            for (Entity entity : allEntity) {
+                propaOutputIrrelevant(entity);
             }
-            analyzer.visitDefinitions(definitionNodes);
+            for (Entity entity : allEntity) {
+                if (!entity.outputIrrelevant())
+                    after++;
+            }
+        }
+        analyzer.visitDefinitions(definitionNodes);
 
-            // print result
-            /*for (Entity entity : allEntity) {
-                if (entity instanceof FunctionEntity)
-                    continue;
-                System.err.println(entity.name() + ": " + entity.outputIrrelevant());
-            }*/
+        // print result
+        err.println("========== RES ==========");
+        for (Entity entity : allEntity) {
+            err.println(entity.name() + ": " + entity.outputIrrelevant());
         }
     }
 
