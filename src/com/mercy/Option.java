@@ -15,37 +15,40 @@ public class Option {
     public static String outFile = "out.asm";
 
     /***** DEBUG *****/
-    public static boolean printRemoveInfo         = true;
-    public static boolean printInlineInfo         = true;
+    public static boolean printRemoveInfo         = false;
+    public static boolean printInlineInfo         = false;
     public static boolean printIrrelevantMarkInfo = false;
     public static boolean printInstruction        = false;
     public static boolean printBasicBlocks        = false;
 
-    public static boolean printNaiveAllocatorInfo = true;
+    public static boolean printNaiveAllocatorInfo = false;
     public static boolean printGlobalAllocationInfo = false;
 
     /***** OPTIMIZATION *****/
-    public static boolean enableGlobalRegisterAllocation = true;
+    public static boolean enableGlobalRegisterAllocation = false;
 
     // ast-ir level
-    public static boolean enableFunctionInline              = true;
-    public static boolean enableSelfInline                  = true;
-    public static boolean enableInstructionSelection        = true;
-    public static boolean enableCommonAssignElimination     = true;
-    public static boolean enablePrintExpanding              = true;
+    public static boolean enableFunctionInline              = false;
+    public static boolean enableSelfInline                  = false;
+    public static boolean enableInstructionSelection        = false;
+    public static boolean enableCommonAssignElimination     = false;
+    public static boolean enablePrintExpanding              = false;
 
     // control flow
-    public static boolean enableControlFlowOptimization     = true;
+    public static boolean enableControlFlowOptimization     = false;
 
     // data flow
-    public static boolean enableCommonExpressionElimination = true;
-    public static boolean enableConstantPropagation         = true;
-    public static boolean enableDeadcodeElimination         = true;
+    public static boolean enableCommonExpressionElimination = false;
+    public static boolean enableConstantPropagation         = false;
+    public static boolean enableDeadcodeElimination         = false;
 
     // other
-    public static boolean enableOutputIrrelevantElimination = true;
-    public static boolean enableLeafFunctionOptimization    = true;
+    public static boolean enableOutputIrrelevantElimination = false;
+    public static boolean enableLeafFunctionOptimization    = false;
 
     // incorrect buf faster
     public static boolean enableDisableShortCut             = false;
+
+    /***** OTHER *****/
+    public static boolean printToC = true;
 }

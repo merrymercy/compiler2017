@@ -109,6 +109,12 @@ public class Main {
         IRBuilder irBuilder = new IRBuilder(ast);
         irBuilder.generateIR();
 
+        if (Option.printToC) {
+            CPrinter cPrinter = new CPrinter(ast, irBuilder);
+            cPrinter.print();
+            return;
+        }
+
         // emit instructions
         InstructionEmitter emitter = new InstructionEmitter(irBuilder);
         emitter.emit();
@@ -152,8 +158,8 @@ public class Main {
         ret.add(new LibFunction(stringType, "getString", null).getEntity());
         ret.add(new LibFunction(integerType, "getInt", null).getEntity());
         ret.add(new LibFunction(stringType, "toString", new Type[]{integerType}).getEntity());
-        ret.add(new LibFunction(integerType, LIB_PREFIX + "printInt", LIB_PREFIX + "printInt", new Type[]{integerType}).getEntity());
-        ret.add(new LibFunction(integerType, LIB_PREFIX + "printlnInt", LIB_PREFIX + "printlnInt", new Type[]{integerType}).getEntity());
+        ret.add(new LibFunction(voidType, LIB_PREFIX + "printInt", LIB_PREFIX + "printInt", new Type[]{integerType}).getEntity());
+        ret.add(new LibFunction(voidType, LIB_PREFIX + "printlnInt", LIB_PREFIX + "printlnInt", new Type[]{integerType}).getEntity());
         ret.add(new LibFunction(integerType, LIB_PREFIX + "malloc", "malloc", new Type[]{integerType}).getEntity());
         // null
         ret.add(new VariableEntity(null, nullType, "null", null));

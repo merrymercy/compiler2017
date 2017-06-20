@@ -1,8 +1,7 @@
 package com.mercy.compiler.IR;
 
-import com.mercy.compiler.BackEnd.InstructionEmitter;
+import com.mercy.compiler.BackEnd.IRVisitor;
 import com.mercy.compiler.Entity.Entity;
-import com.mercy.compiler.INS.Operand.Operand;
 
 /**
  * Created by mercy on 17-3-30.
@@ -20,7 +19,7 @@ public class Addr extends Expr {
     }
 
     @Override
-    public Operand accept(InstructionEmitter emitter) {
+    public <T> T accept(IRVisitor<T> emitter) {
         return emitter.visit(this);
     }
 }

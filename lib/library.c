@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void aha() {
-}
-
 unsigned char *__lib_str_operator_ADD(unsigned char *a, unsigned char *b) {
     int l1 = *(((int *)a) - 1);
     int l2 = *(((int *)b) - 1);
@@ -21,7 +18,7 @@ unsigned char *__lib_str_operator_ADD(unsigned char *a, unsigned char *b) {
     return ret - l1;
 }
 
-unsigned char *__lib_str_substring(unsigned char *a, int low, int high) {
+unsigned char *__lib_str_substring(unsigned char *a, long low, long high) {
     int l = high - low + 1;
 
     unsigned char *ret = (unsigned char *)malloc(l + 1 + sizeof(int));
@@ -34,7 +31,7 @@ unsigned char *__lib_str_substring(unsigned char *a, int low, int high) {
     return ret;
 }
 
-unsigned char *toString(int x) {
+unsigned char *toString(long x) {
     unsigned char *ret = (unsigned char*)malloc(12 + sizeof(int));
     ret += sizeof(int);
     unsigned char *p = ret;

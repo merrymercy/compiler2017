@@ -32,6 +32,9 @@ abstract public class Entity {
     public String name() {
         return name;
     }
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public Type type() {
         return type;

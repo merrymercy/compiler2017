@@ -25,7 +25,7 @@ import static java.lang.System.err;
 /**
  * Created by mercy on 17-4-25.
  */
-public class InstructionEmitter {
+public class InstructionEmitter implements IRVisitor<Operand> {
     private List<FunctionEntity> functionEntities;
     private Scope globalScope;
     private List<IR> globalInitializer;
