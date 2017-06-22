@@ -641,7 +641,7 @@ public class Translator {
      */
     private void pasteLibfunction() {
         asm.add("\n;========== LIB BEGIN ==========");
-        File f = new File("lib.s");
+        File f = new File("lib/lib.s");
         try {
             BufferedReader fin = new BufferedReader(new FileReader(f));
             String line;

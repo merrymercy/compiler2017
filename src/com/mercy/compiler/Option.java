@@ -25,7 +25,7 @@ public class Option {
     public static boolean printGlobalAllocationInfo = false;
 
     /***** OPTIMIZATION *****/
-    public static boolean enableGlobalRegisterAllocation = false;
+    public static boolean enableGlobalRegisterAllocation = true;
 
     // ast-ir level
     public static boolean enableFunctionInline              = true;

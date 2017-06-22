@@ -10,7 +10,6 @@ find ./src -name *.java | javac -d bin -classpath "lib/antlr-4.6-complete.jar" @
 # make jar
 cd bin
 jar xf ../lib/antlr-4.6-complete.jar
-cp ../lib.s .
 rm -rf ./META-INF/
 jar cef com.mercy.compiler.Main Malic.jar .
 cp Malic.jar ..
