@@ -22,7 +22,9 @@ With various optimizations, this compiler is ranked first in the performance com
 for more details, please refer to [my report](doc/report.pdf)
 
 ## Build
+```
 bash build.bash
+```
 
 ## Usage
 ```
