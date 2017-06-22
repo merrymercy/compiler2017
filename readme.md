@@ -5,7 +5,7 @@ A compiler for the course [Compiler 2017](http://acm.sjtu.edu.cn/wiki/Compiler_2
 The source is a java-like language.
 The target is x86-64 NASM.
 
-With various optimizations, this compiler is ranked first in the performance competition of this course.
+With various optimizations, this compiler was ranked first in the performance competition of the course.
 
 ## Optimization
 * Instruction selection
