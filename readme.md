@@ -19,7 +19,7 @@ With various optimizations, this compiler is ranked first in the performance com
 * Register Allocation
     * a full implementation of George, Lal; Appel, Andrew W. (May 1996). *"Iterated Register Coalescing“*
 
-for more details, see doc/report.pdf
+for more details, please refer to [my report](doc/report.pdf)
 
 ## Build
 bash build.bash
@@ -29,6 +29,6 @@ bash build.bash
 Usage: java -jar Malic.jar [options]
 Options:
   -in   <file> : M* language source code
-  -out  <file> : NASM output
+  -out  <file> : x86-64 NASM output
   -help        : print this help page
 ```
