@@ -1,6 +1,5 @@
 package com.mercy.compiler.Entity;
 
-import com.mercy.Option;
 import com.mercy.compiler.AST.*;
 import com.mercy.compiler.BackEnd.BasicBlock;
 import com.mercy.compiler.INS.Instruction;
@@ -8,6 +7,7 @@ import com.mercy.compiler.INS.Label;
 import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.INS.Operand.Register;
 import com.mercy.compiler.IR.IR;
+import com.mercy.compiler.Option;
 import com.mercy.compiler.Type.FunctionType;
 import com.mercy.compiler.Type.Type;
 

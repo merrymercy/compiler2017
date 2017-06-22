@@ -1,11 +1,11 @@
 package com.mercy.compiler.BackEnd;
 
-import com.mercy.Option;
 import com.mercy.compiler.AST.*;
 import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.FrontEnd.AST;
 import com.mercy.compiler.FrontEnd.ASTVisitor;
 import com.mercy.compiler.IR.*;
+import com.mercy.compiler.Option;
 import com.mercy.compiler.Type.*;
 import com.mercy.compiler.Utility.InternalError;
 import com.mercy.compiler.Utility.Pair;
@@ -523,40 +523,30 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
 
     @Override
     public Expr visit(LogicalAndNode node) {
-        if (Option.enableDisableShortCut) {
-            Expr lhs = visitExpr(node.left()), rhs = visitExpr(node.right());
-            return new Binary(lhs, BIT_AND, rhs);
-        } else {
-            Label goon = new Label();
-            Label end = new Label();
+        Label goon = new Label();
+        Label end = new Label();
 
-            Var tmp = newIntTemp();
-            addAssign(tmp, visitExpr(node.left()));
-            stmts.add(new CJump(tmp, goon, end));
-            addLabel(goon, "goon");
-            addAssign(tmp, visitExpr(node.right()));
-            addLabel(end, "end");
-            return needReturn() ? tmp : null;
-        }
+        Var tmp = newIntTemp();
+        addAssign(tmp, visitExpr(node.left()));
+        stmts.add(new CJump(tmp, goon, end));
+        addLabel(goon, "goon");
+        addAssign(tmp, visitExpr(node.right()));
+        addLabel(end, "end");
+        return needReturn() ? tmp : null;
     }
 
     @Override
     public Expr visit(LogicalOrNode node) {
-        if (Option.enableDisableShortCut) {
-            Expr lhs = visitExpr(node.left()), rhs = visitExpr(node.right());
-            return new Binary(lhs, BIT_OR, rhs);
-        } else {
-            Label goon = new Label();
-            Label end = new Label();
+        Label goon = new Label();
+        Label end = new Label();
 
-            Var tmp = newIntTemp();
-            addAssign(tmp, visitExpr(node.left()));
-            stmts.add(new CJump(tmp, end, goon));
-            addLabel(goon, "goon");
-            addAssign(tmp, visitExpr(node.right()));
-            addLabel(end, "end");
-            return needReturn() ? tmp : null;
-        }
+        Var tmp = newIntTemp();
+        addAssign(tmp, visitExpr(node.left()));
+        stmts.add(new CJump(tmp, end, goon));
+        addLabel(goon, "goon");
+        addAssign(tmp, visitExpr(node.right()));
+        addLabel(end, "end");
+        return needReturn() ? tmp : null;
     }
 
     @Override
@@ -867,33 +857,40 @@ public class IRBuilder implements ASTVisitor<Void, Expr> {
     }
 
     private void addCJump(ExprNode cond, Label trueLabel, Label falseLabel) {
-        if (cond instanceof BinaryOpNode) {
-            BinaryOpNode node = (BinaryOpNode)cond;
-            Label goon = new Label();
-            switch (((BinaryOpNode) cond).operator()) {
-                case LOGIC_AND:
-                    addCJump(node.left(), goon, falseLabel);
-                    addLabel(goon, "goon");
-                    addCJump(node.right(), trueLabel, falseLabel);
-                    break;
-                case LOGIC_OR:
-                    addCJump(node.left(), trueLabel, goon);
-                    addLabel(goon, "goon");
-                    addCJump(node.right(), trueLabel, falseLabel);
-                    break;
-                default:
-                    visitExpr(null); // refresh tmpStack
-                    exprDepth++;
-                    stmts.add(new CJump(visitExpr(cond), trueLabel, falseLabel));
-                    exprDepth--;
+        if (Option.enableCJumpOptimization) {
+            if (cond instanceof BinaryOpNode) {
+                BinaryOpNode node = (BinaryOpNode) cond;
+                Label goon = new Label();
+                switch (((BinaryOpNode) cond).operator()) {
+                    case LOGIC_AND:
+                        addCJump(node.left(), goon, falseLabel);
+                        addLabel(goon, "goon");
+                        addCJump(node.right(), trueLabel, falseLabel);
+                        break;
+                    case LOGIC_OR:
+                        addCJump(node.left(), trueLabel, goon);
+                        addLabel(goon, "goon");
+                        addCJump(node.right(), trueLabel, falseLabel);
+                        break;
+                    default:
+                        visitExpr(null); // refresh tmpStack
+                        exprDepth++;
+                        stmts.add(new CJump(visitExpr(cond), trueLabel, falseLabel));
+                        exprDepth--;
+                }
+            } else if (cond instanceof UnaryOpNode && ((UnaryOpNode) cond).operator() == UnaryOpNode.UnaryOp.LOGIC_NOT) {
+                addCJump(((UnaryOpNode) cond).expr(), falseLabel, trueLabel);
+            } else if (cond instanceof BoolLiteralNode) {
+                if (((BoolLiteralNode) cond).value())
+                    stmts.add(new Jump(trueLabel));
+                else
+                    stmts.add(new Jump(falseLabel));
+            } else {
+                visitExpr(null); // refresh tmpStack
+                exprDepth++;
+                stmts.add(new CJump(visitExpr(cond), trueLabel, falseLabel));
+                exprDepth--;
             }
-        } else if (cond instanceof UnaryOpNode) {
-            addCJump(((UnaryOpNode) cond).expr(), falseLabel, trueLabel);
-        } else if (cond instanceof BoolLiteralNode) {
-            if (((BoolLiteralNode) cond).value())
-                stmts.add(new Jump(trueLabel));
-            else
-                stmts.add(new Jump(falseLabel));
         } else {
             visitExpr(null); // refresh tmpStack
             exprDepth++;

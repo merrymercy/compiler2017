@@ -1,4 +1,4 @@
-package com.mercy;
+package com.mercy.compiler;
 
 /**
  * Created by mercy on 17-5-20.
@@ -11,8 +11,8 @@ public class Option {
     public static int FRAME_ALIGNMENT_SIZE = 16;
 
     /***** I/O *****/
-    public static String inFile = "testcase/test.c";
-    public static String outFile = "out.asm";
+    public static String inFile;
+    public static String outFile;
 
     /***** DEBUG *****/
     public static boolean printRemoveInfo         = true;
@@ -25,7 +25,7 @@ public class Option {
     public static boolean printGlobalAllocationInfo = false;
 
     /***** OPTIMIZATION *****/
-    public static boolean enableGlobalRegisterAllocation = true;
+    public static boolean enableGlobalRegisterAllocation = false;
 
     // ast-ir level
     public static boolean enableFunctionInline              = true;
@@ -36,6 +36,7 @@ public class Option {
 
     // control flow
     public static boolean enableControlFlowOptimization     = true;
+    public static boolean enableCJumpOptimization           = true;
 
     // data flow
     public static boolean enableCommonExpressionElimination = true;
@@ -45,7 +46,4 @@ public class Option {
     // other
     public static boolean enableOutputIrrelevantElimination = true;
     public static boolean enableLeafFunctionOptimization    = true;
-
-    // incorrect buf faster
-    public static boolean enableDisableShortCut             = false;
 }

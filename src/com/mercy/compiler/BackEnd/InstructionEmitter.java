@@ -1,6 +1,5 @@
 package com.mercy.compiler.BackEnd;
 
-import com.mercy.Option;
 import com.mercy.compiler.AST.FunctionDefNode;
 import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.INS.*;
@@ -13,6 +12,7 @@ import com.mercy.compiler.INS.Operand.Operand;
 import com.mercy.compiler.INS.Operand.Reference;
 import com.mercy.compiler.INS.Return;
 import com.mercy.compiler.IR.*;
+import com.mercy.compiler.Option;
 import com.mercy.compiler.Utility.InternalError;
 import com.mercy.compiler.Utility.Triple;
 

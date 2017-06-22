@@ -1,10 +1,10 @@
 package com.mercy.compiler.BackEnd;
 
-import com.mercy.Option;
 import com.mercy.compiler.Entity.*;
 import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.Operand.*;
 import com.mercy.compiler.IR.IR;
+import com.mercy.compiler.Option;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.io.BufferedReader;
@@ -14,8 +14,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
-import static com.mercy.Option.FRAME_ALIGNMENT_SIZE;
-import static com.mercy.Option.REG_SIZE;
+import static com.mercy.compiler.Option.FRAME_ALIGNMENT_SIZE;
+import static com.mercy.compiler.Option.REG_SIZE;
 import static java.lang.System.err;
 
 /**

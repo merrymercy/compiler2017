@@ -1,6 +1,5 @@
 package com.mercy.compiler.FrontEnd;
 
-import com.mercy.Option;
 import com.mercy.compiler.Utility.SemanticError;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -10,7 +9,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static com.mercy.Main.compile;
+import static com.mercy.compiler.Main.compile;
 import static java.lang.System.exit;
 import static junit.framework.TestCase.fail;
 
@@ -50,7 +49,7 @@ public class SemanticTest {
         System.out.flush();
 
         InputStream is = new FileInputStream(filename);
-        PrintStream os = new PrintStream(new FileOutputStream(Option.outFile));
+        PrintStream os = new PrintStream(new FileOutputStream("out.asm"));
 
         try {
             compile(is, os);

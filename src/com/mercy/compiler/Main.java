@@ -1,4 +1,4 @@
-package com.mercy;
+package com.mercy.compiler;
 
 import com.mercy.compiler.BackEnd.*;
 import com.mercy.compiler.Entity.Entity;
@@ -28,35 +28,9 @@ import java.util.List;
 
 import static com.mercy.compiler.Type.Type.*;
 import static com.mercy.compiler.Utility.LibFunction.LIB_PREFIX;
-import static java.lang.System.err;
-import static java.lang.System.exit;
+import static java.lang.System.*;
 
 public class Main {
-    private static void parseOption(String []args) {
-        for (int i = 0; i < args.length; i++) {
-            switch (args[i]) {
-                case "--print-ins":
-                    Option.printInstruction = true;
-                    break;
-                case "--print-remove":
-                    Option.printRemoveInfo = true;
-                    break;
-                case "-in":
-                    if (i + 1 >= args.length)
-                        err.println("invalid argument for input file, use default setting instead");
-                    else
-                        Option.inFile = args[++i];
-                    break;
-                case "-out":
-                    if (i + 1 >= args.length)
-                        err.println("invalid argument for output file, use default setting instead");
-                    else
-                        Option.outFile = args[++i];
-                    break;
-            }
-        }
-    }
-
     public static void main(String[] args) throws Exception {
         parseOption(args);
 
@@ -171,6 +145,46 @@ public class Main {
                     err.println(ins.toString());
                 }
             }
+        }
+    }
+
+    private static void printUsage() {
+        out.println("Usage: java -jar Malic.jar [options]");
+        out.println("Options:");
+        out.println("  -in   <file> : M* language source code");
+        out.println("  -out  <file> : NASM output");
+        out.println("  -help        : print this help page");
+        exit(0);
+    }
+
+    private static void parseOption(String []args) {
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "--print-ins":
+                    Option.printInstruction = true;
+                    break;
+                case "--print-remove":
+                    Option.printRemoveInfo = true;
+                    break;
+                case "-in":
+                    if (i + 1 >= args.length)
+                        err.println("invalid argument for input file, use default setting instead");
+                    else
+                        Option.inFile = args[++i];
+                    break;
+                case "-out":
+                    if (i + 1 >= args.length)
+                        err.println("invalid argument for output file, use default setting instead");
+                    else
+                        Option.outFile = args[++i];
+                    break;
+                case "-help":
+                    printUsage();
+            }
+        }
+
+        if (Option.inFile == null || Option.outFile == null) {
+            printUsage();
         }
     }
 }

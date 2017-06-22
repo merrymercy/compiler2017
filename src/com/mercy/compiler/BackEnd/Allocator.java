@@ -1,11 +1,11 @@
 package com.mercy.compiler.BackEnd;
 
-import com.mercy.Option;
 import com.mercy.compiler.Entity.FunctionEntity;
 import com.mercy.compiler.Entity.ParameterEntity;
 import com.mercy.compiler.Entity.Scope;
 import com.mercy.compiler.INS.*;
 import com.mercy.compiler.INS.Operand.*;
+import com.mercy.compiler.Option;
 import com.mercy.compiler.Utility.InternalError;
 
 import java.util.*;
@@ -557,7 +557,7 @@ public class Allocator {
         Reference toSpill = iter.next();
 
         // SPILL HEURISTIC HERE
-        protect.add("i"); protect.add("j"); protect.add("tmp2"); protect.add("g_chunks");
+        protect.add("i"); protect.add("j");
         while ((protect.contains(toSpill.name()) || toSpill.name().contains("spill")) && iter.hasNext()) {
             toSpill = iter.next();
         }

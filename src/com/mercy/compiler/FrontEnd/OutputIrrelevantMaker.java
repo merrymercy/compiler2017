@@ -1,8 +1,8 @@
 package com.mercy.compiler.FrontEnd;
 
-import com.mercy.Option;
 import com.mercy.compiler.AST.*;
 import com.mercy.compiler.Entity.*;
+import com.mercy.compiler.Option;
 import com.mercy.compiler.Type.ArrayType;
 import com.mercy.compiler.Type.ClassType;
 import com.mercy.compiler.Utility.InternalError;

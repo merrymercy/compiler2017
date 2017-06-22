@@ -8,7 +8,7 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.mercy.Main.compile;
+import static com.mercy.compiler.Main.compile;
 import static org.junit.Assert.assertTrue;
 
 /**
