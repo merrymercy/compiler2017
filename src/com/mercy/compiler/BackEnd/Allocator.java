@@ -788,10 +788,11 @@ public class Allocator {
                     newIns.add(new Move(rrdx, rdx)); // cqo
 
                     Operand right = ((Bin)raw).right();
-                    if (right instanceof Immediate) { // right cannot be immediate
-                        newIns.add(new Move(rrcx, right));
-                        right = rrcx;
-                    }
+                    // Right operand cannot be rdx (because of cqo), but our pre-color method does not
+                    // support such constraint, so we should restrict the right operand to be a fixed register 'rcx'
+                    newIns.add(new Move(rrcx, right));
+                    right = rrcx;
+
                     if (raw instanceof Div) {
                         newIns.add(new Div(rrax, right));
                         newIns.add(new Move(rrax, rax)); // refresh
@@ -801,7 +802,7 @@ public class Allocator {
                         newIns.add(new Mod(rrax, right));
                         newIns.add(new Move(rrax, rax)); // refresh
                         newIns.add(new Move(rrdx, rdx));
-                        newIns.add(new Move(((Bin) raw).left(), rrdx));
+                        newIns.add(new Move(((Mod) raw).left(), rrdx));
                     }
                 } else if (raw instanceof Return) {
                     if (((Return) raw).ret() != null)
