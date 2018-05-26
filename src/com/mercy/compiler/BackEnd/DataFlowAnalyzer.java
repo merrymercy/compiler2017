@@ -243,6 +243,9 @@ public class DataFlowAnalyzer {
                         if (ret.first) {
                             constantTable.put((Reference) dest, new Integer(ret.second));
                             ((Move)ins).setSrc(new Immediate(ret.second));
+                        } else {
+                            // clear this item
+                            constantTable.remove(dest);
                         }
                     }
                     newIns.add(ins);
